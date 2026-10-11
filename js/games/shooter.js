@@ -1,7 +1,7 @@
 /* ===== 遊戲：寶石機鬥（現實寶石）：駕駛戰機，六位守衛＋最終魔王薩諾斯；血條、音效、守衛特殊技 ===== */
 function mountShooter(stage,done){
   const wrap=document.createElement('div');wrap.className='shw';
-  wrap.innerHTML=`<div class="top"><div class="hpw"><div class="hpbar"><i id="hpg"></i><i id="hpf"></i></div><span id="hpt">1000 / 1000</span></div><div id="sg">—</div><div class="tr"><span id="sc">得分 0</span><button type="button" class="mute" id="mute" aria-label="音效開關" title="音效開關（M）"></button></div></div>
+  wrap.innerHTML=`<div class="top"><div class="hpw"><div class="hpbar"><i id="hpg"></i><i id="hpf"></i></div><span id="hpt">1500 / 1500</span></div><div id="sg">—</div><div class="tr"><span id="sc">得分 0</span><button type="button" class="mute" id="mute" aria-label="音效開關" title="音效開關（M）"></button></div></div>
 <div class="stage"><canvas id="cv"></canvas><div id="ov"></div></div>
 <div class="bar" id="bar"></div>
 <div class="hint">移動：WASD／方向鍵／按住拖曳 ・ 機頭自動轉向最近目標並從正前方開火 ・ 數字鍵 1–6 或點選武器欄切換已解鎖的寶石武器 ・ M 開關音效</div>`;stage.append(wrap);
@@ -15,9 +15,11 @@ function mountShooter(stage,done){
   {id:'time',n:'時間',c:'#2fe07a',w:'遲滯連射',b:'時間裂縫之眼'},
   {id:'mind',n:'心靈',c:'#ffe600',bg:'#fff67a',w:'連鎖閃電',b:'心靈主宰'}];
   const GT={id:'thanos',n:'薩諾斯',c:'#b36bff',b:'瘋狂泰坦・薩諾斯'},SG=i=>i<6?G[i]:GT;
-  const CAST={th_charge:'衝撞',th_sword:'斬擊',th_volley:'能量連射',th_rocks:'投擲巨岩',th_beam:'終結光束',th_tp:'空間跳躍',th_slam:'泰坦重擊',th_summon:'召喚軍團',th_blast:'力量爆發',th_meteor:'隕石召喚',th_mind:'心靈鎖定',th_soul:'靈魂汲取',th_shield:'能量護盾',th_stun:'破防',th_stab:'突刺',th_warp:'空間瞬移斬',th_blades:'雙面刃連斬',th_snap:'彈指',th_spiral:'星環旋風',th_gravity:'重力牽引',blast:'力場充能',tp:'空間跳躍',dc:'現實分身',soul:'靈魂汲取',mind:'心靈鎖定',psy:'心靈風暴',rw:'時間倒轉'};
+  const CAST={th_charge:'衝撞',th_sword:'斬擊',th_volley:'能量連射',th_rocks:'投擲巨岩',th_beam:'終結光束',th_tp:'空間跳躍',th_slam:'泰坦重擊',th_summon:'召喚軍團',th_blast:'力量爆發',th_meteor:'隕石召喚',th_mind:'心靈鎖定',th_soul:'靈魂汲取',th_shield:'能量護盾',th_stun:'破防',th_stab:'突刺',th_warp:'空間瞬移斬',th_blades:'雙面刃連斬',th_snap:'彈指',th_spiral:'星環旋風',th_gravity:'重力牽引',blast:'力場充能',rush:'巨像衝鋒',tp:'空間跳躍',gate:'空間門陣',dc:'現實分身',soul:'靈魂汲取',mind:'心靈鎖定',psy:'心靈風暴',rw:'時間倒轉'};
   const RATE={base:.22,space:.14,power:.5,reality:.46,soul:.1,time:.09,mind:.32},CHG=.75;
-  const MAXHP=1250;
+  const MAXHP=1500;
+  const DC_MAX=6;   /* 現實守衛的分身同時存在上限（分身不會消失，避免無限堆疊） */
+  const HEAL={power:300,space:300,reality:500,soul:350,time:600,mind:MAXHP};   /* 擊敗守衛、拾取寶石後的回血量 */
   const hpf=$('hpf'),hpg=$('hpg'),hpt=$('hpt'),muteBtn=$('mute');
 
   /* ---------- 音效（Web Audio 合成，不需要音檔） ---------- */
@@ -210,14 +212,23 @@ function mountShooter(stage,done){
   function special(b,st){
     if(st===6)return thSpecial(b);
     const p=S.p;
-    if(st===0){b.cast={k:'blast',t:0,dur:1.4,R:270,freeze:1};b.sp=6.5;sfx.charge()}
+    if(st===0){
+      /* 力量守衛兩招輪流：力場充能（原有）／巨像衝鋒（新增）。同一時間只會有一個 cast，不會互相衝突 */
+      if(b.alt=!b.alt){b.cast={k:'blast',t:0,dur:1.4,R:270,freeze:1};b.sp=6.5;sfx.charge()}
+      else{b.cast={k:'rush',t:0,dur:99,freeze:1,a:Math.atan2(p.y-b.y,p.x-b.x),go:0,n:0,max:b.hp<b.max*.5?2:1,w:0,aim:.6,wind:.85};b.sp=6;sfx.roar()}
+    }
     else if(st===1){
+      /* 空間守衛兩招輪流：空間跳躍（原有）／空間門陣（新增，四道傳送門同時從不同方向射擊） */
+      if(!(b.alt=!b.alt)){
+        const g=[];for(let i=0;i<4;i++){let x,y,k=0;do{const a=Math.random()*6.283,r=230+Math.random()*120;x=p.x+Math.cos(a)*r;y=p.y+Math.sin(a)*r;k++}while((x<60||x>W-60||y<70||y>H-110||g.some(q=>Math.hypot(q.x-x,q.y-y)<170))&&k<30);x=Math.max(60,Math.min(W-60,x));y=Math.max(70,Math.min(H-110,y));g.push({x,y})}
+        b.cast={k:'gate',t:0,dur:2.4,g,v:0,freeze:1};b.sp=4;sfx.tp();return;
+      }
       let x,y,k=0;do{const a=Math.random()*6.283,r=190+Math.random()*150;x=p.x+Math.cos(a)*r;y=p.y+Math.sin(a)*r;k++}while((x<70||x>W-70||y<80||y>H-120)&&k<20);
       x=Math.max(70,Math.min(W-70,x));y=Math.max(80,Math.min(H-120,y));
       b.cast={k:'tp',t:0,dur:.55,dx:x,dy:y,ox:b.x,oy:b.y,freeze:1,done:0};b.sp=3;sfx.tp();
     }
     else if(st===2){
-      const pts=[],cn=(q=>q<.2?1:q<.75?2:3)(Math.random());for(let i=0;i<cn;i++){let x,y,k=0;do{x=90+Math.random()*(W-180);y=80+Math.random()*(H-260);k++}while(Math.hypot(x-p.x,y-p.y)<150&&k<12);pts.push([x,y])}
+      const pts=[],cn=Math.min(DC_MAX-S.dc.length,(q=>q<.2?1:q<.75?2:3)(Math.random()));if(cn<=0){b.sp=3;return}for(let i=0;i<cn;i++){let x,y,k=0;do{x=90+Math.random()*(W-180);y=80+Math.random()*(H-260);k++}while(Math.hypot(x-p.x,y-p.y)<150&&k<12);pts.push([x,y])}
       b.cast={k:'dc',t:0,dur:.9,pts,freeze:1};b.sp=10;sfx.glitch();
     }
     else if(st===3){b.cast={k:'soul',t:0,dur:1.3,freeze:0};b.sp=7;sfx.drain()}
@@ -237,6 +248,22 @@ function mountShooter(stage,done){
         for(let i=0;i<12;i++)eb(b.x,b.y,i*.5236+.2,170,col,45);
         b.cast=null;
       }
+    }else if(c.k==='rush'){
+      /* 巨像衝鋒：先蓄力並鎖定方向（顯示預警帶），然後以極快速度直線衝撞；結束時震出一圈大型彈。血量低於一半時連衝兩次 */
+      if(!c.go){
+        c.w+=dt;if(c.w<c.aim)c.a=Math.atan2(p.y-b.y,p.x-b.x);
+        if(c.w>=c.wind){c.go=1;c.dm=0;b.dash=1;sfx.blast();S.shake=Math.max(S.shake,.2)}
+      }else{
+        const sp=880*dt;c.dm+=dt;
+        b.x=Math.max(60,Math.min(W-60,b.x+Math.cos(c.a)*sp));b.y=Math.max(70,Math.min(H-90,b.y+Math.sin(c.a)*sp));
+        S.pa.push({x:b.x,y:b.y,vx:0,vy:0,l:.3,m:.3,c:col});
+        if(c.dm>=.5){
+          b.dash=0;c.n++;ring(b.x,b.y,col,120,.4);burst(b.x,b.y,'#d9b8ff',24,260);S.shake=.35;sfx.mini();
+          for(let i=0;i<10;i++)eb(b.x,b.y,i*.6283+.3,150,col,50,{r:8});
+          if(c.n<c.max){c.go=0;c.w=0;c.aim=.3;c.wind=.5}
+          else{b.cast=null;pickWp(b)}
+        }
+      }
     }else if(c.k==='tp'){
       if(c.t<.1){b.al=1;b.sc=1}
       else if(c.t<.2){const k=(c.t-.1)/.1;b.al=1-k;b.sc=1-.85*k}
@@ -247,10 +274,14 @@ function mountShooter(stage,done){
         if(c.t>=.3&&!c.vol){c.vol=1;const a=Math.atan2(p.y-b.y,p.x-b.x);for(let i=-2;i<=2;i++)eb(b.x,b.y,a+i*.2,240,shade(col,.5),60)}
       }
       if(c.t>=.55){b.al=1;b.sc=1;b.hid=0;b.cast=null}
+    }else if(c.k==='gate'){
+      /* 空間門陣：四道傳送門打開後，分兩波各自朝玩家射出三連彈 */
+      while(c.v<2&&c.t>=.95+c.v*.65){c.v++;c.g.forEach(q=>{const a=Math.atan2(p.y-q.y,p.x-q.x);for(let i=-1;i<=1;i++)eb(q.x,q.y,a+i*.2,215,shade(col,.5),50);ring(q.x,q.y,col,60,.25);burst(q.x,q.y,'#bfe0ff',10,160)});sfx.pop()}
+      if(c.t>=c.dur)b.cast=null;
     }else if(c.k==='dc'){
       if(c.t>=c.dur){
-        c.pts.forEach(q=>{S.dc.push({x:q[0],y:q[1],r:40,hp:b.max*.15,max:b.max*.15,f:0,life:9,age:0,rt:1.2,at:1,st:.5,sa:Math.random()*6.28,sw:0,acc:Math.random()<.5?9:-9,ang:Math.random()*6,wx:q[0],wy:q[1],wt:0,decoy:1});ring(q[0],q[1],col,70,.4);burst(q[0],q[1],col,26,200)});
-        sfx.glitch();b.cast=null;
+        c.pts.forEach(q=>{S.dc.push({x:q[0],y:q[1],r:40,hp:b.max*.15,max:b.max*.15,f:0,age:0,rt:1.2,at:1,st:.5,sa:Math.random()*6.28,sw:0,acc:Math.random()<.5?9:-9,ang:Math.random()*6,wx:q[0],wy:q[1],wt:0,decoy:1});ring(q[0],q[1],col,70,.4);burst(q[0],q[1],col,26,200)});
+        sfx.glitch();b.cast=null;b.sp=15;   /* 分身出現後 15 秒才能再召喚 */
       }
     }else if(c.k==='soul'){
       if(Math.hypot(p.x-b.x,p.y-b.y)>400){burst((b.x+p.x)/2,(b.y+p.y)/2,col,18,120);S.dn.push({x:p.x,y:p.y-24,t:.9,s:'掙脫',c:'#fff'});b.cast=null}
@@ -650,9 +681,9 @@ function mountShooter(stage,done){
         if(S.boss&&S.boss.hp<=0){const b2=S.boss;S.dark=0;S.rl=null;S.score+=st===6?3000:500;burst(b2.x,b2.y,SG(st).c,90,320);ring(b2.x,b2.y,SG(st).c,160,.7);S.shake=.6;S.flash=.3;sfx.bossdie();S.boss=null;S.eb=[];S.dc=[];S.zones=[];S.rifts=[];S.bar=[];S.hist=[];S.en.forEach(e=>burst(e.x,e.y,SG(st).c,8));S.en=[];if(st===6){S.ph='done';S.drop=null;S.st='snap';S.snap=0;sfx.snap()}else{S.ph='drop';S.drop={x:b2.x,y:b2.y,g:G[st]}}}
       }
       if(S.drop){const d=S.drop;d.y+=((H/2)-d.y)*dt*2;if(Math.hypot(d.x-p.x,d.y-p.y)<34){
-        burst(d.x,d.y,d.g.c,60,260);S.got.push(d.g.id);S.wp=d.g.id;S.drop=null;S.stage++;S.flash=.35;const hv=d.g.id==='reality'||d.g.id==='mind'?400:300;p.hp=Math.min(MAXHP,p.hp+hv);sfx.gem();
-        S.dn.push({x:p.x,y:p.y-22,t:1,s:'+'+hv,c:'#6dffa0'});
-        if(S.stage===6){S.ph='wave';S.pt=17;S.sp=99;p.hp=Math.min(MAXHP,p.hp+300);S.dn.push({x:p.x,y:p.y-42,t:1.1,s:'+300',c:'#6dffa0'});banner('最終關・薩諾斯逼近')}else{S.ph='wave';S.pt=0;S.sp=1;banner(`第 ${S.stage+1} 關・${G[S.stage].n}寶石`)}}}
+        burst(d.x,d.y,d.g.c,60,260);S.got.push(d.g.id);S.wp=d.g.id;S.drop=null;S.stage++;S.flash=.35;const hv=HEAL[d.g.id]==null?300:HEAL[d.g.id];p.hp=Math.min(MAXHP,p.hp+hv);sfx.gem();
+        S.dn.push({x:p.x,y:p.y-22,t:1,s:hv>=MAXHP?'血量回滿':'+'+hv,c:'#6dffa0'});
+        if(S.stage===6){S.ph='wave';S.pt=17;S.sp=99;banner('最終關・薩諾斯逼近')}else{S.ph='wave';S.pt=0;S.sp=1;banner(`第 ${S.stage+1} 關・${G[S.stage].n}寶石`)}}}
     }
     if(S.st==='snap'){S.snap+=dt;S.eb=S.eb.filter(()=>false);
       if(S.snap>2.2){S.st='win';done(S.score);showOv('擊敗薩諾斯','你集齊了六顆無限寶石，擊敗了所有守衛與瘋狂泰坦薩諾斯！<br>最終得分 '+S.score+'。','再玩一次')}}
@@ -714,9 +745,8 @@ function mountShooter(stage,done){
       return true});
     /* 現實守衛的幻象分身 */
     S.dc=S.dc.filter(d=>{
-      d.age+=dt;d.life-=dt;d.f=Math.max(0,d.f-dt);
+      d.age+=dt;d.f=Math.max(0,d.f-dt);
       if(d.hp<=0){burst(d.x,d.y,G[2].c,40,240);ring(d.x,d.y,G[2].c,70,.35);for(let i=0;i<6;i++)eb(d.x,d.y,i*1.047+Math.random(),160,'#d9002f',40);sfx.pop();return false}
-      if(d.life<=0){burst(d.x,d.y,G[2].c,16,140);return false}
       if(d.age>.5){
         if(d.mode==null){d.mode='idle';d.mt=.8+Math.random()*1.4;d.cv=0}
         d.mt-=dt;
@@ -912,6 +942,9 @@ function mountShooter(stage,done){
       else if(c.k==='blast'){const k=c.t/c.dur;ctx.globalAlpha=.5+.45*k;ctx.fillStyle='#1a0430';ctx.beginPath();ctx.arc(b.x,b.y,c.R*k,0,7);ctx.fill();ctx.shadowColor='#b57bff';ctx.shadowBlur=18;ctx.globalAlpha=.4+.5*k;ctx.strokeStyle='#b57bff';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(b.x,b.y,c.R*k,0,7);ctx.stroke();ctx.shadowBlur=0;
         ctx.globalAlpha=.9;ctx.strokeStyle='#6b2bd0';ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.beginPath();ctx.arc(b.x,b.y,c.R,0,7);ctx.stroke()}
       else if(c.k==='tp'){const kk=c.t<.12?c.t/.12:c.t<.38?1:Math.max(0,1-(c.t-.38)/.17);drawPortal(c.ox,c.oy,kk,col);drawPortal(c.dx,c.dy,kk,col)}
+      else if(c.k==='rush'){if(!c.go){const k=Math.min(1,c.w/c.wind),L=520;ctx.lineCap='round';ctx.strokeStyle=col;ctx.globalAlpha=.1+.22*k;ctx.lineWidth=b.r*2;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x+Math.cos(c.a)*L,b.y+Math.sin(c.a)*L);ctx.stroke();ctx.globalAlpha=.45+.45*k;ctx.lineWidth=2.5;ctx.setLineDash([12,9]);ctx.stroke()}}
+      else if(c.k==='gate'){const kk=Math.min(1,c.t/.4)*(c.t>c.dur-.35?Math.max(0,(c.dur-c.t)/.35):1),p=S.p;c.g.forEach(q=>drawPortal(q.x,q.y,kk,col));
+        if(c.t<.95){ctx.strokeStyle=col;ctx.globalAlpha=.2+.4*(c.t/.95);ctx.lineWidth=1.6;ctx.setLineDash([6,8]);c.g.forEach(q=>{ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.lineTo(p.x,p.y);ctx.stroke()})}}
       else if(c.k==='dc'){ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.globalAlpha=.4+.5*(c.t/c.dur);c.pts.forEach(q=>{ctx.beginPath();ctx.arc(q[0],q[1],20+40*(c.t/c.dur),0,7);ctx.stroke()})}
       else if(c.k==='psy'){const k=Math.min(1,c.t/1);ctx.strokeStyle=col;ctx.shadowColor=col;ctx.shadowBlur=18;ctx.lineWidth=3;ctx.globalAlpha=.3+.5*(c.t<1?k:0);for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(b.x,b.y,(c.t<1?70*(1-k)+20:30)+i*22,0,7);ctx.stroke()}}
       else if(c.k==='soul'||c.k==='mind'){const p=S.p;ctx.strokeStyle=col;ctx.shadowColor=col;ctx.shadowBlur=14;ctx.lineWidth=1.5+3*(c.t/c.dur);ctx.globalAlpha=.5+.4*Math.sin(T*30);
@@ -983,7 +1016,7 @@ function mountShooter(stage,done){
       ctx.restore();
       if(e.ty===18){const sa=e.sa==null?e.a:e.sa;ctx.save();ctx.translate(e.x,e.y);ctx.rotate(sa);ctx.shadowColor='#7ff0ff';ctx.shadowBlur=16;ctx.strokeStyle='#bffaff';ctx.lineWidth=6;ctx.lineCap='round';ctx.globalAlpha=.55+.25*Math.sin(T*6);ctx.beginPath();ctx.arc(0,0,e.r+9,-1.15,1.15);ctx.stroke();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.beginPath();ctx.arc(0,0,e.r+9,-1.15,1.15);ctx.stroke();ctx.restore()}
       if(e.ty===19&&e.chg){ctx.save();ctx.strokeStyle='#7ff0ff';ctx.globalAlpha=.4+.5*Math.abs(Math.sin(T*16));ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y,e.r+8,0,7);ctx.stroke();ctx.restore()}});
-    S.dc.forEach(d=>{const al=Math.min(1,d.age/.5)*(d.life<1?Math.max(.2,d.life):1)*.82;{const cv=d.cv||0;if(cv<1)drawLiquid(d,G[2].c,al*(1-cv),d.ang);if(cv>0)drawWheel(d,G[2].c,al*cv)}d.f=Math.max(0,d.f-.016);ctx.fillStyle='#1a1733';ctx.fillRect(d.x-26,d.y-d.r-12,52,5);ctx.fillStyle=G[2].c;ctx.fillRect(d.x-26,d.y-d.r-12,52*Math.max(0,d.hp/d.max),5)});
+    S.dc.forEach(d=>{const al=Math.min(1,d.age/.5)*.82;{const cv=d.cv||0;if(cv<1)drawLiquid(d,G[2].c,al*(1-cv),d.ang);if(cv>0)drawWheel(d,G[2].c,al*cv)}d.f=Math.max(0,d.f-.016);ctx.fillStyle='#1a1733';ctx.fillRect(d.x-26,d.y-d.r-12,52,5);ctx.fillStyle=G[2].c;ctx.fillRect(d.x-26,d.y-d.r-12,52*Math.max(0,d.hp/d.max),5)});
     if(S.boss){const b=S.boss;
       if(!b.hid){const al=b.al==null?1:b.al;if(S.stage===0)drawOrbBoss(b,col,al);else if(S.stage===1)drawCube(b,col,al);else if(S.stage===2)drawLiquid(b,col,al,0);else if(S.stage===4)drawEyeBoss(b,col,al);else if(S.stage===5)drawTallGem(b,col,al);else if(S.stage===6)drawThanos(b,al);else drawBoss(b,col,al,false)}
       b.f=Math.max(0,b.f-.016);
@@ -1053,6 +1086,6 @@ function mountShooter(stage,done){
   window.__stop=()=>{dead=true;cancelAnimationFrame(raf);removeEventListener('keydown',kd);removeEventListener('keyup',ku);try{AC&&AC.close()}catch(e){}};
   window.__sh=()=>S;
   reset('menu');
-  showOv('無限寶石：寶石機鬥','駕駛你的戰機闖過七關：前六關各有一位寶石守衛，擊敗後取得寶石並解鎖專屬武器；集齊六顆之後，最終關要面對瘋狂泰坦・薩諾斯。<br>移動：WASD／方向鍵／按住拖曳；機頭會自動轉向最近的目標並從正前方開火。血量 1250，不同攻擊扣的血不同，每位守衛都有自己的彈幕和特殊技。','開始出擊');
+  showOv('無限寶石：寶石機鬥','駕駛你的戰機闖過七關：前六關各有一位寶石守衛，擊敗後取得寶石並解鎖專屬武器；集齊六顆之後，最終關要面對瘋狂泰坦・薩諾斯。<br>移動：WASD／方向鍵／按住拖曳；機頭會自動轉向最近的目標並從正前方開火。血量 1500，不同攻擊扣的血不同，每位守衛都有自己的彈幕和特殊技。','開始出擊');
   raf=requestAnimationFrame(loop);
 }
