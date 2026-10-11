@@ -34,13 +34,12 @@ function mountSoulArena(stage,done){
   const hc=h('canvas',{width:Math.round(W*dpr),height:Math.round(H*dpr),style:'position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:none'});
   const pickBox=h('div',{class:'ar-pick',hidden:''});
   const pz=h('div',{class:'ty-ov',hidden:'',style:'cursor:pointer;background:rgba(7,6,15,.7)'},h('div',{class:'ty-t',style:'color:'+OR},'已暫停'),h('p',{},'點擊畫面繼續（滑鼠會被鎖定在畫面內，按 Esc 可隨時暫停）'));
-  const start=h('button',{class:'btn'},'進入戰場'),glbBtn=h('button',{class:'btn',type:'button',style:'background:transparent'},'自訂角色（選擇 .glb）'),glbDel=h('button',{class:'btn',type:'button',style:'background:transparent',hidden:''},'移除自訂角色'),glbFlip=h('button',{class:'btn',type:'button',style:'background:transparent',hidden:''},'角色轉向 180°');
-  const glbIn=h('input',{type:'file',accept:'.glb,.gltf',hidden:''}),glbMsg=h('div',{style:'font-size:12px;color:var(--mut);max-width:520px;min-height:1.2em'});
+  const start=h('button',{class:'btn'},'進入戰場');
   const ov=h('div',{class:'ty-ov',style:'overflow:auto;justify-content:flex-start;padding-top:18px'},h('div',{class:'ty-t',style:'color:'+OR},'靈魂戰場'),
     h('p',{},'殭屍與怪物一波波湧來，共 10 波，第 4、7 波有屍王，第 10 波是最終魔王「寶石吞噬者」。擊倒敵人掉落經驗晶體，升級時選擇強化機體，或解鎖／強化六顆無限寶石各自的技能。'),
     h('div',{class:'ty-leg'},[['WASD','移動（Shift 加速）'],['滑鼠','轉動視角與瞄準（第一次點擊畫面會鎖定滑鼠，Esc 暫停）'],['左鍵（按住）','射擊'],['1–6','施放已解鎖的寶石技能'],['無法鎖定滑鼠時','把滑鼠移到畫面左右邊緣轉動視角；←／→ 也可轉動']].map(q=>h('div',{},h('b',{},q[0]),h('span',{},q[1])))),
-    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;justify-content:center'},start,glbBtn,glbFlip,glbDel),glbMsg,
-    h('div',{style:'font-size:12px;color:var(--mut);max-width:520px'},'自訂角色只在你的瀏覽器本機載入，不會上傳。使用 Sketchfab 等網站的模型前，請確認它的授權（CC-BY 需標示作者、NC 不可商用）允許你這樣使用。'),glbIn);
+    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;justify-content:center'},start),
+  );
   const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(dpr);R.setSize(W,H,false);R.setClearColor(0x120a10);
   R.domElement.style.cssText='position:absolute;inset:0;width:100%;height:100%;display:block';
   box.append(R.domElement,hc,pickBox,pz,ov);stage.append(hud,h('div',{class:'ty-wrap'},box),h('div',{class:'hint'},'WASD 移動　・　滑鼠瞄準、左鍵射擊　・　1–6 寶石技能　・　升級時按 1–3 或點選強化　・　Esc 暫停'));
@@ -96,29 +95,6 @@ function mountSoulArena(stage,done){
   {const gun=new THREE.Mesh(new THREE.BoxGeometry(.1,.16,.9),M(0x222230,{emissive:0xff9a1f,emissiveIntensity:.25}));gun.position.set(.3,1.32,.55);proc.g.add(gun);
    const cape=new THREE.Mesh(new THREE.BoxGeometry(.6,.9,.06),M(0x3a1a08,{emissive:0xff7a1a,emissiveIntensity:.2}));cape.position.set(0,1.05,-.25);proc.g.add(cape)}
   hero.add(proc.g);hero.add(shadow(.7));scene.add(hero);
-  let custom=null,mixer=null,acts={},curAct=null,flip=false;try{flip=localStorage.getItem('bi_glbflip')==='1'}catch(e){}
-  function setAct(n){if(!mixer||curAct===n)return;const a=acts[n];if(!a)return;const o=acts[curAct];a.reset().play();if(o)o.crossFadeTo(a,.2,false);curAct=n}
-  function clearCustom(){if(custom){hero.remove(custom);custom=null}mixer=null;acts={};curAct=null;proc.g.visible=true;glbDel.hidden=true;glbFlip.hidden=true}
-  function applyGLB(buf,quiet){
-    if(!THREE.GLTFLoader){glbMsg.textContent='GLB 載入器尚未載入。';return}
-    try{new THREE.GLTFLoader().parse(buf,'',gl=>{
-      clearCustom();const m=gl.scene,b1=new THREE.Box3().setFromObject(m),sz=b1.getSize(new THREE.Vector3()),sc=1.8/Math.max(.01,sz.y);m.scale.multiplyScalar(sc);
-      const b2=new THREE.Box3().setFromObject(m),ct=b2.getCenter(new THREE.Vector3());m.position.x-=ct.x;m.position.z-=ct.z;m.position.y-=b2.min.y;
-      const wr=new THREE.Group();wr.add(m);wr.userData.inner=m;custom=wr;hero.add(wr);proc.g.visible=false;
-      if(gl.animations&&gl.animations.length){mixer=new THREE.AnimationMixer(m);const f=re=>gl.animations.find(a=>re.test(a.name));
-        const idle=f(/idle|stand|wait|breath/i),run=f(/run|walk|move|jog/i)||gl.animations[0];
-        if(idle)acts.idle=mixer.clipAction(idle);if(run)acts.run=mixer.clipAction(run);if(!acts.idle&&acts.run){acts.idle=acts.run}setAct('idle')}
-      glbDel.hidden=false;glbFlip.hidden=false;glbMsg.textContent=quiet?'已載入先前選擇的自訂角色。':'自訂角色已載入（若角色背對前方，按「角色轉向 180°」）。'},
-      err=>{glbMsg.textContent='無法讀取這個模型檔：請選擇 .glb 或 .gltf（含內嵌資源）。'})}catch(e){glbMsg.textContent='無法讀取這個模型檔。'}
-  }
-  const idb=(m,v)=>new Promise(res=>{try{const rq=indexedDB.open('bi_soul',1);rq.onupgradeneeded=()=>rq.result.createObjectStore('k');rq.onerror=()=>res(null);
-    rq.onsuccess=()=>{try{const db=rq.result,tx=db.transaction('k',m==='get'?'readonly':'readwrite'),os=tx.objectStore('k'),r=m==='get'?os.get('glb'):m==='set'?os.put(v,'glb'):os.delete('glb');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)}catch(e){res(null)}}}catch(e){res(null)}});
-  glbBtn.onclick=()=>glbIn.click();
-  glbIn.onchange=()=>{const f=glbIn.files&&glbIn.files[0];if(!f)return;if(f.size>60e6){glbMsg.textContent='檔案太大（上限 60 MB）。';return}
-    const rd=new FileReader();rd.onload=()=>{applyGLB(rd.result);idb('set',rd.result)};rd.readAsArrayBuffer(f);glbIn.value=''};
-  glbDel.onclick=()=>{clearCustom();idb('del');glbMsg.textContent='已改回預設角色。'};
-  glbFlip.onclick=()=>{flip=!flip;try{localStorage.setItem('bi_glbflip',flip?'1':'0')}catch(e){}};
-  idb('get').then(b=>{if(b&&stage.isConnected)applyGLB(b,true)});
   /* —— 狀態 —— */
   let S=null,T=0,raf=0,last=0,yaw=0,pit=.12,locked=false,fb=false,hadLock=false;
   const keys={},ms={x:.5,y:.5,down:false};
@@ -366,9 +342,8 @@ function mountSoulArena(stage,done){
   /* —— 畫面同步 —— */
   function sync(dt){
     const p=S.p,[fx,fz]=fwd();
-    hero.position.set(p.x,0,p.z);hero.rotation.y=Math.atan2(fx,fz)+(custom&&flip?PI:0);hero.visible=!(p.inv>0&&S.run&&Math.floor(T*20)%2);
+    hero.position.set(p.x,0,p.z);hero.rotation.y=Math.atan2(fx,fz);hero.visible=!(p.inv>0&&S.run&&Math.floor(T*20)%2);
     const mvk=Math.min(1,p.mv/5);proc.legL.rotation.x=Math.sin(p.sw)*.8*mvk;proc.legR.rotation.x=-Math.sin(p.sw)*.8*mvk;proc.g.position.y=Math.abs(Math.sin(p.sw))*.06*mvk;
-    if(mixer){mixer.update(dt);setAct(p.mv>.6?'run':'idle')}
     props.forEach(q=>q.g.children.forEach(c=>{if(c.userData.spin)c.rotation.y=T*1.3}));
     for(const e of S.en){const m=e.mdl;e.g.position.set(e.x,e.t==='wsp'?1.1+Math.sin(T*3+e.ph)*.25:0,e.z);e.g.rotation.y=e.face;
       if(m.legL){const s=Math.sin(e.wk)*.6;m.legL.rotation.x=s;m.legR.rotation.x=-s;m.armL.rotation.x=-1.4+Math.sin(e.wk*.5)*.18;m.armR.rotation.x=-1.4-Math.sin(e.wk*.5)*.18}
