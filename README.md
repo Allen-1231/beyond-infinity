@@ -10,7 +10,7 @@ css/style.css           # 全站樣式
 js/three.js             # Three.js（靈魂戰場用）
 js/core.js              # 路由、頁面、音效、排行榜、寶石 3D 繪製
 js/games/
-  archer.js             # 寶石弓手（力量）
+  archer.js             # 無限寶石：生存戰（力量）
   tunnel.js             # 螺旋隧道（空間）
   shooter.js            # 寶石機鬥（現實）
   soul.js               # 靈魂戰場（靈魂）
