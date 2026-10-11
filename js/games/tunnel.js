@@ -43,7 +43,7 @@ function mountTunnel(stage,done){
   const lc=k=>k*STEP+STEP/2;
   function reset(){S={dist:0,speed:15,th:lc(0),vel:0,lives:3,inv:0,bonus:0,combo:1,got:new Set(),items:[],next:30,safe:0,shake:0,flash:0,reson:0,t:0,over:false,parts:[],msg:null,gems:0,fx:{power:0,time:0},gold:0,goldK:0,coins:0,gc:0,gr:0,mindAt:-9999,last:[],soulAt:-9999,warp:0,stars:Array.from({length:190},()=>({a:rnd()*6.283,z:rnd()*40,r:1.06+Math.pow(rnd(),1.6)*6,b:.4+rnd()*.6}))}}
   function pickType(){
-    let pool=GEM.map((g,i)=>[i,g.w]).filter(q=>!S.last.includes(q[0])&&!(q[0]===3&&S.dist+30<S.soulAt+700)&&!(q[0]===5&&S.dist+30<S.mindAt+300)),r=rnd()*pool.reduce((a,q)=>a+q[1],0),ty=pool[0][0];
+    let pool=GEM.map((g,i)=>[i,g.w]).filter(q=>!S.last.includes(q[0])&&!(q[0]===3&&S.dist+30<S.soulAt+700)&&!(q[0]===5&&S.dist+30<S.mindAt+800)),r=rnd()*pool.reduce((a,q)=>a+q[1],0),ty=pool[0][0];
     for(const q of pool){if(r<q[1]){ty=q[0];break}r-=q[1]}
     if(ty===3)S.soulAt=S.next;if(ty===5)S.mindAt=S.next;S.last.push(ty);if(S.last.length>2)S.last.shift();return ty;
   }
