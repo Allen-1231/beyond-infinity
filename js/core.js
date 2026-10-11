@@ -6,10 +6,10 @@ function h(t,a={},...k){const e=document.createElement(t);for(const x in a){if(x
 
 /* ===== 遊戲註冊表：新增遊戲只要在這裡加一筆 ===== */
 const GAMES=[
- {id:'archer',stone:'力量',c:'#a24bff',name:'寶石弓手',desc:'弓箭傳說式闖關：邊走邊躲、停下自動射擊，升級從三個技能中選一個。共 25 關，每 5 關一位魔王，途中還有中衛兵。',ready:true,mount:mountArcher},
+ {id:'archer',stone:'力量',c:'#a24bff',name:'無限寶石：生存戰',desc:'Roguelite 生存：你只有一把基本槍或刀，寶石能力都在敵人手上。升級隨機選強化，組出火焰、零度、雷暴、不死等流派；每 3 分鐘一位寶石守護者。',ready:true,mount:mountArcher},
  {id:'tunnel',stone:'空間',c:'#2f7bff',name:'螺旋隧道',desc:'在太空中的螺旋隧道裡高速飛行，換線閃開障礙，撿起六種寶石，每一種都有自己的能力。',ready:true,mount:mountTunnel},
  {id:'shooter',stone:'現實',c:'#ff3b3b',name:'寶石機鬥',desc:'駕駛你的戰機，闖過六位寶石守衛，取得寶石、解鎖專屬武器，最後直面瘋狂泰坦薩諾斯。',ready:true,mount:mountShooter},
- {id:'soul',stone:'靈魂',c:'#ff9a1f',name:'靈魂戰場',desc:'3D 鍵盤加滑鼠戰鬥：WASD 移動、滑鼠瞄準射擊，右鍵靈魂爆發、空白鍵衝刺。無限波次，每 5 波一位守魂魔王，升級時選強化。',ready:true,mount:mountSoulArena},
+ {id:'soul',stone:'靈魂',c:'#ff9a1f',name:'靈魂戰場',desc:'3D 第三人稱射擊：WASD 移動、滑鼠瞄準，殺殭屍與怪物。升級時選擇強化機體，或解鎖六顆寶石各自的技能（按 1–6 施放），10 波內擊敗最終魔王「寶石吞噬者」。可自訂 GLB 角色。',ready:true,mount:mountSoulArena},
  {id:'typing',stone:'時間',c:'#2fe07a',name:'打字遊戲',desc:'仿 ZType 的打字空戰：敵艦帶著英文單字逼近，打完單字就能擊落。六種無限寶石艦各有特色，每 5 波薩諾斯降臨。',ready:true,mount:mountTyping},
  {id:'vault',stone:'心靈',c:'#ffd52e',name:'心靈密碼',desc:'只有一關的多層密室：由外而內破解六層寶石封印，每層都是不同的謎題，並留下通往最終密碼的線索。進度會自動保存，用時與提示越少分數越高。',ready:true,mount:mountVault}
 ];
