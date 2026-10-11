@@ -89,6 +89,54 @@ function mountSoulArena(stage,done){
     return{g,armL,armR,legL,legR,sk,head,all};
   }
   function wispModel(){const g=new THREE.Group(),m=new THREE.Mesh(new THREE.IcosahedronGeometry(.55,0),M(0xff9a1f,{emissive:0xff9a1f,emissiveIntensity:1}));g.add(m);const t=new THREE.Mesh(new THREE.ConeGeometry(.4,1.1,6),BM(0xff6a10,{transparent:true,opacity:.6}));t.rotation.x=-PI/2;t.position.z=-.8;g.add(t);const e=new THREE.Mesh(new THREE.SphereGeometry(.14,6,6),BM(0xffffff));e.position.set(0,.05,.45);g.add(e);return{g,sk:m.material,all:[m.material],core:m}}
+  /* —— model.glb 怪物：內建極簡 GLB 解析器（支援 KHR_mesh_quantization），不依賴 GLTFLoader —— */
+  const GLB_URL=window.SOUL_GLB_URL||'assets/model.glb';   /* ← model.glb 放的位置，可自行修改 */
+  /* 各敵人類型可抽到的怪物（數字＝model.glb 內第幾隻，0 起算；8 號是比例尺標竿，不使用）。共 17 隻全部都有用到 */
+  const POOL={zom:[9,5,10],run:[13,14,12],brt:[1,2,11,4],spt:[7,6],wsp:[15,16,17,3],mbs:[0]};
+  let GLB=null;
+  function parseGLB(buf){
+    const dv=new DataView(buf);if(dv.getUint32(0,true)!==0x46546C67)throw new Error('不是 GLB 檔');
+    let off=12,js=null,bin=null;
+    while(off+8<=buf.byteLength){const len=dv.getUint32(off,true),ty=dv.getUint32(off+4,true);
+      if(ty===0x4E4F534A)js=JSON.parse(new TextDecoder().decode(new Uint8Array(buf,off+8,len)));
+      else if(ty===0x004E4942&&!bin)bin=buf.slice(off+8,off+8+len);
+      off+=8+len}
+    const bd=new DataView(bin),SZ={5120:1,5121:1,5122:2,5123:2,5125:4,5126:4},NC={SCALAR:1,VEC2:2,VEC3:3,VEC4:4};
+    const rd=(c,o)=>c===5126?bd.getFloat32(o,true):c===5125?bd.getUint32(o,true):c===5123?bd.getUint16(o,true):c===5122?bd.getInt16(o,true):c===5121?bd.getUint8(o):bd.getInt8(o);
+    const acc=i=>{const a=js.accessors[i],bv=js.bufferViews[a.bufferView],nc=NC[a.type],sz=SZ[a.componentType],st=bv.byteStride||nc*sz,base=(bv.byteOffset||0)+(a.byteOffset||0);
+      const out=a.componentType===5125||a.componentType===5123||a.componentType===5121?new Uint32Array(a.count*nc):new Float32Array(a.count*nc);
+      const sg=a.componentType===5120||a.componentType===5122,mx=sg?(a.componentType===5120?127:32767):(a.componentType===5121?255:65535);
+      for(let k=0;k<a.count;k++)for(let c=0;c<nc;c++){let v=rd(a.componentType,base+k*st+c*sz);if(a.normalized)v=sg?Math.max(v/mx,-1):v/mx;out[k*nc+c]=v}
+      return out};
+    const mats=(js.materials||[]).map(m=>{const pb=m.pbrMetallicRoughness||{},c=pb.baseColorFactor||[1,1,1,1],em=m.emissiveFactor||[0,0,0];
+      const tr=!!(m.extensions&&m.extensions.KHR_materials_transmission)||m.alphaMode==='BLEND';   /* 透射材質改用簡單半透明（效能） */
+      return new THREE.MeshStandardMaterial({color:new THREE.Color(c[0],c[1],c[2]),roughness:pb.roughnessFactor==null?.85:pb.roughnessFactor,metalness:pb.metallicFactor==null?.1:Math.min(.4,pb.metallicFactor),
+        emissive:new THREE.Color(em[0],em[1],em[2]),transparent:tr,opacity:tr?.55:1,depthWrite:!tr,side:m.doubleSided||tr?THREE.DoubleSide:THREE.FrontSide})});
+    const geos={},geo=(mi,pi)=>{const k=mi+'_'+pi;if(geos[k])return geos[k];const pr=js.meshes[mi].primitives[pi],g=new THREE.BufferGeometry();
+      g.setAttribute('position',new THREE.BufferAttribute(acc(pr.attributes.POSITION),3));
+      if(pr.attributes.NORMAL!=null)g.setAttribute('normal',new THREE.BufferAttribute(acc(pr.attributes.NORMAL),3));
+      if(pr.indices!=null)g.setIndex(new THREE.BufferAttribute(acc(pr.indices),1));
+      if(pr.attributes.NORMAL==null)g.computeVertexNormals();
+      g.userData.shared=true;return geos[k]=g};
+    const build=ni=>{const n=js.nodes[ni],o=new THREE.Group();
+      if(n.matrix)new THREE.Matrix4().fromArray(n.matrix).decompose(o.position,o.quaternion,o.scale);
+      if(n.translation)o.position.fromArray(n.translation);if(n.rotation)o.quaternion.fromArray(n.rotation);if(n.scale)o.scale.fromArray(n.scale);
+      if(n.mesh!=null)js.meshes[n.mesh].primitives.forEach((pr,pi)=>o.add(new THREE.Mesh(geo(n.mesh,pi),pr.material!=null?mats[pr.material]:mats[0])));
+      (n.children||[]).forEach(c=>o.add(build(c)));return o};
+    const sc=js.scenes[js.scene||0];let roots=sc.nodes;if(roots.length===1&&(js.nodes[roots[0]].children||[]).length>1)roots=js.nodes[roots[0]].children;
+    const cr=roots.map(ni=>{const g=build(ni);g.position.set(0,0,0);const wrap=new THREE.Group();wrap.add(g);wrap.updateMatrixWorld(true);
+      const bb=new THREE.Box3().setFromObject(wrap),sz=bb.getSize(new THREE.Vector3()),c=bb.getCenter(new THREE.Vector3());
+      g.position.set(-c.x,-bb.min.y,-c.z);return{tpl:wrap,ex:sz.x,ey:sz.y,ez:sz.z}});
+    return{cr}}
+  /* 以 model.glb 的怪物建出敵人。模型沒有骨架，所以用「整隻身體」做走路晃動／飄浮動畫 */
+  function glbModel(t){
+    const d=ET[t],pl=POOL[t],tp=GLB.cr[pl[(rnd()*pl.length)|0]],g=new THREE.Group(),body=tp.tpl.clone(true),mm=new Map(),all=[];
+    body.traverse(o=>{if(o.isMesh){let m=mm.get(o.material);if(!m){m=o.material.clone();mm.set(o.material,m);all.push(m)}o.material=m}});
+    const fly=!!d.fly,s=Math.min(d.h/tp.ey,d.r*2*(d.boss?2.9:2)/Math.max(tp.ex,tp.ez)),hh=tp.ey*s,by=fly?-hh/2:0;
+    body.scale.setScalar(s);body.position.y=by;g.add(body);
+    return{g,all,sk:all[0],hh,anim(e,T){
+      if(fly){body.position.y=by+Math.sin(T*4+e.ph)*.06;body.rotation.z=Math.sin(T*2.5+e.ph)*.12;body.rotation.x=Math.sin(T*1.7+e.ph)*.08}
+      else{const k=Math.sin(e.wk*1.1);body.position.y=Math.abs(k)*.07*Math.max(1,hh*.5);body.rotation.z=k*.07;body.rotation.x=Math.sin(e.wk*.55)*.04;body.scale.y=s*(1+Math.sin(T*3+e.ph)*.02)}}}}
   /* —— 玩家 —— */
   const hero=new THREE.Group(),proc=humanoid({col:0xd9a77a,cloth:0xff9a1f,eye:0x111111,s:1});
   proc.armL.rotation.x=proc.armR.rotation.x=-1.45;
@@ -119,15 +167,16 @@ function mountSoulArena(stage,done){
   function burst(x,y,z,c,n=10,sp=4,s=.12){for(let i=0;i<n;i++){const a=rnd()*6.283,v=rnd()*sp;S.pa.push({x,y,z,vx:Math.cos(a)*v,vy:1+rnd()*sp*.8,vz:Math.sin(a)*v,l:.4+rnd()*.5,m:.9,c,s})}}
   function dnum(x,y,z,s,c){if(S.dn.length<40)S.dn.push({x,y,z,t:.8,s,c})}
   /* —— 敵人 —— */
-  function disp(g){g.traverse(o=>{if(o.isMesh){if(o.geometry&&o.geometry!==sh&&o.geometry!==RG)o.geometry.dispose();if(o.material&&o.material!==shM)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose())}})}
+  function disp(g){g.traverse(o=>{if(o.isMesh){if(o.geometry&&o.geometry!==sh&&o.geometry!==RG&&!o.geometry.userData.shared)o.geometry.dispose();if(o.material&&o.material!==shM)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose())}})}
   function spawnEn(t,x,z){
     const d=ET[t],w=Math.max(1,S.wave),m=d.boss?1:1+.1*(w-1);
-    const mdl=t==='wsp'?wispModel():humanoid({col:d.col,eye:d.eye,s:d.s||1,back:t==='spt',armor:t==='brt'||t==='mbs'||t==='fbs',cloth:t==='fbs'?0x201030:t==='mbs'?0x3a1a1a:0x2c2c3a});
-    if(t!=='wsp'){mdl.armL.rotation.x=mdl.armR.rotation.x=-1.4}
+    const useG=!!(GLB&&POOL[t]);
+    const mdl=useG?glbModel(t):t==='wsp'?wispModel():humanoid({col:d.col,eye:d.eye,s:d.s||1,back:t==='spt',armor:t==='brt'||t==='mbs'||t==='fbs',cloth:t==='fbs'?0x201030:t==='mbs'?0x3a1a1a:0x2c2c3a});
+    if(!useG&&t!=='wsp'){mdl.armL.rotation.x=mdl.armR.rotation.x=-1.4}
     const g=mdl.g;g.position.set(x,0,z);g.add(shadow(d.r*1.15));
     let og=null;if(t==='fbs'){og=new THREE.Group();GEM.forEach((q,i)=>{const o=new THREE.Mesh(new THREE.OctahedronGeometry(.45),BM(new THREE.Color(q.c)));const a=i/6*PI*2;o.position.set(Math.cos(a)*3.6,6.8,Math.sin(a)*3.6);og.add(o)});g.add(og)}
     dyn.add(g);
-    const e={t,d,x,z,hp:d.hp*m,max:d.hp*m,sp:d.sp*(d.boss?1:1+.02*w),r:d.r,h:d.h,y0:t==='wsp'?.6:0,at:rnd()*d.at,kx:0,kz:0,stun:0,fl:0,ph:rnd()*6,mdl,g,og,boss:!!d.boss,bt:2.5,b2:5,b3:9,face:0,wk:0};
+    const e={t,d,x,z,hp:d.hp*m,max:d.hp*m,sp:d.sp*(d.boss?1:1+.02*w),r:d.r,h:useG?Math.max(.8,Math.min(d.h,mdl.hh*1.15)):d.h,y0:t==='wsp'?.6:0,at:rnd()*d.at,kx:0,kz:0,stun:0,fl:0,ph:rnd()*6,mdl,g,og,boss:!!d.boss,bt:2.5,b2:5,b3:9,face:0,wk:0};
     S.en.push(e);if(d.boss)S.boss=e;return e;
   }
   function edgeSpawn(t){let x=0,z=0;for(let k=0;k<8;k++){const a=rnd()*PI*2,r=26+rnd()*14;x=S.p.x+Math.cos(a)*r;z=S.p.z+Math.sin(a)*r;const dd=Math.hypot(x,z);if(dd>AR-3){x*=(AR-3)/dd;z*=(AR-3)/dd}if(Math.hypot(x-S.p.x,z-S.p.z)>18)break}return spawnEn(t,x,z)}
@@ -346,7 +395,8 @@ function mountSoulArena(stage,done){
     const mvk=Math.min(1,p.mv/5);proc.legL.rotation.x=Math.sin(p.sw)*.8*mvk;proc.legR.rotation.x=-Math.sin(p.sw)*.8*mvk;proc.g.position.y=Math.abs(Math.sin(p.sw))*.06*mvk;
     props.forEach(q=>q.g.children.forEach(c=>{if(c.userData.spin)c.rotation.y=T*1.3}));
     for(const e of S.en){const m=e.mdl;e.g.position.set(e.x,e.t==='wsp'?1.1+Math.sin(T*3+e.ph)*.25:0,e.z);e.g.rotation.y=e.face;
-      if(m.legL){const s=Math.sin(e.wk)*.6;m.legL.rotation.x=s;m.legR.rotation.x=-s;m.armL.rotation.x=-1.4+Math.sin(e.wk*.5)*.18;m.armR.rotation.x=-1.4-Math.sin(e.wk*.5)*.18}
+      if(m.anim)m.anim(e,T);
+      else if(m.legL){const s=Math.sin(e.wk)*.6;m.legL.rotation.x=s;m.legR.rotation.x=-s;m.armL.rotation.x=-1.4+Math.sin(e.wk*.5)*.18;m.armR.rotation.x=-1.4-Math.sin(e.wk*.5)*.18}
       else if(m.core)m.core.rotation.y=T*3;
       if(e.og)e.og.rotation.y=T*.9;
       for(const q of m.all){if(!q.emissive)continue;if(q.userData.e0==null)q.userData.e0=q.emissive.getHex();q.emissive.setHex(e.fl>0?0xffffff:e.stun>0&&e.t!=='fbs'?0x555500:q.userData.e0)}}
@@ -411,6 +461,8 @@ function mountSoulArena(stage,done){
   function cleanup(){cancelAnimationFrame(raf);try{document.exitPointerLock&&document.exitPointerLock()}catch(e){}
     document.removeEventListener('pointerlockchange',onLock);document.removeEventListener('pointerlockerror',onLockErr);document.removeEventListener('mousemove',onMove);removeEventListener('mouseup',onUp);
     removeEventListener('keydown',kd);removeEventListener('keyup',ku);removeEventListener('blur',bl);try{R.dispose();R.forceContextLoss()}catch(e){}GA.stopMusic()}
+  start.disabled=true;start.textContent='載入怪物模型中…';
+  fetch(GLB_URL).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(b=>{GLB=parseGLB(b)}).catch(err=>{GLB=null;console.warn('[soul] model.glb 載入失敗（'+GLB_URL+'），改用內建怪物模型',err)}).then(()=>{start.disabled=false;start.textContent='進入戰場'});
   start.onclick=begin;reset();last=performance.now();raf=requestAnimationFrame(loop);
   window.__sa=()=>S;window.__sax={cam:(y,p)=>{yaw=y;pit=p},cast,choose,showPick,gainXp,spawn:edgeSpawn,begin,nextWave};window.__stop=cleanup;
 }
