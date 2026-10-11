@@ -19,7 +19,7 @@ function mountShooter(stage,done){
   const RATE={base:.22,space:.14,power:.5,reality:.46,soul:.1,time:.09,mind:.32},CHG=.75;
   const MAXHP=1500;
   const DC_MAX=10;let HT=null;   /* 現實守衛的分身同時存在上限（分身不會消失，避免無限堆疊） */
-  const HEAL={power:300,space:300,reality:550,soul:450,time:700,mind:MAXHP};   /* 擊敗守衛、拾取寶石後的回血量 */
+  const HEAL={power:300,space:300,reality:550,soul:450,time:750,mind:MAXHP};   /* 擊敗守衛、拾取寶石後的回血量 */
   const hpf=$('hpf'),hpg=$('hpg'),hpt=$('hpt'),muteBtn=$('mute');
 
   /* ---------- 音效（Web Audio 合成，不需要音檔） ---------- */
@@ -769,7 +769,7 @@ function mountShooter(stage,done){
           S.boss={boss:1,x:W/2,y:-60,r:44,hp:h,max:h,t:0,rt:2,at:1.5,st:0,ang:0,f:0,live:0,al:1,hid:0,cast:null,sp:4.5,wx:W/2,wy:100,wt:2};
           if(st===6)Object.assign(S.boss,{r:58,ph:1,sh:0,shT:0,shCd:10,last:'',combo:null,sp:2.4,y:-100});banner('警告・'+SG(st).b);sfx.warn()}
       }
-      if(S.stage===5&&(S.ph==='wave'||S.ph==='boss')){S.a18=(S.a18==null?3:S.a18)-dt;if(S.a18<=0){if(S.en.filter(q=>q.ty===18).length<2){spawnEn(18);S.a18=6}else S.a18=.5}   /* 防禦兵固定 2 隻，一隻一隻慢慢出現，被打倒後會補上 */
+      if(S.stage===5&&(S.ph==='wave'||S.ph==='boss')){if((S.n18||0)<2&&S.pt>=((S.n18||0)===0?5:10)){spawnEn(18);S.n18=(S.n18||0)+1}   /* 整個心靈關只會有 2 隻防禦兵：關卡開始後 5 秒、10 秒各出現一隻，被打倒後不補 */
         S.a19=(S.a19||0)-dt;if(S.a19<=0){const n19=S.en.filter(q=>q.ty===19).length;if(n19<3){spawnEn(19);S.a19=n19===0?.8:2.2}else S.a19=.5}}
       if(S.boss){
         const b=S.boss,st=S.stage;b.t+=dt;b.ang+=dt;
@@ -1012,6 +1012,9 @@ function mountShooter(stage,done){
     const R=b.r,gold='#d9b04a',gl='#f4e0a0',cast=b.cast&&b.cast.k==='rw';
     const ph=T%4,open=cast?1:ph>3.7?1-Math.sin((ph-3.7)/.3*Math.PI):1;
     ctx.save();ctx.globalAlpha=al;ctx.translate(b.x,b.y);ctx.scale(1.32,.84);ctx.shadowColor=col;ctx.shadowBlur=cast?34:22;
+    /* 狂暴（鏡像次元）：本體外圍有閃爍的綠光 */
+    const rg=S.mir?(.5+.5*Math.sin(T*18)*Math.sin(T*7.3+1)):0;
+    if(S.mir){const hg=ctx.createRadialGradient(0,0,R*.6,0,0,R*2.1);hg.addColorStop(0,'rgba(60,255,140,'+(.35+.4*rg)+')');hg.addColorStop(1,'rgba(60,255,140,0)');ctx.save();ctx.shadowBlur=0;ctx.fillStyle=hg;ctx.beginPath();ctx.arc(0,0,R*2.1,0,7);ctx.fill();ctx.restore()}
     ctx.save();ctx.rotate(-T*.25);ctx.fillStyle=b.f>0?'#fff':gold;for(let i=0;i<12;i++){ctx.save();ctx.rotate(i*.5236);ctx.beginPath();ctx.moveTo(-5,-R-2);ctx.lineTo(0,-R-14-(i%2?0:6));ctx.lineTo(5,-R-2);ctx.closePath();ctx.fill();ctx.restore()}ctx.restore();
     ctx.save();ctx.rotate(T*.35);ctx.lineWidth=6;ctx.strokeStyle=b.f>0?'#fff':gold;ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.stroke();
     ctx.lineWidth=2;ctx.strokeStyle='#7a5a14';for(let i=0;i<24;i++){const a=i*.2618;ctx.beginPath();ctx.moveTo(Math.cos(a)*(R-3),Math.sin(a)*(R-3));ctx.lineTo(Math.cos(a)*(R+3),Math.sin(a)*(R+3));ctx.stroke()}ctx.restore();
@@ -1022,6 +1025,7 @@ function mountShooter(stage,done){
     eye();ctx.fillStyle='#07120c';ctx.fill();ctx.lineWidth=2.4;ctx.strokeStyle=gold;ctx.stroke();
     if(open>.15){ctx.save();eye();ctx.clip();const ig=ctx.createRadialGradient(0,0,2,0,0,16);ig.addColorStop(0,col+'ff');ig.addColorStop(1,col+'00');ctx.fillStyle=ig;ctx.beginPath();ctx.arc(0,0,16,0,7);ctx.fill();ctx.restore();
       ctx.globalAlpha=al*Math.min(1,open*1.3);drawGem(ctx,0,0,10,col,T,true)}
+    if(S.mir){ctx.save();ctx.globalAlpha=al;ctx.shadowColor='#2fff8a';ctx.shadowBlur=14+16*rg;ctx.strokeStyle='rgba(120,255,180,'+(.45+.5*rg)+')';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,R+10,0,7);ctx.stroke();ctx.restore()}
     ctx.restore();
   }
   let S_t=0,lastHp=-1,curOp='1';
