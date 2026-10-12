@@ -547,12 +547,13 @@ function mountSoulArena(stage,done){
   function gainXp(v){S.xp+=v*(1+.1*S.bl.mag);while(!S.pick&&S.xp>=S.need){S.xp-=S.need;S.lvl++;S.need=xpNeed(S.lvl);showPick()}}
   /* —— 輸入／視角 —— */
   const el=R.domElement;
-  function tryLock(){try{const r=el.requestPointerLock&&el.requestPointerLock();if(r&&r.catch)r.catch(()=>{fb=true})}catch(e){fb=true}}
+  function tryLock(){try{let r;try{r=el.requestPointerLock({unadjustedMovement:true})}catch(e){r=el.requestPointerLock()}   /* 原始滑鼠輸入（關閉系統滑鼠加速），手感像一般 FPS */
+    if(r&&r.catch)r.catch(()=>{try{const r2=el.requestPointerLock();if(r2&&r2.catch)r2.catch(()=>{fb=true})}catch(e){fb=true}})}catch(e){fb=true}}
   const onLock=()=>{locked=document.pointerLockElement===el;if(locked){hadLock=true;pz.hidden=true}};
   const onLockErr=()=>{fb=true;pz.hidden=true};
   document.addEventListener('pointerlockchange',onLock);document.addEventListener('pointerlockerror',onLockErr);
-  const SENS_X=.0015,SENS_Y=.0012;   /* 滑鼠靈敏度（原 .0024／.002，調低） */
-  const onMove=e=>{if(!S||S.over)return;if(locked){ay-=clamp(e.movementX,-80,80)*SENS_X;ap-=clamp(e.movementY,-80,80)*SENS_Y*(e.movementY<0?.55:1)}else{const r=el.getBoundingClientRect();ms.x=(e.clientX-r.left)/r.width;ms.y=(e.clientY-r.top)/r.height}};
+  const SENS_X=.0017,SENS_Y=.0013;   /* 滑鼠靈敏度（原 .0024／.002，調低） */
+  const onMove=e=>{if(!S||S.over)return;if(locked){yaw-=clamp(e.movementX,-300,300)*SENS_X;pit=clamp(pit-clamp(e.movementY,-300,300)*SENS_Y*(e.movementY<0?.55:1),-.5,.8)}   /* 直接套用，不做平滑延遲 */else{const r=el.getBoundingClientRect();ms.x=(e.clientX-r.left)/r.width;ms.y=(e.clientY-r.top)/r.height}};
   const onDown=e=>{if(!S||!S.run||S.pick)return;if(e.button===2){cast(0);e.preventDefault();return}if(e.button===0){ms.down=true;if(!locked&&!fb&&!hadLock)tryLock()}};
   const onUp=e=>{if(e.button===0)ms.down=false};
   document.addEventListener('mousemove',onMove);el.addEventListener('mousedown',onDown);addEventListener('mouseup',onUp);
@@ -616,7 +617,7 @@ function mountSoulArena(stage,done){
     let ix=0,iz=0;const[fx,fz]=fwd(),[rx,rz]=rgt();
     if(keys.w)ix+=fx,iz+=fz;if(keys.s)ix-=fx,iz-=fz;if(keys.d)ix+=rx,iz+=rz;if(keys.a)ix-=rx,iz-=rz;
     const il=Math.hypot(ix,iz);if(il){ix/=il;iz/=il}
-    const sp=7.2*spdMul(),k=1-Math.exp(-dt*(il?14:22));p.vx+=(ix*sp-p.vx)*k;p.vz+=(iz*sp-p.vz)*k;
+    const sp=7.2*spdMul(),k=1-Math.exp(-dt*(il?30:40));p.vx+=(ix*sp-p.vx)*k;p.vz+=(iz*sp-p.vz)*k;
     p.x+=p.vx*dt;p.z+=p.vz*dt;resolve(p,.5);p.mv=Math.hypot(p.vx,p.vz);p.sw+=p.mv*dt*2.1;
     if(p.y>0||p.vy>0){p.vy-=26*dt;p.y+=p.vy*dt;if(p.y<=0){p.y=0;p.vy=0;ring(p.x,p.z,1.4,0xffd08a,.3)}}   /* 跳躍重力 */
     /* 射擊 */
@@ -669,7 +670,7 @@ function mountSoulArena(stage,done){
   function sync(dt){
     const p=S.p,[fx,fz]=fwd();
     p.aimT=Math.max(0,(p.aimT||0)-dt);const aiming=ms.down||p.aimT>0;p.ak=(p.ak||0)+((aiming?1:0)-(p.ak||0))*Math.min(1,dt*10);p.rc=Math.max(0,(p.rc||0)-dt*7);
-    {let tg=Math.atan2(fx,fz);if(!aiming&&p.mv>.8)tg=Math.atan2(p.vx,p.vz);let df=tg-hy;df=Math.atan2(Math.sin(df),Math.cos(df));hy+=df*Math.min(1,dt*(aiming?18:11));sync.hd=df}
+    {let tg=Math.atan2(fx,fz);if(!aiming&&p.mv>.8)tg=Math.atan2(p.vx,p.vz);let df=tg-hy;df=Math.atan2(Math.sin(df),Math.cos(df));hy+=df*Math.min(1,dt*(aiming?32:20));sync.hd=df}
     hero.position.set(p.x,p.y,p.z);hsh.position.set(p.x,.04,p.z);hsh.scale.setScalar(.7*(1-Math.min(.5,p.y*.25)));hero.rotation.y=hy;hero.visible=!(p.inv>0&&S.run&&Math.floor(T*20)%2);
     const mvk=Math.min(1,p.mv/5),ak=p.ak,rc=p.rc,air=p.y>.05?1:0,a=p.sw,sa=Math.sin(a),ca=Math.cos(a),sb=-sa,cb=-ca;
     proc.legL.rotation.x=-sa*.95*mvk-air*.5;proc.legR.rotation.x=-sb*.95*mvk+air*.35;
@@ -712,12 +713,14 @@ function mountSoulArena(stage,done){
     const p=S.p,cp=Math.cos(pit),dx=-Math.sin(yaw)*cp,dy=Math.sin(pit),dz=-Math.cos(yaw)*cp,[rx,rz]=rgt(),D=4.8;
     let x=p.x-dx*D+rx*.85,y=1.55+p.y*.55-dy*D,z=p.z-dz*D+rz*.85;y=Math.max(.6,y);
     const sk=S.shake;x+=(rnd()-.5)*sk*.7;y+=(rnd()-.5)*sk*.7;z+=(rnd()-.5)*sk*.7;
+    {const tf=60+Math.min(1,p.mv/7.5)*4;camUpdate.f=(camUpdate.f||60)+(tf-(camUpdate.f||60))*.12;if(Math.abs(cam.fov-camUpdate.f)>.03){cam.fov=camUpdate.f;cam.updateProjectionMatrix()}}   /* 跑動時視野微微拉開 */
     cam.position.set(x,y,z);cam.lookAt(x+dx*20,y+dy*20,z+dz*20);plight.position.set(p.x,3,p.z);
   }
   const sp2d=(x,y,z)=>{proj.set(x,y,z).project(cam);return proj.z<1?[(proj.x+1)/2*W,(1-proj.y)/2*H]:null};
   const SKL=['右鍵','Shift','G','E','F','Q'];
   function draw(){
     hx.clearRect(0,0,W,H);const p=S.p;
+    hx.save();hx.globalAlpha=.55;hx.fillStyle=fps<45?'#ff8a5c':'#c9c2d8';hx.font='11px monospace';hx.textAlign='right';hx.fillText(fps+' FPS・畫質 '+Math.round(qf*100)+'%',W-8,H-7);hx.restore();
     if(S.slow){hx.fillStyle='rgba(47,224,122,.12)';hx.fillRect(0,0,W,H)}
     if(S.flash>0){hx.fillStyle='rgba(255,40,40,'+Math.min(.35,S.flash*1.2)+')';hx.fillRect(0,0,W,H)}
     if(p.hp<p.max*.3&&S.run){const g=hx.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,H*.8);g.addColorStop(0,'rgba(120,0,0,0)');g.addColorStop(1,'rgba(160,0,0,'+(.3+.15*Math.sin(T*6))+')');hx.fillStyle=g;hx.fillRect(0,0,W,H)}
@@ -754,15 +757,24 @@ function mountSoulArena(stage,done){
     if(S.run&&S.t<6&&!S.pick){hx.fillStyle='rgba(255,236,200,.85)';hx.font='13px sans-serif';hx.textAlign='center';hx.fillText(locked||fb===false?'':'（未鎖定滑鼠：把滑鼠移到畫面左右邊緣轉動視角）',W/2,H-82)}
     aS.textContent='第 '+Math.max(1,S.wave)+' / 10 波　Lv '+S.lvl;bS.textContent='擊倒 '+S.kills;cS.textContent='得分 '+S.score;
   }
+  const PRmax=()=>{const w=box.clientWidth||W;return clamp(w*(devicePixelRatio||1)/W,1,2)};
+  let qf=1,qCap=1,fAvg=16.7,fN=0,qT=0,fpsT=0,fpsC=0,fps=60,prQ=0;
+  function applyQ(){const v=PRmax()*qf;if(Math.abs(v-prQ)>.01){prQ=v;R.setPixelRatio(v);R.setSize(W,H,false)}}   /* 渲染解析度跟畫面實際大小一致（原本固定 900×600 再放大會糊） */
   function loop(ts){
     if(!S)return;if(!stage.isConnected){cleanup();return}
-    raf=requestAnimationFrame(loop);const dt=Math.min(.05,(ts-last)/1000);last=ts;
+    raf=requestAnimationFrame(loop);const ms_=ts-last,dt=Math.min(.05,ms_/1000);last=ts;
+    /* 動態畫質：幀時間太長就自動降低渲染解析度，穩定後再提高 */
+    fAvg+=(Math.min(100,ms_)-fAvg)*.06;fpsC++;fpsT+=ms_;if(fpsT>=500){fps=Math.round(fpsC*1000/fpsT);fpsC=0;fpsT=0}
+    if(++fN%45===0){qT+=.75;if(fAvg>21&&qf>.55){qf=Math.max(.55,qf-.15);qCap=Math.min(qCap,qf+.15);qT=0}else if(fAvg<18.5&&qf<qCap&&qT>6){qf=Math.min(qCap,qf+.1);qT=0}}
+    applyQ();
     const paused=S.run&&!S.pick&&!S.over&&hadLock&&!locked&&!fb;if(paused&&pz.hidden)pz.hidden=false;
-    {const kk=1-Math.exp(-dt*40);yaw+=ay*kk;ay-=ay*kk;pit=clamp(pit+ap*kk,-.5,.8);ap-=ap*kk}   /* 滑鼠轉動量平滑套用 */
     if(S.run&&!S.pick&&!S.over&&!paused)update(dt);else T+=dt;
     sync(dt);camUpdate();draw();R.render(scene,cam);
   }
-  function begin(){reset();ov.hidden=true;ov.style.justifyContent='flex-start';pickBox.hidden=true;pz.hidden=true;S.run=true;ms.x=.5;ms.y=.5;GA.ctx();GA.music('soul',()=>stage.isConnected&&S&&!S.over);if(!fb)tryLock();hadLock=false}
+  let warmed=false;
+  /* 預先載入所有敵人（編譯 shader、上傳貼圖），避免遊戲中第一次出現新怪物時瞬間卡頓 */
+  function prewarm(){if(warmed)return;warmed=true;try{const tmp=[];for(const t in ET){const e=spawnEn(t,S.p.x,S.p.z-6);e.g.position.set(S.p.x+(tmp.length%5-2)*3,0,S.p.z-7-Math.floor(tmp.length/5)*3);tmp.push(e)}camUpdate();sync(.016);R.render(scene,cam);for(const e of tmp)dyn.remove(e.g);S.en=[];S.boss=null}catch(err){console.warn('[soul] prewarm 失敗',err);S.en=[];S.boss=null}}
+  function begin(){reset();prewarm();ov.hidden=true;ov.style.justifyContent='flex-start';pickBox.hidden=true;pz.hidden=true;S.run=true;ms.x=.5;ms.y=.5;GA.ctx();GA.music('soul',()=>stage.isConnected&&S&&!S.over);if(!fb)tryLock();hadLock=false}
   function cleanup(){cancelAnimationFrame(raf);try{document.exitPointerLock&&document.exitPointerLock()}catch(e){}
     document.removeEventListener('pointerlockchange',onLock);document.removeEventListener('pointerlockerror',onLockErr);document.removeEventListener('mousemove',onMove);removeEventListener('mouseup',onUp);
     removeEventListener('keydown',kd);removeEventListener('keyup',ku);removeEventListener('blur',bl);try{R.dispose();R.forceContextLoss()}catch(e){}GA.stopMusic()}
