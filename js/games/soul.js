@@ -106,7 +106,7 @@ function mountSoulArena(stage,done){
     const bd=new DataView(bin),SZ={5120:1,5121:1,5122:2,5123:2,5125:4,5126:4},NC={SCALAR:1,VEC2:2,VEC3:3,VEC4:4};
     const rd=(c,o)=>c===5126?bd.getFloat32(o,true):c===5125?bd.getUint32(o,true):c===5123?bd.getUint16(o,true):c===5122?bd.getInt16(o,true):c===5121?bd.getUint8(o):bd.getInt8(o);
     const acc=i=>{const a=js.accessors[i],bv=js.bufferViews[a.bufferView],nc=NC[a.type],sz=SZ[a.componentType],st=bv.byteStride||nc*sz,base=(bv.byteOffset||0)+(a.byteOffset||0);
-      const out=a.componentType===5125||a.componentType===5123||a.componentType===5121?new Uint32Array(a.count*nc):new Float32Array(a.count*nc);
+      const out=(a.componentType===5125||a.componentType===5123||a.componentType===5121)&&!a.normalized?new Uint32Array(a.count*nc):new Float32Array(a.count*nc);
       const sg=a.componentType===5120||a.componentType===5122,mx=sg?(a.componentType===5120?127:32767):(a.componentType===5121?255:65535);
       for(let k=0;k<a.count;k++)for(let c=0;c<nc;c++){let v=rd(a.componentType,base+k*st+c*sz);if(a.normalized)v=sg?Math.max(v/mx,-1):v/mx;out[k*nc+c]=v}
       return out};
@@ -118,20 +118,21 @@ function mountSoulArena(stage,done){
       g.setAttribute('position',new THREE.BufferAttribute(acc(pr.attributes.POSITION),3));
       if(pr.attributes.NORMAL!=null)g.setAttribute('normal',new THREE.BufferAttribute(acc(pr.attributes.NORMAL),3));
       if(pr.attributes.TEXCOORD_0!=null)g.setAttribute('uv',new THREE.BufferAttribute(acc(pr.attributes.TEXCOORD_0),2));
+      if(pr.attributes.JOINTS_0!=null){g.setAttribute('skinIndex',new THREE.BufferAttribute(Float32Array.from(acc(pr.attributes.JOINTS_0)),4));g.setAttribute('skinWeight',new THREE.BufferAttribute(acc(pr.attributes.WEIGHTS_0),4))}
       if(pr.indices!=null)g.setIndex(new THREE.BufferAttribute(acc(pr.indices),1));
       if(pr.attributes.NORMAL==null)g.computeVertexNormals();
       g.userData.shared=true;return geos[k]=g};
-    const build=ni=>{const n=js.nodes[ni],o=new THREE.Group();
-      if(n.matrix)new THREE.Matrix4().fromArray(n.matrix).decompose(o.position,o.quaternion,o.scale);
-      if(n.translation)o.position.fromArray(n.translation);if(n.rotation)o.quaternion.fromArray(n.rotation);if(n.scale)o.scale.fromArray(n.scale);
+    const trs=(o,n)=>{if(n.matrix)new THREE.Matrix4().fromArray(n.matrix).decompose(o.position,o.quaternion,o.scale);
+      if(n.translation)o.position.fromArray(n.translation);if(n.rotation)o.quaternion.fromArray(n.rotation);if(n.scale)o.scale.fromArray(n.scale)};
+    const build=ni=>{const n=js.nodes[ni],o=new THREE.Group();trs(o,n);
       if(n.mesh!=null)js.meshes[n.mesh].primitives.forEach((pr,pi)=>o.add(new THREE.Mesh(geo(n.mesh,pi),pr.material!=null?mats[pr.material]:mats[0])));
       (n.children||[]).forEach(c=>o.add(build(c)));return o};
     const sc=js.scenes[js.scene||0];let roots=sc.nodes;if(roots.length===1&&(js.nodes[roots[0]].children||[]).length>1)roots=js.nodes[roots[0]].children;
-    const cr=roots.map(ni=>{const g=build(ni);g.position.set(0,0,0);const wrap=new THREE.Group();wrap.add(g);wrap.updateMatrixWorld(true);
+    const cr=(js.skins&&js.skins.length)?[]:roots.map(ni=>{const g=build(ni);g.position.set(0,0,0);const wrap=new THREE.Group();wrap.add(g);wrap.updateMatrixWorld(true);
       const bb=new THREE.Box3().setFromObject(wrap),sz=bb.getSize(new THREE.Vector3()),c=bb.getCenter(new THREE.Vector3());
       g.position.set(-c.x,-bb.min.y,-c.z);return{tpl:wrap,ex:sz.x,ey:sz.y,ez:sz.z}});
     const blob=i=>{const im=js.images[i],bv=js.bufferViews[im.bufferView],o=bv.byteOffset||0;return new Blob([bin.slice(o,o+bv.byteLength)],{type:im.mimeType})};
-    return{cr,js,build,blob}}
+    return{cr,js,build,blob,acc,geo,trs}}
   /* 以 model.glb 的怪物建出敵人。模型沒有骨架，所以用「整隻身體」做走路晃動／飄浮動畫 */
   function glbModel(t){
     const d=ET[t],pl=POOL[t],tp=GLB.cr[pl[(rnd()*pl.length)|0]],g=new THREE.Group(),body=tp.tpl.clone(true),mm=new Map(),all=[];
@@ -167,6 +168,48 @@ function mountSoulArena(stage,done){
       const zs=held?0:-.38,add=(geo,m,sx,sy,sz,z)=>{const o=new THREE.Mesh(geo,m);o.scale.set(sx,sy,sz);o.position.z=z+zs;roll.add(o)};
       add(FBD.bl,FBD.m,.022,.06,.46,.46);add(FBD.bx,FBD.m,.05,.2,.04,.04);add(FBD.bx,FBD.m2,.045,.045,.2,-.08)}
     return g}
+  /* —— 地面怪物：Quaternius「Bestiary - Dungeon Monsters Kit」的 Imp、Puglin（帶骨架＋貼圖，沒有內建動畫，走路／擺臂用程式驅動骨頭）—— */
+  const SKN_URL={imp:window.SOUL_IMP_URL||'assets/imp.glb',pug:window.SOUL_PUGLIN_URL||'assets/puglin.glb'};   /* ← 兩個 glb 放的位置，可自行修改 */
+  /* 各地面敵人可抽到的模型：[模型, 目標身高, 色調, 前傾角度] */
+  const GR={zom:[['imp',1.75,0xffffff,.18],['pug',1.25,0xffffff,0]],run:[['pug',1.15,0xffd2a0,0]],brt:[['imp',2.7,0xb0b8ff,.18],['pug',2.0,0xb0b8ff,0]],spt:[['pug',1.35,0xb6ff8a,0]],mbs:[['imp',4.2,0xd8b0ff,.18]]};
+  const SKN={};
+  function loadSkinModel(key){
+    return fetch(SKN_URL[key]).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(buf=>{
+      const G=parseGLB(buf),m0=(G.js.materials||[])[0]||{},pb=m0.pbrMetallicRoughness||{};
+      const src=o=>o&&G.js.textures&&G.js.textures[o.index]?G.js.textures[o.index].source:-1;
+      const ts=[pb.baseColorTexture,pb.metallicRoughnessTexture,m0.normalTexture,m0.emissiveTexture].map(src);
+      return Promise.all(ts.map((i,k)=>i>=0?loadTex(G.blob(i),k===0||k===3):null)).then(([c,orm,nm,em])=>{
+        const es=m0.extensions&&m0.extensions.KHR_materials_emissive_strength&&m0.extensions.KHR_materials_emissive_strength.emissiveStrength||1;
+        const mat=new THREE.MeshStandardMaterial({map:c||null,roughnessMap:orm||null,metalnessMap:orm||null,normalMap:nm||null,emissiveMap:em||null,emissive:em?0xffffff:0x000000,emissiveIntensity:es,color:0xffffff,roughness:1,metalness:.5,side:THREE.DoubleSide});
+        mat.skinning=true;
+        SKN[key]={G,mat,h:G.js.accessors[G.js.meshes[0].primitives[0].attributes.POSITION].max[1]}})})}
+  const AX=new THREE.Vector3(1,0,0),AY=new THREE.Vector3(0,1,0),AZ=new THREE.Vector3(0,0,1),qa=new THREE.Quaternion(),qb=new THREE.Quaternion();
+  const setB=(B,D)=>B.b.quaternion.copy(B.Qpi).multiply(D).multiply(B.Qp).multiply(B.rest);   /* 以「靜止姿勢的世界軸」套用旋轉 */
+  function pickGR(t){const l=GR[t]&&GR[t].filter(q=>SKN[q[0]]);return l&&l.length?l[(rnd()*l.length)|0]:null}
+  function skinModel(gp){
+    const M=SKN[gp[0]],G=M.G,js=G.js,sk=js.skins[0],jset=new Set(sk.joints),objs={},pend=[],mat=M.mat.clone(),lean=gp[3];
+    mat.skinning=true;mat.color.setHex(gp[2]);
+    const mk=ni=>{const n=js.nodes[ni];let o;
+      if(n.mesh!=null&&n.skin!=null){o=new THREE.SkinnedMesh(G.geo(n.mesh,0),mat);o.frustumCulled=false;pend.push(o)}
+      else o=jset.has(ni)?new THREE.Bone():new THREE.Group();
+      G.trs(o,n);objs[ni]=o;(n.children||[]).forEach(c=>o.add(mk(c)));return o};
+    const body=new THREE.Group();js.scenes[js.scene||0].nodes.forEach(ni=>body.add(mk(ni)));body.updateMatrixWorld(true);
+    const ibm=G.acc(sk.inverseBindMatrices),bones=sk.joints.map(j=>objs[j]),skel=new THREE.Skeleton(bones,bones.map((_,k)=>new THREE.Matrix4().fromArray(ibm,k*16)));
+    pend.forEach(m=>m.bind(skel,m.matrixWorld));
+    const idx={};js.nodes.forEach((n,i)=>idx[n.name]=i);const B={};
+    ['thigh_l','thigh_r','calf_l','calf_r','upperarm_l','upperarm_r','lowerarm_l','lowerarm_r','spine_01','spine_02','Head'].forEach(nm=>{const b=objs[idx[nm]],Qp=b.parent.getWorldQuaternion(new THREE.Quaternion());B[nm]={b,rest:b.quaternion.clone(),Qp,Qpi:Qp.clone().conjugate()}});
+    const s=gp[1]/M.h;body.scale.setScalar(s);const g=new THREE.Group();g.add(body);
+    return{g,all:[mat],sk:mat,hh:gp[1],anim(e,T){
+      const mv=Math.abs(e.wk-(e.wp||0))>.002;e.wp=e.wk;e.am=(e.am||0)+((mv?1:0)-(e.am||0))*.15;
+      const A=e.am,w=e.wk,sw=Math.sin(w),br=Math.sin(T*2.2+e.ph),ad=1.15;
+      setB(B.thigh_l,qa.setFromAxisAngle(AX,-.5*sw*A));setB(B.thigh_r,qa.setFromAxisAngle(AX,.5*sw*A));
+      setB(B.calf_l,qa.setFromAxisAngle(AX,.65*Math.max(0,Math.sin(w+1.4))*A));setB(B.calf_r,qa.setFromAxisAngle(AX,.65*Math.max(0,-Math.sin(w+1.4))*A));
+      qa.setFromAxisAngle(AX,.5*sw*A);qb.setFromAxisAngle(AZ,-ad);setB(B.upperarm_l,qa.multiply(qb));
+      qa.setFromAxisAngle(AX,-.5*sw*A);qb.setFromAxisAngle(AZ,ad);setB(B.upperarm_r,qa.multiply(qb));
+      setB(B.lowerarm_l,qa.setFromAxisAngle(AY,-1-.05*br));setB(B.lowerarm_r,qa.setFromAxisAngle(AY,1+.05*br));
+      setB(B.spine_01,qa.setFromAxisAngle(AX,lean+.03*br));
+      qa.setFromAxisAngle(AY,.18*sw*A);qb.setFromAxisAngle(AX,.08);setB(B.spine_02,qa.multiply(qb));
+      setB(B.Head,qa.setFromAxisAngle(AX,-lean*.67))}}}
   /* —— 玩家 —— */
   const hero=new THREE.Group(),proc=humanoid({col:0xd9a77a,cloth:0xff9a1f,eye:0x111111,s:1});
   proc.armL.rotation.x=proc.armR.rotation.x=-1.45;
@@ -198,16 +241,16 @@ function mountSoulArena(stage,done){
   function burst(x,y,z,c,n=10,sp=4,s=.12){for(let i=0;i<n;i++){const a=rnd()*6.283,v=rnd()*sp;S.pa.push({x,y,z,vx:Math.cos(a)*v,vy:1+rnd()*sp*.8,vz:Math.sin(a)*v,l:.4+rnd()*.5,m:.9,c,s})}}
   function dnum(x,y,z,s,c){if(S.dn.length<40)S.dn.push({x,y,z,t:.8,s,c})}
   /* —— 敵人 —— */
-  function disp(g){g.traverse(o=>{if(o.isMesh){if(o.geometry&&o.geometry!==sh&&o.geometry!==RG&&!o.geometry.userData.shared)o.geometry.dispose();if(o.material&&o.material!==shM)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose())}})}
+  function disp(g){g.traverse(o=>{if(o.isSkinnedMesh&&o.skeleton&&o.skeleton.dispose)o.skeleton.dispose();if(o.isMesh){if(o.geometry&&o.geometry!==sh&&o.geometry!==RG&&!o.geometry.userData.shared)o.geometry.dispose();if(o.material&&o.material!==shM)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose())}})}
   function spawnEn(t,x,z){
     const d=ET[t],w=Math.max(1,S.wave),m=d.boss?1:1+.1*(w-1);
-    const useG=!!(GLB&&POOL[t]);
-    const mdl=useG?glbModel(t):d.fly?wispModel():humanoid({col:d.col,eye:d.eye,s:d.s||1,back:t==='spt',armor:t==='brt'||t==='mbs'||t==='fbs',cloth:t==='fbs'?0x201030:t==='mbs'?0x3a1a1a:0x2c2c3a});
-    if(!useG&&!d.fly){mdl.armL.rotation.x=mdl.armR.rotation.x=-1.4}
+    const gp=!d.fly&&GR[t]?pickGR(t):null,useG=!gp&&!!(GLB&&POOL[t]);
+    const mdl=gp?skinModel(gp):useG?glbModel(t):d.fly?wispModel():humanoid({col:d.col,eye:d.eye,s:d.s||1,back:t==='spt',armor:t==='brt'||t==='mbs'||t==='fbs',cloth:t==='fbs'?0x201030:t==='mbs'?0x3a1a1a:0x2c2c3a});
+    if(!useG&&!gp&&!d.fly){mdl.armL.rotation.x=mdl.armR.rotation.x=-1.4}
     const g=mdl.g;g.position.set(x,0,z);g.add(shadow(d.r*1.15));
     let og=null;if(t==='fbs'){og=new THREE.Group();GEM.forEach((q,i)=>{const o=new THREE.Mesh(new THREE.OctahedronGeometry(.45),BM(new THREE.Color(q.c)));const a=i/6*PI*2;o.position.set(Math.cos(a)*3.6,6.8,Math.sin(a)*3.6);og.add(o)});g.add(og)}
     dyn.add(g);
-    const e={t,d,x,z,hp:d.hp*m,max:d.hp*m,sp:d.sp*(d.boss?1:1+.02*w),r:d.r,h:useG?Math.max(.8,Math.min(d.h,mdl.hh*1.15)):d.h,y0:t==='wsp'?.6:d.alt?d.alt-d.h/2:0,alt:d.alt,at:rnd()*d.at,kx:0,kz:0,stun:0,fl:0,ph:rnd()*6,mdl,g,og,boss:!!d.boss,bt:2.5,b2:5,b3:9,face:0,wk:0};
+    const e={t,d,x,z,hp:d.hp*m,max:d.hp*m,sp:d.sp*(d.boss?1:1+.02*w),r:d.r,h:useG||gp?Math.max(.8,Math.min(d.h,mdl.hh*1.15)):d.h,y0:t==='wsp'?.6:d.alt?d.alt-d.h/2:0,alt:d.alt,at:rnd()*d.at,kx:0,kz:0,stun:0,fl:0,ph:rnd()*6,mdl,g,og,boss:!!d.boss,bt:2.5,b2:5,b3:9,face:0,wk:0};
     S.en.push(e);if(d.boss)S.boss=e;return e;
   }
   function edgeSpawn(t){let x=0,z=0;for(let k=0;k<8;k++){const a=rnd()*PI*2,r=26+rnd()*14;x=S.p.x+Math.cos(a)*r;z=S.p.z+Math.sin(a)*r;const dd=Math.hypot(x,z);if(dd>AR-3){x*=(AR-3)/dd;z*=(AR-3)/dd}if(Math.hypot(x-S.p.x,z-S.p.z)>18)break}return spawnEn(t,x,z)}
@@ -486,7 +529,9 @@ function mountSoulArena(stage,done){
       else if(m.legL){const s=Math.sin(e.wk)*.6;m.legL.rotation.x=s;m.legR.rotation.x=-s;m.armL.rotation.x=-1.4+Math.sin(e.wk*.5)*.18;m.armR.rotation.x=-1.4-Math.sin(e.wk*.5)*.18}
       else if(m.core)m.core.rotation.y=T*3;
       if(e.og)e.og.rotation.y=T*.9;
-      for(const q of m.all){if(!q.emissive)continue;if(q.userData.e0==null)q.userData.e0=q.emissive.getHex();q.emissive.setHex(e.fl>0?0xffffff:e.stun>0&&e.t!=='fbs'?0x555500:q.userData.e0)}}
+      for(const q of m.all){if(!q.emissive)continue;if(q.userData.e0==null){q.userData.e0=q.emissive.getHex();q.userData.em=q.emissiveMap||null;q.userData.c0=q.color.getHex()}
+        const f=e.fl>0,st=!f&&e.stun>0&&e.t!=='fbs',u=q.userData;q.emissive.setHex(f?0xffffff:st&&!u.em?0x555500:u.e0);
+        if(u.em){const wm=f?null:u.em;if(q.emissiveMap!==wm){q.emissiveMap=wm;q.needsUpdate=true}q.color.setHex(st?0xcccc66:u.c0)}}}
     /* 實例化 */
     let n=0;for(const b of S.pb){if(n>=300)break;dm.position.set(b.x,b.y,b.z);dm.quaternion.identity();dm.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);dm.scale.set(1,1,1.4);dm.updateMatrix();IP.setMatrixAt(n,dm.matrix);IP.setColorAt(n,CC.set(b.c));n++}
     IP.count=n;IP.instanceMatrix.needsUpdate=true;if(IP.instanceColor)IP.instanceColor.needsUpdate=true;
@@ -555,8 +600,9 @@ function mountSoulArena(stage,done){
     removeEventListener('keydown',kd);removeEventListener('keyup',ku);removeEventListener('blur',bl);try{R.dispose();R.forceContextLoss()}catch(e){}GA.stopMusic()}
   start.disabled=true;start.textContent='載入模型中…';
   const monP=fetch(GLB_URL).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(b=>{GLB=parseGLB(b)}).catch(err=>{GLB=null;console.warn('[soul] model.glb 載入失敗（'+GLB_URL+'），改用內建怪物模型',err)});
+  const sknP=Promise.all(Object.keys(SKN_URL).map(k=>loadSkinModel(k).catch(err=>{delete SKN[k];console.warn('[soul] '+SKN_URL[k]+' 載入失敗，該怪物改用其他模型',err)})));
   const dagP2=loadDagger().catch(err=>{DAG=null;console.warn('[soul] dagger.glb 載入失敗（'+DAG_URL+'），改用內建匕首',err)});
-  Promise.all([monP,dagP2]).then(()=>{attachHeld();start.disabled=false;start.textContent='進入戰場'});
+  Promise.all([monP,dagP2,sknP]).then(()=>{attachHeld();start.disabled=false;start.textContent='進入戰場'});
   start.onclick=begin;reset();last=performance.now();raf=requestAnimationFrame(loop);
   window.__sa=()=>S;window.__sax={cam:(y,p)=>{yaw=y;pit=p},cast,choose,showPick,gainXp,spawn:edgeSpawn,begin,nextWave};window.__stop=cleanup;
 }
