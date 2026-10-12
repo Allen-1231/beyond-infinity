@@ -164,6 +164,87 @@ function mountSoulArena(stage,done){
     if(o.armor){bx(.95,.25,.55,M(0x7a6a8a),0,1.5,0);bx(.3,.3,.5,M(0x7a6a8a),-.55,1.5,0);bx(.3,.3,.5,M(0x7a6a8a),.55,1.5,0)}
     return{g,armL,armR,legL,legR,sk,head,all};
   }
+  /* —— 玩家：圓潤細節的騎士（鎧甲＋披風），面向 +Z —— */
+  const KG={};const kg=(k,f)=>KG[k]||(KG[k]=(()=>{const g=f();g.userData.shared=true;return g})());
+  function knight(o){
+    o=o||{};const g=new THREE.Group(),all=[];
+    const MS=(c,x)=>{const m=new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.45,metalness:.45},x||{}));m.flatShading=false;all.push(m);return m};
+    const steel=MS(0xaeb6c6),dark=MS(0x6c7486,{roughness:.55}),gold=MS(0xe0a43a,{emissive:0x5a3000,emissiveIntensity:.3,metalness:.7,roughness:.35}),cloth=MS(0x2a2230,{roughness:.9,metalness:0,side:THREE.DoubleSide}),leather=MS(0x4a2c1c,{roughness:.8,metalness:.05});
+    const glow=BM(0xffa030);
+    const add=(par,geo,mat,x,y,z,sx,sy,sz)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x||0,y||0,z||0);if(sx!=null)m.scale.set(sx,sy==null?sx:sy,sz==null?sx:sz);par.add(m);return m};
+    const SP=(r,w,h)=>kg('sp'+r+'_'+(w||14)+'_'+(h||10),()=>new THREE.SphereGeometry(r,w||14,h||10));
+    const CY=(a,b,l,sg)=>kg('cy'+a+'_'+b+'_'+l+'_'+(sg||12),()=>new THREE.CylinderGeometry(a,b,l,sg||12));
+    const TR=(r,t)=>kg('tr'+r+'_'+t,()=>new THREE.TorusGeometry(r,t,8,24));
+    /* 軀幹：旋轉成形的胸甲 */
+    const cu=add(g,kg('cuirass',()=>new THREE.LatheGeometry([[0,.98],[.2,.98],[.215,1.05],[.235,1.15],[.27,1.27],[.285,1.36],[.27,1.44],[.2,1.5],[.12,1.53],[0,1.53]].map(a=>new THREE.Vector2(a[0],a[1])),18)),steel,0,0,0,1.12,1,.8);cu.material.side=THREE.DoubleSide;
+    add(g,TR(.2,.022),gold,0,1.5,0,1.12,.8,1).rotation.x=PI/2;
+    add(g,TR(.22,.03),leather,0,1.0,0,1.12,.8,1).rotation.x=PI/2;
+    add(g,kg('bk',()=>new THREE.BoxGeometry(.09,.08,.03)),gold,0,1.0,.19);
+    add(g,SP(.045,12,8),gold,0,1.28,.225,1,1,.6);
+    add(g,kg('ridge',()=>new THREE.CylinderGeometry(.012,.012,.38,6)),dark,0,1.27,.226);
+    add(g,CY(.2,.27,.3,16),cloth,0,.84,0,1.1,1,.85).geometry.userData.shared=true;  /* 腰裙 */
+    for(const x of[-.15,0,.15])add(g,SP(.09,10,8),steel,x,.86,.2-Math.abs(x)*.4,.9,1.9,.35);   /* 腿甲片 */
+    add(g,CY(.11,.14,.1,14),dark,0,1.56,0);   /* 護頸 */
+    /* 頭盔 */
+    const head=new THREE.Group();head.position.set(0,1.74,0);g.add(head);
+    add(head,SP(.2,18,14),steel,0,0,0,1,1.08,1.06);
+    add(head,kg('vz',()=>new THREE.BoxGeometry(.26,.07,.05)),dark,0,-.02,.195);
+    add(head,kg('vs',()=>new THREE.BoxGeometry(.2,.025,.02)),glow,0,-.02,.222);
+    add(head,TR(.19,.014),gold,0,.07,0,1,1.06,1.05).rotation.x=PI/2;
+    for(let i=0;i<4;i++){const c=add(head,kg('crest',()=>new THREE.ConeGeometry(.035,.17,8)),MS(0xff7a1a,{emissive:0xff5a10,emissiveIntensity:.5,metalness:.1}),0,.24-i*.01,.04-i*.075);c.rotation.x=-.5-i*.18}
+    for(const sx of[-1,1])add(head,kg('cheek',()=>new THREE.SphereGeometry(.07,10,8)),dark,sx*.17,-.06,.07,.55,1.1,1);
+    /* 手臂 */
+    const arm=(sx)=>{const a=new THREE.Group();a.position.set(sx*.36,1.44,0);g.add(a);
+      const pa=add(a,kg('paul',()=>new THREE.SphereGeometry(.17,16,10,0,PI*2,0,PI*.58)),steel,0,.035,0,1,.85,1.1);pa.material.side=THREE.DoubleSide;
+      add(a,TR(.16,.02),gold,0,.0,0,1,1,1).rotation.x=PI/2;
+      add(a,kg('pk',()=>new THREE.ConeGeometry(.03,.09,8)),gold,sx*.04,.14,0).rotation.z=-sx*.35;
+      add(a,CY(.062,.055,.3,12),cloth,0,-.15,0);
+      add(a,CY(.075,.075,.1,12),steel,0,-.05,0);
+      add(a,SP(.07,12,10),dark,0,-.3,0);
+      const fa=new THREE.Group();fa.position.y=-.3;a.add(fa);
+      add(fa,CY(.055,.045,.3,12),cloth,0,-.15,0);
+      add(fa,CY(.078,.062,.2,14),steel,0,-.12,0);
+      add(fa,TR(.072,.012),gold,0,-.03,0).rotation.x=PI/2;
+      add(fa,SP(.058,12,10),leather,0,-.33,0,1,1.1,1);
+      a.userData.fa=fa;return a};
+    const armL=arm(-1),armR=arm(1);
+    /* 腿 */
+    const leg=(sx)=>{const l=new THREE.Group();l.position.set(sx*.14,.91,0);g.add(l);
+      add(l,CY(.095,.075,.44,12),cloth,0,-.22,0);
+      add(l,CY(.115,.09,.28,14),steel,0,-.16,.0,1,1,1.05);
+      const kn=new THREE.Group();kn.position.y=-.44;l.add(kn);
+      add(kn,SP(.085,12,10),dark,0,0,.03);
+      add(kn,SP(.05,10,8),gold,0,0,.1);
+      add(kn,CY(.07,.055,.38,12),cloth,0,-.19,0);
+      add(kn,CY(.085,.065,.3,14),steel,0,-.2,.01);
+      const bt=new THREE.Group();bt.position.y=-.38;kn.add(bt);
+      add(bt,SP(.075,12,10),dark,0,-.01,.07,1,.7,1.9);
+      add(bt,TR(.07,.012),gold,0,.04,0).rotation.x=PI/2;
+      l.userData.kn=kn;return l};
+    const legL=leg(-1),legR=leg(1);
+    /* 無限手套：前臂背側的六顆寶石 */
+    const gems=[];if(o.gems){for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roughness:.3,metalness:.2,emissive:0x000000});m.userData.lit=-1;gems.push(m);
+        add(armR.userData.fa,kg('gm',()=>new THREE.OctahedronGeometry(.03,0)),m,(i%2?.025:-.025)*1,-.08-Math.floor(i/2)*.075,-.07)}}
+    /* 披風 */
+    let capeUpd=null;
+    if(o.cape!==false){
+      const W=.78,Hh=1.2,SX=6,SY=12,cg=new THREE.PlaneGeometry(W,Hh,SX,SY);cg.translate(0,-Hh/2,0);
+      const pos=cg.attributes.position,base=new Float32Array(pos.array),col=new Float32Array(pos.count*3),c1=new THREE.Color(0x5a0e10),c2=new THREE.Color(0xb02424),c3=new THREE.Color(0xe0a43a),cc=new THREE.Color();
+      for(let i=0;i<pos.count;i++){const v=-base[i*3+1]/Hh;cc.copy(c1).lerp(c2,Math.min(1,v*1.6));if(v>.94)cc.copy(c3);col.set([cc.r,cc.g,cc.b],i*3)}
+      cg.setAttribute('color',new THREE.BufferAttribute(col,3));
+      const cm=MS(0xffffff,{vertexColors:true,side:THREE.DoubleSide,roughness:.85,metalness:0,emissive:0x401010,emissiveIntensity:.35});
+      const cape=new THREE.Group();cape.position.set(0,1.5,-.2);g.add(cape);
+      const cp=new THREE.Mesh(cg,cm);cp.frustumCulled=false;cape.add(cp);
+      for(const sx of[-1,1])add(g,SP(.04,10,8),gold,sx*.2,1.5,-.17);
+      capeUpd=(T,lift,sway)=>{
+        for(let i=0;i<pos.count;i++){const bx=base[i*3],by=base[i*3+1],u=bx/W,v=-by/Hh;
+          pos.array[i*3]=bx*(1+.35*v)+sway*v*.25;
+          pos.array[i*3+1]=by*(1-.1*lift*v);
+          pos.array[i*3+2]=-lift*Math.pow(v,1.3)*.55+Math.sin(T*6-v*5+u*2.2)*.045*v*(.35+lift*1.2)+v*.03}
+        pos.needsUpdate=true;cg.computeVertexNormals();cape.rotation.x=.06+lift*.35};
+    }
+    return{g,armL,armR,legL,legR,sk:steel,head,all,gems,capeUpd};
+  }
   function wispModel(){const g=new THREE.Group(),m=new THREE.Mesh(new THREE.IcosahedronGeometry(.55,0),M(0xff9a1f,{emissive:0xff9a1f,emissiveIntensity:1}));g.add(m);const t=new THREE.Mesh(new THREE.ConeGeometry(.4,1.1,6),BM(0xff6a10,{transparent:true,opacity:.6}));t.rotation.x=-PI/2;t.position.z=-.8;g.add(t);const e=new THREE.Mesh(new THREE.SphereGeometry(.14,6,6),BM(0xffffff));e.position.set(0,.05,.45);g.add(e);return{g,sk:m.material,all:[m.material],core:m}}
   /* —— model.glb 怪物：內建極簡 GLB 解析器（支援 KHR_mesh_quantization），不依賴 GLTFLoader —— */
   const GLB_URL=window.SOUL_GLB_URL||'assets/model.glb';   /* ← model.glb 放的位置，可自行修改 */
@@ -264,9 +345,8 @@ function mountSoulArena(stage,done){
       add(FBD.bl,FBD.m,.022,.06,.46,.46);add(FBD.bx,FBD.m,.05,.2,.04,.04);add(FBD.bx,FBD.m2,.045,.045,.2,-.08)}
     return g}
   /* —— 玩家 —— */
-  const hero=new THREE.Group(),proc=humanoid({col:0xd9a77a,cloth:0xff9a1f,eye:0x111111,s:1});
-  proc.armL.rotation.x=proc.armR.rotation.x=-1.45;
-  {const cape=new THREE.Mesh(new THREE.BoxGeometry(.6,.9,.06),M(0x3a1a08,{emissive:0xff7a1a,emissiveIntensity:.2}));cape.position.set(0,1.05,-.25);proc.g.add(cape)}
+  const hero=new THREE.Group(),proc=knight({gems:true});
+  proc.armR.rotation.x=-.5;
   hero.add(proc.g);const hsh=shadow(.7);scene.add(hsh);scene.add(hero);
   const dagP=new THREE.Group();dagP.rotation.order='YXZ';proc.g.add(dagP);let heldD=null;   /* 握持中的匕首（右手） */
   function attachHeld(){if(heldD)dagP.remove(heldD);heldD=makeDagger(true);dagP.add(heldD)}
@@ -408,7 +488,7 @@ function mountSoulArena(stage,done){
       if(L>=5){later(.15,()=>{ring(nx,nz,5,0x9fc4ff,.5);S.shake=.3;for(const e of S.en)if(dist(e,{x:nx,z:nz})<5+e.r)hurtE(e,55,'#8fb4ff')})}
       if(L>=4&&!S.sp2){S.sp2=1;S.sp2t=2.5;S.cd[i]=.5}else{S.sp2=0;S.cd[i]=CDS[1]*(L>=2?.8:1)}}
     else if(i===2){const n=2+(L>=2?1:0),dur=7+(L>=3?3:0);
-      for(let k=0;k<n;k++){const m=humanoid({col:0xff7a7a,cloth:0xaa2020,eye:0xffffff});m.armL.rotation.x=m.armR.rotation.x=-1.45;m.all.forEach(q=>{q.transparent=true;q.opacity=.62;q.emissive=new THREE.Color(0xff2020);q.emissiveIntensity=.5});
+      for(let k=0;k<n;k++){const m=knight({cape:false});m.armL.rotation.x=m.armR.rotation.x=-1.3;m.all.forEach(q=>{q.transparent=true;q.opacity=.62;q.emissive=new THREE.Color(0xff2020);q.emissiveIntensity=.5});
         m.g.add(shadow(.7));dyn.add(m.g);S.cl.push({x:p.x,z:p.z,a:k/n*PI*2,t:dur,dur,fcd:rnd()*.2,g:m.g,dm:1+(L>=4?.6:0),boom:L>=5})}
       ring(p.x,p.z,4,0xff3b3b,.5);GA.tone(500,.4,'triangle',.14,2);S.cd[i]=CDS[2]}
     else if(i===3){S.aura={t:4+(L>=4?2:0),R:8*(L>=2?1.35:1),k:0};ring(p.x,p.z,S.aura.R,0xff9a1f,.6);GA.tone(300,.5,'sine',.15,2);S.cd[i]=CDS[3]}
@@ -581,11 +661,19 @@ function mountSoulArena(stage,done){
   function sync(dt){
     const p=S.p,[fx,fz]=fwd();
     hero.position.set(p.x,p.y,p.z);hsh.position.set(p.x,.04,p.z);hsh.scale.setScalar(.7*(1-Math.min(.5,p.y*.25)));hero.rotation.y=Math.atan2(fx,fz);hero.visible=!(p.inv>0&&S.run&&Math.floor(T*20)%2);
-    const mvk=Math.min(1,p.mv/5);proc.legL.rotation.x=Math.sin(p.sw)*.8*mvk;proc.legR.rotation.x=-Math.sin(p.sw)*.8*mvk;proc.g.position.y=Math.abs(Math.sin(p.sw))*.06*mvk;
+    const mvk=Math.min(1,p.mv/5);const sw=Math.sin(p.sw);proc.legL.rotation.x=sw*.8*mvk;proc.legR.rotation.x=-sw*.8*mvk;proc.legL.userData.kn.rotation.x=Math.max(0,sw)*.7*mvk+(p.y>.05?.5:0);proc.legR.userData.kn.rotation.x=Math.max(0,-sw)*.7*mvk+(p.y>.05?.5:0);
+    {const yw=Math.atan2(fx,fz);let dy=yw-(sync.yw==null?yw:sync.yw);if(dy>PI)dy-=2*PI;if(dy<-PI)dy+=2*PI;sync.yw=yw;sync.sy=(sync.sy||0)+(clamp(dy/Math.max(dt,.001)*.15,-1,1)-(sync.sy||0))*Math.min(1,dt*8);
+      proc.capeUpd(T,clamp(p.mv/7,0,1)+(p.y>.05?.35:0),-sync.sy);
+      proc.armR.rotation.x=-.5+sw*.35*mvk;
+      proc.gems.forEach((m,i)=>{const on=S.gl[i]>0?1:0;if(m.userData.lit!==on){m.userData.lit=on;const c=new THREE.Color(on?GEM[i].c:0x444455);m.color.copy(c);m.emissive.copy(on?c:new THREE.Color(0));m.emissiveIntensity=on?.9:0}})}
+proc.g.position.y=Math.abs(Math.sin(p.sw))*.06*mvk;
     /* 匕首：握持姿勢、揮砍與射擊動畫 */
     if(heldD){let rx=S.wm?-.3:-.1,ry=0,px=-.42,py=1.28+Math.sin(p.sw)*.03*mvk,pz=.62,rl=0;
       if(S.swT>0){const k=1-S.swT/SW_DUR,e=k*k*(3-2*k);ry=S.swDir*(1.3-2.6*e);rl=PI/2*Math.sin(k*PI);rx=-.05;pz+=.12*Math.sin(k*PI)}
       else if(S.kick>0){pz+=.4*S.kick;rx-=.35*S.kick}
+      const th=-1.31+(rx+.1),ph=ry*.65,sn=Math.sin(th),cs=Math.cos(th);
+      px=-.36-.66*sn*Math.sin(ph);py=1.44-.66*cs+Math.sin(p.sw)*.03*mvk;pz=-.66*sn*Math.cos(ph)+(pz-.62);
+      proc.armL.rotation.order='YXZ';proc.armL.rotation.set(th,ph,0);
       dagP.position.set(px,py,pz);dagP.rotation.set(rx,ry,0);heldD.userData.roll.rotation.z=rl}
     for(const b of S.dg){b.m.position.set(b.x,b.y,b.z);b.m.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);b.m.userData.roll.rotation.z=b.ro+=dt*28}
     props.forEach(q=>q.g.children.forEach(c=>{if(c.userData.spin)c.rotation.y=T*1.3}));
