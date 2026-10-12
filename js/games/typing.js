@@ -27,6 +27,7 @@ function mountTyping(stage,done){
   const rnd=Math.random,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   let S=null,raf=0,last=0,stars=Array.from({length:70},()=>({x:rnd()*W,y:rnd()*H,s:8+rnd()*30,r:.4+rnd()*1.2}));
   const alive=()=>S.en.filter(e=>!e.dead);
+  const lockable=e=>e.y>-20;   /* 進入畫面、可以鎖定時才顯示單字（魔王剛下來時不會先出現句子） */
   const usedFirst=()=>new Set(alive().map(e=>e.w[0]));
   function pickWord(lo,hi){
     lo=clamp(lo,3,13);hi=clamp(hi,lo,14);const used=usedFirst(),pool=WORDS.filter(w=>w.length>=lo&&w.length<=hi);
@@ -34,7 +35,7 @@ function mountTyping(stage,done){
     return pool[Math.floor(rnd()*pool.length)];
   }
   const easy=w=>w>=7&&w<=9;
-  const baseLen=()=>{const d=S.wave<=4?1:S.wave===5?-1:easy(S.wave)?-1:0;return[clamp(2+Math.ceil(S.wave*.5)+(d>0?0:d),3,11),clamp(4+Math.floor(S.wave*.8)+d,4,14)]};
+  const baseLen=()=>{const d=S.wave<=4?1:S.wave===5?-1:easy(S.wave)?-1:S.wave===10?-1:0;return[clamp(2+Math.ceil(S.wave*.5)+(d>0?0:d),3,11),clamp(4+Math.floor(S.wave*.8)+d,4,14)]};
   function mk(k,x,y,w,extra){const K=KINDS[k]||{};return Object.assign({k,x,y,w,i:0,r:K.r||14,t:0,dead:0,bl:2+rnd()*2,fire:2+rnd()*2,x0:x,ph:rnd()*6},extra||{})}
   function spawn(k){
     const [lo,hi]=baseLen();let w;
@@ -61,12 +62,12 @@ function mountTyping(stage,done){
   }
   function nextWave(){
     S.wave++;S.ph='banner';S.pt=2.2;[523,659,784].forEach((f,i)=>GA.tone(f,.2,'triangle',.14,0,i*.08));S.boss=false;
-    const w=S.wave,n=Math.min(60,4+w*2+(w<=4?1:w===5?-2:easy(w)?-4:0)),boss=w%5===0;S.q=[];
+    const w=S.wave,n=Math.min(60,4+w*2+(w<=4?1:w===5?-2:easy(w)?-4:0)+(w===6?1:w===7?2:w===10?-3:0)),boss=w%5===0;S.q=[];
     const un=ORDER.filter(k=>KINDS[k].u<=w);
     un.filter(k=>KINDS[k].u===w).forEach(k=>S.q.push(k));
     while(S.q.length<(boss?Math.ceil(n/2):n))S.q.push(un[Math.floor(rnd()*un.length)]);
     S.q.sort(()=>rnd()-.5);if(boss)S.q.unshift('BOSS');
-    S.sp=0;S.interval=Math.max(.42,2.4-w*.09)*(w<=4?.9:w===5?1.25:easy(w)?1.2:1);
+    S.sp=0;S.interval=Math.max(.42,2.4-w*.09)*(w<=4?.9:w===5?1.25:w===7?1.1:easy(w)?1.2:w===6?.96:w===10?1.12:1);
     S.banner='第 '+w+' 波'+(boss?(Math.round(w/5)%2===0?'　深淵無畏艦':'　薩諾斯降臨'):'');
   }
   function hudUp(){
@@ -81,7 +82,7 @@ function mountTyping(stage,done){
     let t=S.lock&&!S.lock.dead?S.lock:null;
     if(t){if(t.w[t.i]===ch)hit(t);else miss()}
     else{
-      const c=alive().filter(e=>e.w[0]===ch&&e.y>-20);
+      const c=alive().filter(e=>e.w[0]===ch&&lockable(e));
       if(!c.length){miss();return}
       c.sort((a,b)=>(b.k==='orb')-(a.k==='orb')||b.y-a.y);S.lock=c[0];hit(c[0]);
     }
@@ -141,8 +142,8 @@ function mountTyping(stage,done){
       else if(e.k==='orb'){e.x+=e.vx*dt;e.y+=e.vy*dt}
       else if(e.k==='boss'&&e.war){e.x=450+Math.sin(e.t*.3)*18;if(e.y<135)e.y+=45*dt;else e.y+=3.6*dt;e.fireT=Math.max(0,e.fireT-dt);e.fire-=dt;if(e.fire<=0&&e.y>40){e.fire=Math.max(2.1,3.8-S.wave*.04);e.fireT=.25;orb(e.x+(rnd()-.5)*700,e.y+70)}}
       else if(e.k==='boss'){e.x=450+Math.sin(e.t*.55)*250;if(e.y<110)e.y+=45*dt;else e.y+=4.5*dt}
-      if(e.k==='orb'){if(Math.hypot(e.x-PX,e.y-PY)<30){e.dead=1;hurt(8);explode(e.x,e.y,'#ff9a1f',14,150)}}
-      else if(e.y>=DANGER-(e.war?115:e.k==='boss'?30:0)){e.dead=1;hurt(e.k==='boss'?70:e.k==='power'?25:e.k==='drone'?8:14);explode(e.x,e.y,'#ff5a5a',26,220)}
+      if(e.k==='orb'){if(Math.hypot(e.x-PX,e.y-PY)<30){e.dead=1;hurt(6);explode(e.x,e.y,'#ff9a1f',14,150)}}
+      else if(e.y>=DANGER-(e.war?115:e.k==='boss'?30:0)){e.dead=1;hurt(e.k==='boss'?55:e.k==='power'?20:e.k==='drone'?6:11);explode(e.x,e.y,'#ff5a5a',26,220)}
     }
     if(S.en.some(e=>e.dead&&e===S.lock))S.lock=null;
     S.en=S.en.filter(e=>!e.dead);
@@ -152,6 +153,7 @@ function mountTyping(stage,done){
   }
   /* —— 繪圖 —— */
   const lbl=(e,txt,col)=>{
+    if(!lockable(e))return;
     const big=e.k==='boss',fs=big?20:17;ctx.font='bold '+fs+'px ui-monospace,Menlo,Consolas,monospace';
     const cw=ctx.measureText('m').width,tw=cw*e.w.length,y=e.y+e.r+(big?10:8),x=e.x-tw/2;
     const lk=S.lock===e;
@@ -166,8 +168,8 @@ function mountTyping(stage,done){
     }
     ctx.shadowBlur=0;
   };
-  function bossBar(e,x,y,w,col){const n=e.segs.length,gap=4,sw=(w-gap*(n-1))/n;ctx.save();ctx.shadowBlur=0;
-    for(let i=0;i<n;i++){const bx=x+i*(sw+gap),fr=i<e.si?0:i>e.si?1:1-e.i/e.w.length;ctx.fillStyle='#1a1733';ctx.fillRect(bx,y,sw,9);ctx.fillStyle=col;ctx.fillRect(bx,y,sw*fr,9);ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=1;ctx.strokeRect(bx,y,sw,9)}ctx.restore()}
+  function bossBar(e,x,y,w,col){const tot=e.segs.reduce((a,q)=>a+q.length,0);let dn=e.i;for(let k=0;k<e.si;k++)dn+=e.segs[k].length;const fr=clamp(1-dn/tot,0,1);ctx.save();ctx.shadowBlur=0;   /* 魔王血條：一整條，不分段 */
+    ctx.fillStyle='#1a1733';ctx.fillRect(x,y,w,9);ctx.fillStyle=col;ctx.fillRect(x,y,w*fr,9);ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=1;ctx.strokeRect(x,y,w,9);ctx.restore()}
   /* 橫向巨型戰艦（原創造型）：長條多層裝甲船身、中央艦橋、兩排舷窗燈、下方機庫與兩端引擎 */
   function warship(e,f){
     const T=e.t,col='#ffb060';ctx.save();ctx.scale(.94,.94);ctx.shadowBlur=0;ctx.lineJoin='round';
