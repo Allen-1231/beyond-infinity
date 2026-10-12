@@ -9,19 +9,19 @@ function mountTyping(stage,done){
     'responsibility unforgettable incomprehensible interconnected indestructible uncompromising extraterrestrial misunderstanding').split(' ').filter((w,i,a)=>a.indexOf(w)===i);
   const PHRASES=['i am inevitable','perfectly balanced','balance the universe','half of all life','i finally rest','the hardest choices','destiny arrives','dread it run from it','you could not live','fun isnt something'];
   const KINDS={
-    power:{n:'力量・重甲艦',c:'#a24bff',r:36,u:3,d:'血厚、字特別長'},
+    power:{n:'力量・重甲艦',c:'#a24bff',r:36,u:2,d:'血厚、字特別長'},
     space:{n:'空間・躍遷艦',c:'#2f7bff',r:27,u:1,d:'會瞬間橫向跳躍'},
-    reality:{n:'現實・裂變艦',c:'#ff3b3b',r:31,u:5,d:'擊落後分裂成兩架小機'},
-    soul:{n:'靈魂・魂火艦',c:'#ff9a1f',r:29,u:7,d:'停在上空，不斷射出單字母魂火'},
-    time:{n:'時間・沙漏艦',c:'#2fe07a',r:29,u:9,d:'忽快忽慢；擊落後時間凍結 3 秒'},
-    mind:{n:'心靈・幻影艦',c:'#ffd52e',r:29,u:11,d:'單字會閃爍隱藏'}};
+    reality:{n:'現實・裂變艦',c:'#ff3b3b',r:31,u:4,d:'擊落後分裂成兩架小機'},
+    soul:{n:'靈魂・魂火艦',c:'#ff9a1f',r:29,u:6,d:'停在上空，不斷射出單字母魂火'},
+    time:{n:'時間・沙漏艦',c:'#2fe07a',r:29,u:7,d:'忽快忽慢；擊落後時間凍結 3 秒'},
+    mind:{n:'心靈・幻影艦',c:'#ffd52e',r:29,u:8,d:'單字會閃爍隱藏'}};
   const ORDER=Object.keys(KINDS);
   const hud=h('div',{class:'hud'}),hpS=h('span'),sS=h('span'),wS=h('span'),cS=h('span');hud.append(hpS,sS,wS,cS,GA.muteBtn());
   const cv=h('canvas',{width:Math.round(W*dpr),height:Math.round(H*dpr),class:'ty-cv'});
   const inp=h('input',{class:'ty-hid',type:'text',autocomplete:'off',autocapitalize:'off',autocorrect:'off',spellcheck:'false','aria-label':'typing'});
   const start=h('button',{class:'btn'},'出擊');
   const legend=h('div',{class:'ty-leg'},ORDER.map(k=>h('div',{},h('i',{style:'background:'+KINDS[k].c}),h('b',{},KINDS[k].n),h('span',{},KINDS[k].d))));
-  const ov=h('div',{class:'ty-ov'},h('div',{class:'ty-t'},'打字遊戲'),h('p',{},'敵艦帶著英文單字從上方逼近。按下單字的第一個字母鎖定目標，再把整個單字打完就能擊落它。敵艦碰到下方防線會扣血，血量歸零就結束。'),legend,h('p',{class:'mut'},'波數沒有上限，越往後敵艦越快、單字越長；每 5 波薩諾斯降臨。'),start);
+  const ov=h('div',{class:'ty-ov'},h('div',{class:'ty-t'},'打字遊戲'),h('p',{},'敵艦帶著英文單字從上方逼近。按下單字的第一個字母鎖定目標，再把整個單字打完就能擊落它。敵艦碰到下方防線會扣血，血量歸零就結束。'),legend,h('p',{class:'mut'},'波數沒有上限，越往後敵艦越快、單字越長；每 5 波魔王降臨：薩諾斯與橫向巨型戰艦輪流出場，每一位的血條（句子）都比上一位多一條。'),start);
   stage.append(hud,h('div',{class:'ty-wrap'},cv,inp,ov),h('div',{class:'hint'},'直接打字，不用按 Enter　・　打錯字會中斷連擊　・　Esc 放棄目前鎖定的目標　・　點畫面可重新啟用鍵盤'));
   const ctx=cv.getContext('2d');ctx.setTransform(cv.width/W,0,0,cv.height/H,0,0);
   const rnd=Math.random,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -33,16 +33,20 @@ function mountTyping(stage,done){
     for(let i=0;i<30;i++){const w=pool[Math.floor(rnd()*pool.length)];if(!used.has(w[0]))return w}
     return pool[Math.floor(rnd()*pool.length)];
   }
-  const baseLen=()=>{const d=S.wave<=4?1:S.wave===5?-1:0;return[clamp(2+Math.ceil(S.wave*.5)+(d>0?0:d),3,11),clamp(4+Math.floor(S.wave*.8)+d,4,14)]};
+  const easy=w=>w>=7&&w<=9;
+  const baseLen=()=>{const d=S.wave<=4?1:S.wave===5?-1:easy(S.wave)?-1:0;return[clamp(2+Math.ceil(S.wave*.5)+(d>0?0:d),3,11),clamp(4+Math.floor(S.wave*.8)+d,4,14)]};
   function mk(k,x,y,w,extra){const K=KINDS[k]||{};return Object.assign({k,x,y,w,i:0,r:K.r||14,t:0,dead:0,bl:2+rnd()*2,fire:2+rnd()*2,x0:x,ph:rnd()*6},extra||{})}
   function spawn(k){
     const [lo,hi]=baseLen();let w;
     if(k==='power')w=pickWord(lo+2,hi+3);else if(k==='space')w=pickWord(lo-1,hi-1);else if(k==='soul')w=pickWord(lo-1,hi);else w=pickWord(lo,hi);
     S.en.push(mk(k,70+rnd()*760,-30,w));
   }
+  const SENT=['the void swallows every last star','surrender now and your world will live','our fleet darkens the sky above you','no light escapes this iron fortress','every engine answers to my command','your defenses are nothing but dust','the armada has waited long enough','bow before the shadow of the throne','there is no escape from the abyss','a thousand cannons now take aim','this is the end of your little war','fall silent beneath our endless wings','the stars will burn for our glory','hear the engines of a dying galaxy','nothing stands before the black fleet','your last hope sinks into the dark'];
+  /* 魔王每 5 波一位：奇數位＝薩諾斯、偶數位＝巨型戰艦；血條（句子）數 = 2 + 魔王序號，每次多一條 */
   function spawnBoss(){
-    const ph=[];while(ph.length<3){const p=PHRASES[Math.floor(rnd()*PHRASES.length)];if(!ph.includes(p))ph.push(p)}
-    S.en.push(mk('boss',450,-90,ph[0],{r:80,segs:ph,si:0,x0:450}));S.boss=true;
+    const idx=Math.round(S.wave/5),war=idx%2===0,bars=2+idx,pool=war?SENT:PHRASES,ph=[];
+    while(ph.length<bars){const q=pool.slice().sort(()=>rnd()-.5);if(ph.length&&q[0]===ph[ph.length-1])q.push(q.shift());ph.push(...q)}ph.length=bars;
+    S.en.push(war?mk('boss',450,-130,ph[0],{r:100,segs:ph,si:0,x0:450,war:1,fireT:0}):mk('boss',450,-90,ph[0],{r:80,segs:ph,si:0,x0:450}));S.boss=true;
   }
   function orb(x,y,n){
     GA.tone(280,.2,'sine',.12,2);
@@ -57,13 +61,13 @@ function mountTyping(stage,done){
   }
   function nextWave(){
     S.wave++;S.ph='banner';S.pt=2.2;[523,659,784].forEach((f,i)=>GA.tone(f,.2,'triangle',.14,0,i*.08));S.boss=false;
-    const w=S.wave,n=Math.min(60,4+w*2+(w<=4?1:w===5?-2:0)),boss=w%5===0;S.q=[];
+    const w=S.wave,n=Math.min(60,4+w*2+(w<=4?1:w===5?-2:easy(w)?-4:0)),boss=w%5===0;S.q=[];
     const un=ORDER.filter(k=>KINDS[k].u<=w);
     un.filter(k=>KINDS[k].u===w).forEach(k=>S.q.push(k));
     while(S.q.length<(boss?Math.ceil(n/2):n))S.q.push(un[Math.floor(rnd()*un.length)]);
     S.q.sort(()=>rnd()-.5);if(boss)S.q.unshift('BOSS');
-    S.sp=0;S.interval=Math.max(.42,2.4-w*.09)*(w<=4?.9:w===5?1.25:1);
-    S.banner='第 '+w+' 波';
+    S.sp=0;S.interval=Math.max(.42,2.4-w*.09)*(w<=4?.9:w===5?1.25:easy(w)?1.2:1);
+    S.banner='第 '+w+' 波'+(boss?(Math.round(w/5)%2===0?'　深淵無畏艦':'　薩諾斯降臨'):'');
   }
   function hudUp(){
     hpS.textContent='防線 '+Math.max(0,Math.round(S.hp))+'%';sS.textContent='分數 '+S.score;wS.textContent='第 '+S.wave+' 波';cS.textContent='連擊 ×'+Math.min(5,1+Math.floor(S.combo/10))+'（'+S.combo+'）';
@@ -102,7 +106,7 @@ function mountTyping(stage,done){
     if(t.k==='boss'){
       t.si++;if(t.si<t.segs.length){
         t.w=t.segs[t.si];t.i=0;S.lock=null;t.y=Math.max(110,t.y-30);explode(t.x,t.y,'#ffd27a',30,240);S.shake=.4;
-        for(let i=-1;i<=1;i++)orb(t.x+i*30,t.y+60,i*.35);spawn(ORDER[Math.floor(rnd()*Math.min(6,Math.max(1,S.wave)))]);
+        if(t.war){for(let i=-2;i<=2;i++)orb(t.x+i*150,t.y+70,i*.18)}else for(let i=-1;i<=1;i++)orb(t.x+i*30,t.y+60,i*.35);spawn(ORDER[Math.floor(rnd()*Math.min(6,Math.max(1,S.wave)))]);
         return}
       S.score+=1000+S.wave*100;explode(t.x,t.y,'#b36bff',90,320);S.shake=.7;S.banner='';
     }else{
@@ -124,7 +128,7 @@ function mountTyping(stage,done){
       S.sp-=dt;if(S.sp<=0&&S.q.length){const k=S.q.shift();if(k==='BOSS')spawnBoss();else spawn(k);S.sp=S.interval*(.7+rnd()*.6)}
       if(!S.q.length)S.ph='clear';
     }
-    const vy=Math.min(120,18+S.wave*2.4)*(S.wave<=4?1.1:S.wave===5?.85:1);
+    const vy=Math.min(120,18+S.wave*2.4)*(S.wave<=4?1.1:S.wave===5?.85:easy(S.wave)?.88:1);
     if(!fr)for(const e of S.en){
       if(e.dead)continue;e.t+=dt;e.hf=Math.max(0,(e.hf||0)-dt);
       if(e.k==='power')e.y+=vy*.55*dt;
@@ -135,9 +139,10 @@ function mountTyping(stage,done){
       else if(e.k==='mind'){e.y+=vy*.85*dt;e.x=clamp(e.x0+Math.sin(e.t*2.2+e.ph)*65,40,860)}
       else if(e.k==='drone'){e.y+=vy*1.3*dt;e.x=clamp(e.x+Math.sin(e.t*3+e.ph)*20*dt,30,870)}
       else if(e.k==='orb'){e.x+=e.vx*dt;e.y+=e.vy*dt}
+      else if(e.k==='boss'&&e.war){e.x=450+Math.sin(e.t*.3)*18;if(e.y<135)e.y+=45*dt;else e.y+=3.6*dt;e.fireT=Math.max(0,e.fireT-dt);e.fire-=dt;if(e.fire<=0&&e.y>40){e.fire=Math.max(2.1,3.8-S.wave*.04);e.fireT=.25;orb(e.x+(rnd()-.5)*700,e.y+70)}}
       else if(e.k==='boss'){e.x=450+Math.sin(e.t*.55)*250;if(e.y<110)e.y+=45*dt;else e.y+=4.5*dt}
       if(e.k==='orb'){if(Math.hypot(e.x-PX,e.y-PY)<30){e.dead=1;hurt(8);explode(e.x,e.y,'#ff9a1f',14,150)}}
-      else if(e.y>=DANGER-(e.k==='boss'?30:0)){e.dead=1;hurt(e.k==='boss'?70:e.k==='power'?25:e.k==='drone'?8:14);explode(e.x,e.y,'#ff5a5a',26,220)}
+      else if(e.y>=DANGER-(e.war?115:e.k==='boss'?30:0)){e.dead=1;hurt(e.k==='boss'?70:e.k==='power'?25:e.k==='drone'?8:14);explode(e.x,e.y,'#ff5a5a',26,220)}
     }
     if(S.en.some(e=>e.dead&&e===S.lock))S.lock=null;
     S.en=S.en.filter(e=>!e.dead);
@@ -161,6 +166,45 @@ function mountTyping(stage,done){
     }
     ctx.shadowBlur=0;
   };
+  function bossBar(e,x,y,w,col){const n=e.segs.length,gap=4,sw=(w-gap*(n-1))/n;ctx.save();ctx.shadowBlur=0;
+    for(let i=0;i<n;i++){const bx=x+i*(sw+gap),fr=i<e.si?0:i>e.si?1:1-e.i/e.w.length;ctx.fillStyle='#1a1733';ctx.fillRect(bx,y,sw,9);ctx.fillStyle=col;ctx.fillRect(bx,y,sw*fr,9);ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=1;ctx.strokeRect(bx,y,sw,9)}ctx.restore()}
+  /* 橫向巨型戰艦（原創造型）：長條多層裝甲船身、中央艦橋、兩排舷窗燈、下方機庫與兩端引擎 */
+  function warship(e,f){
+    const T=e.t,col='#ffb060';ctx.save();ctx.scale(.94,.94);ctx.shadowBlur=0;ctx.lineJoin='round';
+    const poly=(pts,fill,stroke)=>{ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1.6;ctx.stroke()}};
+    /* 引擎光 */
+    for(const sd of[-1,1])for(const y of[-14,22,52]){const g=ctx.createRadialGradient(sd*432,y,2,sd*432,y,30);g.addColorStop(0,'rgba(255,190,110,.95)');g.addColorStop(1,'rgba(255,110,40,0)');ctx.fillStyle=g;ctx.fillRect(sd*432-30,y-30,60,60)}
+    /* 下層船身 */
+    const hg=ctx.createLinearGradient(0,10,0,92);hg.addColorStop(0,'#3a322b');hg.addColorStop(1,'#15110f');
+    poly([[-436,22],[-140,22],[-96,40],[-64,92],[64,92],[96,40],[140,22],[436,22],[436,54],[310,64],[-310,64],[-436,54]],hg,'#0b0908');
+    /* 機庫龍骨 */
+    poly([[-84,26],[84,26],[58,86],[-58,86]],'#1d1814','#6b5a48');
+    ctx.strokeStyle='#7a6850';ctx.lineWidth=1.4;for(let i=0;i<5;i++){const y=34+i*10,w=78-i*6;ctx.beginPath();ctx.moveTo(-w,y);ctx.lineTo(0,y+9);ctx.lineTo(w,y);ctx.stroke()}
+    const hp=.55+.25*Math.sin(T*3);ctx.fillStyle='rgba(120,230,255,'+hp+')';ctx.shadowColor='#7fe7ff';ctx.shadowBlur=14;ctx.beginPath();ctx.ellipse(0,52,26,4.5,0,0,7);ctx.fill();ctx.shadowBlur=0;
+    /* 下層舷窗 */
+    for(let i=-205;i<=205;i+=9){if(Math.abs(i)<70)continue;const a=.45+.55*Math.sin(T*2.4+i*.21);ctx.fillStyle='rgba(255,214,150,'+a.toFixed(2)+')';ctx.fillRect(i*2.05-1.5,38+Math.abs(i)*.02,3,2.5)}
+    /* 底部長軌 */
+    ctx.fillStyle='#1a1512';ctx.fillRect(-300,60,600,7);ctx.strokeStyle='#4a3e32';ctx.lineWidth=1;ctx.strokeRect(-300,60,600,7);
+    /* 上層船身 */
+    const ug=ctx.createLinearGradient(0,-90,0,12);ug.addColorStop(0,'#5a4d3f');ug.addColorStop(1,'#241e19');
+    poly([[-440,-14],[-340,-38],[-178,-50],[-94,-62],[-52,-86],[52,-86],[94,-62],[178,-50],[340,-38],[440,-14],[440,12],[-440,12]],ug,'#0b0908');
+    /* 裝甲板縫 */
+    ctx.strokeStyle='rgba(15,10,8,.7)';ctx.lineWidth=1.3;ctx.beginPath();
+    for(let i=0;i<9;i++){const x=-400+i*40;ctx.moveTo(x,-26+Math.abs(x)*.02);ctx.lineTo(x+14,10)}for(let i=0;i<9;i++){const x=70+i*40;ctx.moveTo(x,-40+(x-70)*.03);ctx.lineTo(x+14,10)}ctx.stroke();
+    ctx.strokeStyle='rgba(190,165,130,.35)';ctx.beginPath();ctx.moveTo(-430,-14);ctx.lineTo(-340,-37);ctx.lineTo(-178,-49);ctx.lineTo(-94,-61);ctx.lineTo(-52,-85);ctx.lineTo(52,-85);ctx.lineTo(94,-61);ctx.lineTo(178,-49);ctx.lineTo(340,-37);ctx.lineTo(430,-14);ctx.stroke();
+    /* 艦橋 */
+    poly([[-38,-86],[-26,-104],[26,-104],[38,-86]],'#3a3128','#0b0908');ctx.fillStyle='rgba(255,200,130,.9)';ctx.fillRect(-18,-98,36,4);ctx.strokeStyle='#8a7a66';ctx.beginPath();ctx.moveTo(-10,-104);ctx.lineTo(-10,-120);ctx.moveTo(14,-104);ctx.lineTo(14,-114);ctx.stroke();
+    /* 寶石 */
+    const gc=['#a24bff','#2f7bff','#ff3b3b','#ff9a1f','#2fe07a','#ffd52e'];gc.forEach((c,i)=>{const gx=-50+i*20;ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(gx,-76);ctx.lineTo(gx+5,-70);ctx.lineTo(gx,-64);ctx.lineTo(gx-5,-70);ctx.closePath();ctx.fill()});ctx.shadowBlur=0;
+    /* 炮塔（開火時閃光） */
+    for(const x of[-320,-230,230,320]){ctx.fillStyle='#2a2320';ctx.strokeStyle='#0b0908';ctx.beginPath();ctx.arc(x,-30+Math.abs(x)*.02,9,0,7);ctx.fill();ctx.stroke();ctx.fillStyle='#3a312a';ctx.fillRect(x-2,-28+Math.abs(x)*.02,4,18);
+      if(e.fireT>0){ctx.fillStyle='rgba(255,230,160,'+Math.min(1,e.fireT*5)+')';ctx.beginPath();ctx.arc(x,-12+Math.abs(x)*.02,7,0,7);ctx.fill()}}
+    /* 上層舷窗兩排 */
+    for(let i=-215;i<=215;i+=7){if(Math.abs(i)<62)continue;const x=i*2,a=.4+.6*Math.sin(T*3+i*.37);ctx.fillStyle='rgba(255,226,170,'+a.toFixed(2)+')';ctx.fillRect(x-1.5,-3,3,3);ctx.fillRect(x-1.5,4,3,2.4)}
+    if(f){ctx.globalAlpha=.35;ctx.fillStyle='#fff';poly([[-440,-14],[-340,-38],[-178,-50],[-94,-62],[-52,-86],[52,-86],[94,-62],[178,-50],[340,-38],[440,-14],[440,12],[-440,12]],'#fff');poly([[-436,22],[436,22],[436,54],[-436,54]],'#fff');ctx.globalAlpha=1}
+    ctx.restore();
+    bossBar(e,-Math.min(260,e.segs.length*60),-124,Math.min(260,e.segs.length*60)*2,col);
+  }
   function ship(e){
     const c=(KINDS[e.k]||{c:'#b36bff'}).c,r=e.r,f=e.hf>0;
     ctx.save();ctx.translate(e.x,e.y);ctx.shadowColor=c;ctx.shadowBlur=f?30:14;ctx.lineJoin='round';ctx.lineWidth=2;ctx.strokeStyle=f?'#fff':c;ctx.fillStyle=f?'#fff':'#12102a';
@@ -190,13 +234,14 @@ function mountTyping(stage,done){
       P([[0,r],[-r*.9,-r*.6],[r*.9,-r*.6]]);gem(0,-r*.1,r*.3,'#ff3b3b');
     }else if(e.k==='orb'){
       ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=18;ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.fill();ctx.fillStyle='#2a1200';ctx.font='bold 17px ui-monospace,monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowBlur=0;ctx.fillText(e.w[0].toUpperCase(),0,1);
+    }else if(e.k==='boss'&&e.war){warship(e,f);
     }else if(e.k==='boss'){
       ctx.strokeStyle=f?'#fff':'#b36bff';
       P([[-r*1.3,-r*.2],[-r*.7,-r*.9],[r*.7,-r*.9],[r*1.3,-r*.2],[r*.6,r*.85],[-r*.6,r*.85]]);
       ctx.fillStyle='#d1a23c';ctx.strokeStyle='#0d1020';[-3,-1.5,0,1.5,3].forEach((k,i)=>{const hh=[22,34,48,34,22][i];ctx.beginPath();ctx.moveTo(k*r*.2-8,-r*.9);ctx.lineTo(k*r*.2,-r*.9-hh);ctx.lineTo(k*r*.2+8,-r*.9);ctx.closePath();ctx.fill();ctx.stroke()});
       ctx.fillStyle='#8b58ac';ctx.beginPath();ctx.arc(0,-r*.1,r*.5,0,7);ctx.fill();ctx.fillStyle='#b98cff';ctx.shadowColor='#b98cff';ctx.shadowBlur=14;[-1,1].forEach(s=>{ctx.beginPath();ctx.moveTo(s*r*.1,-r*.1);ctx.lineTo(s*r*.38,-r*.2);ctx.lineTo(s*r*.25,0);ctx.closePath();ctx.fill()});
       const cs=['#a24bff','#2f7bff','#ff3b3b','#ff9a1f','#2fe07a','#ffd52e'];cs.forEach((q,i)=>gem(-r*.75+i*r*.3,r*.55,r*.12,q));
-      ctx.shadowBlur=0;ctx.fillStyle='#1a1733';ctx.fillRect(-r,-r*1.95-14,r*2,8);ctx.fillStyle='#b36bff';ctx.fillRect(-r,-r*1.95-14,r*2*(1-(e.si+e.i/e.w.length)/e.segs.length),8);
+      ctx.shadowBlur=0;bossBar(e,-r,-r*1.95-14,r*2,'#b36bff');
     }
     ctx.restore();
   }
@@ -205,7 +250,7 @@ function mountTyping(stage,done){
     const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0a0820');g.addColorStop(1,'#140a26');ctx.fillStyle=g;ctx.fillRect(-10,-10,W+20,H+20);
     ctx.fillStyle='#fff';stars.forEach(s=>{ctx.globalAlpha=.3+s.r*.25;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,7);ctx.fill()});ctx.globalAlpha=1;
     ctx.strokeStyle='rgba(255,90,90,.35)';ctx.setLineDash([10,8]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,DANGER+30);ctx.lineTo(W,DANGER+30);ctx.stroke();ctx.setLineDash([]);
-    if(S.lock&&!S.lock.dead){const t=S.lock;ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PX,PY);ctx.lineTo(t.x,t.y);ctx.stroke();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(t.x,t.y,t.r+9+Math.sin(S.t*8)*2,0,7);ctx.stroke()}
+    if(S.lock&&!S.lock.dead){const t=S.lock;ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PX,PY);ctx.lineTo(t.x,t.y);ctx.stroke();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;if(t.war){ctx.setLineDash([8,6]);ctx.strokeRect(t.x-420,t.y-104,840,200);ctx.setLineDash([])}else{ctx.beginPath();ctx.arc(t.x,t.y,t.r+9+Math.sin(S.t*8)*2,0,7);ctx.stroke()}}
     S.en.forEach(e=>{ship(e);lbl(e,e.w,(KINDS[e.k]||{c:'#b36bff'}).c)});
     S.beams.forEach(b=>{if(b.t.dead&&false)return;ctx.strokeStyle='rgba(180,240,255,'+(b.l*9).toFixed(2)+')';ctx.shadowColor='#8fe8ff';ctx.shadowBlur=12;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.t.x,b.t.y);ctx.stroke();ctx.shadowBlur=0});
     S.pa.forEach(q=>{ctx.globalAlpha=Math.max(0,q.l/q.m);ctx.fillStyle=q.c;ctx.fillRect(q.x-2,q.y-2,4,4)});ctx.globalAlpha=1;
@@ -257,5 +302,5 @@ function mountTyping(stage,done){
   inp.addEventListener('keydown',e=>{if(e.key==='Escape'&&S&&S.lock){S.lock=null;e.preventDefault()}});
   cv.addEventListener('pointerdown',()=>inp.focus());
   start.onclick=begin;
-  window.__ty=()=>S;window.__typress=press;
+  window.__ty=()=>S;window.__typress=press;window.__tyx={nextWave,spawnBoss};
 }
