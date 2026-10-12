@@ -6,7 +6,7 @@ function h(t,a={},...k){const e=document.createElement(t);for(const x in a){if(x
 
 /* ===== 遊戲註冊表：新增遊戲只要在這裡加一筆 ===== */
 const GAMES=[
- {id:'archer',stone:'力量',c:'#a24bff',name:'無限寶石：生存戰',desc:'Roguelite 生存：你只有一把基本槍或刀，寶石能力都在敵人手上。升級隨機選強化，組出火焰、零度、雷暴、不死等流派；每 3 分鐘一位寶石守護者。',ready:true,mount:mountArcher},
+ {id:'archer',stone:'力量',c:'#a24bff',name:'無限寶石：生存戰',desc:'Roguelite 生存：你只有一把突擊步槍，寶石的力量全在敵人手上。各種體型與攻擊的怪物不斷湧來，升級隨機選強化，組出火焰、零度、雷暴、不死等流派；每 90 秒一位寶石守衛降臨。',ready:true,mount:mountArcher},
  {id:'tunnel',stone:'空間',c:'#2f7bff',name:'螺旋隧道',desc:'在太空中的螺旋隧道裡高速飛行，換線閃開障礙，撿起六種寶石，每一種都有自己的能力。',ready:true,mount:mountTunnel},
  {id:'shooter',stone:'現實',c:'#ff3b3b',name:'寶石機鬥',desc:'駕駛你的戰機，闖過六位寶石守衛，取得寶石、解鎖專屬武器，最後直面瘋狂泰坦薩諾斯。',ready:true,mount:mountShooter},
  {id:'soul',stone:'靈魂',c:'#ff9a1f',name:'靈魂戰場',desc:'3D 第三人稱射擊：WASD 移動、滑鼠瞄準，殺殭屍與怪物。升級時選擇強化機體，或解鎖六顆寶石各自的技能（按 1–6 施放），10 波內擊敗最終魔王「寶石吞噬者」。可自訂 GLB 角色。',ready:true,mount:mountSoulArena},
