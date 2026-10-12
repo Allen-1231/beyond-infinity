@@ -27,6 +27,7 @@ function mountSoulArena(stage,done){
     spt:{n:'酸液怪',hp:44,sp:2.2,r:.6,h:1.7,dm:14,at:2.6,xp:3,sc:28,col:0x3aa05a,eye:0xb6ff3a},
     bat:{n:'蝠魔',hp:30,sp:4.5,r:.5,h:1.0,dm:12,at:.9,xp:2,sc:20,col:0x7a3aa0,eye:0xff4040,fly:1,alt:4.2},
     gar:{n:'空襲者',hp:80,sp:3.0,r:.75,h:1.5,dm:13,at:2.4,xp:5,sc:40,col:0x2a8aa0,eye:0x9fe8ff,fly:1,alt:5.6},
+    drg:{n:'飛龍',hp:260,sp:3.4,r:1.4,h:2.4,dm:22,at:3.2,xp:12,sc:120,col:0x44663a,eye:0xf2b61e,fly:1,alt:6.5},
     wsp:{n:'魂焰',hp:28,sp:3.8,r:.5,h:1.2,dm:10,at:.9,xp:2,sc:22,col:0xff9a1f,eye:0xffffff,fly:1},
     mbs:{n:'屍王',hp:1100,sp:2.6,r:1.5,h:4,dm:34,at:1.3,xp:30,sc:500,col:0x6a3a3a,eye:0xffcc00,s:2.2,boss:1},
     fbs:{n:'寶石吞噬者',hp:7500,sp:2.2,r:2.2,h:6,dm:45,at:1.4,xp:0,sc:3000,col:0x3a2a5a,eye:0xff9a1f,s:3.1,boss:1}};
@@ -131,7 +132,7 @@ function mountSoulArena(stage,done){
       const bb=new THREE.Box3().setFromObject(wrap),sz=bb.getSize(new THREE.Vector3()),c=bb.getCenter(new THREE.Vector3());
       g.position.set(-c.x,-bb.min.y,-c.z);return{tpl:wrap,ex:sz.x,ey:sz.y,ez:sz.z}});
     const blob=i=>{const im=js.images[i],bv=js.bufferViews[im.bufferView],o=bv.byteOffset||0;return new Blob([bin.slice(o,o+bv.byteLength)],{type:im.mimeType})};
-    return{cr,js,build,blob}}
+    return{cr,js,build,blob,mats,geo}}
   /* 以 model.glb 的怪物建出敵人。模型沒有骨架，所以用「整隻身體」做走路晃動／飄浮動畫 */
   function glbModel(t){
     const d=ET[t],pl=POOL[t],tp=GLB.cr[pl[(rnd()*pl.length)|0]],g=new THREE.Group(),body=tp.tpl.clone(true),mm=new Map(),all=[];
@@ -141,6 +142,28 @@ function mountSoulArena(stage,done){
     return{g,all,sk:all[0],hh,anim(e,T){
       if(fly){body.position.y=by+Math.sin(T*4+e.ph)*.06;body.rotation.z=Math.sin(T*2.5+e.ph)*.12;body.rotation.x=Math.sin(T*1.7+e.ph)*.08}
       else{const k=Math.sin(e.wk*1.1);body.position.y=Math.abs(k)*.07*Math.max(1,hh*.5);body.rotation.z=k*.07;body.rotation.x=Math.sin(e.wk*.55)*.04;body.scale.y=s*(1+Math.sin(T*3+e.ph)*.02)}}}}
+  /* —— 飛龍 dragon.glb：高空敵人，拍翅（用頂點著色器彎折翅膀）、噴火球、投下火焰區 —— */
+  const DRG_URL=window.SOUL_DRAGON_URL||'assets/dragon.glb';   /* ← dragon.glb 放的位置，可自行修改 */
+  let DRG=null;
+  function loadDragon(){
+    return fetch(DRG_URL).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(buf=>{
+      const G=parseGLB(buf),js=G.js,root=js.scenes[js.scene||0].nodes[0],tpl=new THREE.Group();
+      (js.nodes[root].children||[]).forEach(ci=>{const n=js.nodes[ci];if(n.mesh==null)return;
+        /* 把每個零件的位移／縮放烤進頂點，之後所有零件共用同一座標系（拍翅才能用 x 座標判斷離身體多遠） */
+        const src=G.geo(n.mesh,0),P=src.attributes.position.array,Q=new Float32Array(P.length),sc=n.scale?n.scale[0]:1,tr=n.translation||[0,0,0];
+        for(let i=0;i<P.length;i+=3){Q[i]=P[i]*sc+tr[0];Q[i+1]=P[i+1]*sc+tr[1];Q[i+2]=P[i+2]*sc+tr[2]}
+        const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(Q,3));g.setAttribute('normal',src.attributes.normal);if(src.index)g.setIndex(src.index);g.userData.shared=true;
+        const pr=js.meshes[n.mesh].primitives[0];tpl.add(new THREE.Mesh(g,G.mats[pr.material]||G.mats[0]))});
+      tpl.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(tpl),sz=bb.getSize(new THREE.Vector3()),c=bb.getCenter(new THREE.Vector3());
+      DRG={tpl,cx:c.x,cy:c.y,cz:c.z,ex:sz.x,ey:sz.y,ez:sz.z}})}
+  function dragonModel(){
+    const g=new THREE.Group(),sc=new THREE.Group(),body=DRG.tpl.clone(true),mm=new Map(),all=[],s=7/DRG.ex;   /* 翼展縮成約 7 */
+    body.traverse(o=>{if(o.isMesh){let m=mm.get(o.material);if(!m){m=o.material.clone();m.side=THREE.DoubleSide;const U={value:0};m.userData.fl=U;
+      m.onBeforeCompile=sh=>{sh.uniforms.uFl=U;sh.vertexShader='uniform float uFl;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n float ax=max(abs(position.x)-1.0,0.0);transformed.y+=uFl*pow(ax,1.5)*.2;')};
+      mm.set(o.material,m);all.push(m)}o.material=m}});
+    body.position.set(-DRG.cx,-DRG.cy,-DRG.cz);sc.scale.setScalar(s);sc.add(body);g.add(sc);
+    return{g,all,sk:all[0],hh:DRG.ey*s,anim(e,T){const f=Math.sin(T*6+e.ph);all.forEach(m=>m.userData.fl.value=f);
+      sc.rotation.z=Math.sin(T*1.6+e.ph)*.15;sc.rotation.x=Math.sin(T*2.1+e.ph)*.05+f*.04;sc.position.y=f*.1}}}
   /* —— 匕首武器：dagger.glb（內嵌貼圖）。載入失敗時改用內建簡易匕首 —— */
   const DAG_URL=window.SOUL_DAGGER_URL||'assets/dagger.glb';   /* ← dagger.glb 放的位置，可自行修改 */
   const DAG_LEN=.95;   /* 匕首全長（遊戲單位） */
@@ -202,12 +225,12 @@ function mountSoulArena(stage,done){
   function spawnEn(t,x,z){
     const d=ET[t],w=Math.max(1,S.wave),m=d.boss?1:1+.1*(w-1);
     const useG=!!(GLB&&POOL[t]);
-    const mdl=useG?glbModel(t):d.fly?wispModel():humanoid({col:d.col,eye:d.eye,s:d.s||1,back:t==='spt',armor:t==='brt'||t==='mbs'||t==='fbs',cloth:t==='fbs'?0x201030:t==='mbs'?0x3a1a1a:0x2c2c3a});
+    const mdl=t==='drg'&&DRG?dragonModel():useG?glbModel(t):d.fly?wispModel():humanoid({col:d.col,eye:d.eye,s:d.s||1,back:t==='spt',armor:t==='brt'||t==='mbs'||t==='fbs',cloth:t==='fbs'?0x201030:t==='mbs'?0x3a1a1a:0x2c2c3a});
     if(!useG&&!d.fly){mdl.armL.rotation.x=mdl.armR.rotation.x=-1.4}
     const g=mdl.g;g.position.set(x,0,z);g.add(shadow(d.r*1.15));
     let og=null;if(t==='fbs'){og=new THREE.Group();GEM.forEach((q,i)=>{const o=new THREE.Mesh(new THREE.OctahedronGeometry(.45),BM(new THREE.Color(q.c)));const a=i/6*PI*2;o.position.set(Math.cos(a)*3.6,6.8,Math.sin(a)*3.6);og.add(o)});g.add(og)}
     dyn.add(g);
-    const e={t,d,x,z,hp:d.hp*m,max:d.hp*m,sp:d.sp*(d.boss?1:1+.02*w),r:d.r,h:useG?Math.max(.8,Math.min(d.h,mdl.hh*1.15)):d.h,y0:t==='wsp'?.6:d.alt?d.alt-d.h/2:0,alt:d.alt,at:rnd()*d.at,kx:0,kz:0,stun:0,fl:0,ph:rnd()*6,mdl,g,og,boss:!!d.boss,bt:2.5,b2:5,b3:9,face:0,wk:0};
+    const e={t,d,x,z,hp:d.hp*m,max:d.hp*m,sp:d.sp*(d.boss?1:1+.02*w),r:d.r,h:useG||(t==='drg'&&DRG)?Math.max(.8,Math.min(d.h,mdl.hh*1.15)):d.h,y0:t==='wsp'?.6:d.alt?d.alt-d.h/2:0,alt:d.alt,at:rnd()*d.at,kx:0,kz:0,stun:0,fl:0,ph:rnd()*6,mdl,g,og,boss:!!d.boss,bt:2.5,b2:5,b3:9,face:0,wk:0};
     S.en.push(e);if(d.boss)S.boss=e;return e;
   }
   function edgeSpawn(t){let x=0,z=0;for(let k=0;k<8;k++){const a=rnd()*PI*2,r=26+rnd()*14;x=S.p.x+Math.cos(a)*r;z=S.p.z+Math.sin(a)*r;const dd=Math.hypot(x,z);if(dd>AR-3){x*=(AR-3)/dd;z*=(AR-3)/dd}if(Math.hypot(x-S.p.x,z-S.p.z)>18)break}return spawnEn(t,x,z)}
@@ -263,6 +286,18 @@ function mountSoulArena(stage,done){
         e.x+=gx/gl*e.sp*edt*(wnt||e.sd?1:0);e.z+=gz/gl*e.sp*edt;
         if(e.at<=0&&dd<30){e.at=d.at;const V=11,tt=dd/V,vy=(p.y+1.1-e.alt)/tt,a0=Math.atan2(dz,dx);
           for(let i=-1;i<=1;i++){const a=a0+i*.16;if(S.eb.length<260)S.eb.push({x:e.x,y:e.alt,z:e.z,vx:Math.cos(a)*V,vz:Math.sin(a)*V,vy,l:tt*1.5+.5,d:d.dm,c:'#9fe8ff',r:.32})}GA.tone(700,.08,'sine',.07,.5)}}
+      else if(e.t==='drg'){
+        /* 飛龍：在高空繞著玩家盤旋；兩招輪流——噴火（面向玩家連射 7 發扇形火球）／轟炸（地面先出現預警圈，約 1.2 秒後火焰炸開，可跳起躲避） */
+        mv=0;if(e.ds==null){e.ds=0;e.bt=2.5+rnd()*2;e.ca=rnd()*6.28;e.dir=rnd()<.5?1:-1;e.alt=d.alt}
+        e.alt+=(d.alt+Math.sin(T*.9+e.ph)*.8-e.alt)*Math.min(1,edt*2);e.bt-=edt;
+        if(e.ds===0){e.ca+=edt*.45*e.dir;const tx=p.x+Math.cos(e.ca)*15,tz=p.z+Math.sin(e.ca)*15,ax=tx-e.x,az=tz-e.z,al=Math.hypot(ax,az)||1,v=Math.min(e.sp*1.5,al*1.5);e.x+=ax/al*v*edt;e.z+=az/al*v*edt;
+          if(e.bt<=0){e.k=!e.k;if(e.k){e.ds=1;e.bt=1.8;e.fv=0;e.fc=.4;GA.tone(120,.5,'sawtooth',.15,.4)}else{e.ds=2;e.bt=1.4;e.bm=0}}}
+        else if(e.ds===1){e.fc-=edt;
+          if(e.fc<=0&&e.fv<7){e.fc=.18;e.fv++;const V=13,tt=Math.max(.3,dd/V),vy=(p.y+1.1-e.alt)/tt,a=Math.atan2(dz,dx)+(e.fv-4)*.09;
+            if(S.eb.length<260)S.eb.push({x:e.x,y:e.alt,z:e.z,vx:Math.cos(a)*V,vz:Math.sin(a)*V,vy,l:tt*1.5+.5,d:d.dm,c:'#ff8a2a',r:.45});GA.noise(.1,.1,900)}
+          if(e.bt<=0){e.ds=0;e.bt=3.5+rnd()*2}}
+        else{if(!e.bm){e.bm=1;for(let i=0;i<3;i++)zone(p.x+(i?(rnd()-.5)*12:0),p.z+(i?(rnd()-.5)*12:0),4.2,1.2,32,'#ff7a1a');GA.tone(90,.4,'sawtooth',.18,.4)}
+          if(e.bt<=0){e.ds=0;e.bt=3.5+rnd()*2}}}
       else if(dd<e.r+.75&&e.at<=0&&p.y<.8){e.at=d.at;hurtP(d.dm);e.lunge=.2}
       const sp=e.sp*mv*(e.lunge>0?1.8:1);if(e.lunge>0)e.lunge-=dt;
       if(!(e.t==='mbs'||e.t==='fbs')||dd>e.r+.6){e.x+=ux*sp*edt;e.z+=uz*sp*edt}
@@ -313,7 +348,7 @@ function mountSoulArena(stage,done){
   function waveList(w){
     if(w===10)return['fbs'];
     const n=Math.min(70,8+Math.round(w*5.5)),L=[];
-    const W2=[['zom',10],['run',w>=2?3+w*.5:0],['spt',w>=3?2+w*.4:0],['brt',w>=4?1.2+w*.3:0],['wsp',w>=5?2+w*.3:0],['bat',w>=3?1.5+w*.35:0],['gar',w>=5?1+w*.3:0]],tot=W2.reduce((a,q)=>a+q[1],0);
+    const W2=[['zom',10],['run',w>=2?3+w*.5:0],['spt',w>=3?2+w*.4:0],['brt',w>=4?1.2+w*.3:0],['wsp',w>=5?2+w*.3:0],['bat',w>=3?1.5+w*.35:0],['gar',w>=5?1+w*.3:0],['drg',w>=6?.4+w*.12:0]],tot=W2.reduce((a,q)=>a+q[1],0);
     for(let i=0;i<n;i++){let r=rnd()*tot,t='zom';for(const q of W2){if(r<q[1]){t=q[0];break}r-=q[1]}L.push(t)}
     if(w===4||w===7)L.unshift('mbs');return L;
   }
@@ -426,7 +461,7 @@ function mountSoulArena(stage,done){
     /* 射擊 */
     p.fcd-=dt;if(ms.down&&p.fcd<=0)shoot();
     /* 波次 */
-    if(S.q.length){S.sp-=dt;const cap=24+S.wave*2;if(S.sp<=0&&S.en.length<cap){const t=S.q.shift();edgeSpawn(t);S.sp=Math.max(.3,1.05-.05*S.wave);if(t==='fbs'||t==='mbs'){S.bn={s:ET[t].n+' 現身',t:2.2};GA.noise(.6,.3,200)}}}
+    if(S.q.length){S.sp-=dt;const cap=24+S.wave*2;if(S.sp<=0&&S.en.length<cap){const t=S.q.shift();if(t==='drg'&&S.en.filter(q=>q.t==='drg'&&q.hp>0).length>=2){S.q.push(t);S.sp=.6}else edgeSpawn(t);S.sp=Math.max(.3,1.05-.05*S.wave);if(t==='fbs'||t==='mbs'){S.bn={s:ET[t].n+' 現身',t:2.2};GA.noise(.6,.3,200)}}}
     else if(S.wave===10){S.escort-=dt;if(S.escort<=0&&S.en.length<22){S.escort=7;for(let i=0;i<4;i++)edgeSpawn(i%2?'run':'zom')}}
     else if(!S.en.length&&!S.over){S.gapT-=dt;if(S.gapT<=0){S.gapT=3;if(S.wave>0){S.score+=100*S.wave;heal(Math.round(S.p.max*.12));S.bn={s:'第 '+S.wave+' 波結束',t:1.6}}nextWave()}}
     /* 敵人 */
@@ -556,7 +591,8 @@ function mountSoulArena(stage,done){
   start.disabled=true;start.textContent='載入模型中…';
   const monP=fetch(GLB_URL).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(b=>{GLB=parseGLB(b)}).catch(err=>{GLB=null;console.warn('[soul] model.glb 載入失敗（'+GLB_URL+'），改用內建怪物模型',err)});
   const dagP2=loadDagger().catch(err=>{DAG=null;console.warn('[soul] dagger.glb 載入失敗（'+DAG_URL+'），改用內建匕首',err)});
-  Promise.all([monP,dagP2]).then(()=>{attachHeld();start.disabled=false;start.textContent='進入戰場'});
+  const drgP=loadDragon().catch(err=>{DRG=null;console.warn('[soul] dragon.glb 載入失敗（'+DRG_URL+'），飛龍改用魂焰外型',err)});
+  Promise.all([monP,dagP2,drgP]).then(()=>{attachHeld();start.disabled=false;start.textContent='進入戰場'});
   start.onclick=begin;reset();last=performance.now();raf=requestAnimationFrame(loop);
   window.__sa=()=>S;window.__sax={cam:(y,p)=>{yaw=y;pit=p},cast,choose,showPick,gainXp,spawn:edgeSpawn,begin,nextWave};window.__stop=cleanup;
 }
