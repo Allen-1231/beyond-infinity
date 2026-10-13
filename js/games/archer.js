@@ -92,13 +92,13 @@ function mountArcher(stage,done){
   /* —— 敵人 —— */
   const mins=()=>A.t/60;
   /* 難度曲線：前 3 分鐘維持原樣，之後小兵血量與傷害階段性大幅上升 */
-  const hpMul=m=>1+.24*m+.012*m*m+(m>3?.5*(m-3)+.03*(m-3)*(m-3):0);
-  const dmMul=m=>1+.04*m+(m>3?.14*(m-3)+.004*(m-3)*(m-3):0);
+  const hpMul=m=>1+.24*m+.012*m*m+(m>3?1.1*(m-3)+.07*(m-3)*(m-3):0);
+  const dmMul=m=>1+.04*m+(m>3?.25*(m-3)+.008*(m-3)*(m-3):0);
   const BOSS_EVERY=60;
   function spawnEn(t,x,y,boss){
     const d=ET[t],m=mins(),hm=hpMul(m)*.92;
     const e={t,x,y,hp:d.hp*hm,max:d.hp*hm,sp:d.sp*(1+.02*Math.min(m,10)),r:d.r,dm:d.dm*dmMul(m)*.92,c:d.c,cd:1+rnd()*3,fl:0,kx:0,ky:0,stop:0,ph:rnd()*6,chill:0,frz:0,burn:null,big:false,ang:0,gem:KEYS.includes(t)};
-    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3000*(1+.3*(A.bossN-1))*(1+.2*m);e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=19*dmMul(m);e.cd=2;e.stop=0}
+    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3000*(1+.3*(A.bossN-1))*(1+.2*m)*(1+(m>3?.3*(m-3)+.02*(m-3)*(m-3):0));e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=19*dmMul(m);e.cd=2;e.stop=0}
     A.en.push(e);return e;
   }
   function spawnWave(dt){
