@@ -168,7 +168,7 @@ function mountShooter(stage,done){
   function B(a,o){S.pb.push(Object.assign({x:S.p.x+Math.cos(a)*25,y:S.p.y+Math.sin(a)*25,vx:Math.cos(a)*o.s,vy:Math.sin(a)*o.s,l:1.6,r:4,pi:1,c:'#ffe8a8',d:1,hit:[]},o))}
   const angd=(a,b)=>((a-b+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
   /* 屏障、盾兵的輔助判定 */
-  const shielded=(t,x,y)=>t.ty===18&&Math.abs(angd(Math.atan2(y-t.y,x-t.x),t.sa==null?t.a:t.sa))<1.15;
+  const shielded=(t,x,y)=>(t.ty===18||t.ty===21)&&Math.abs(angd(Math.atan2(y-t.y,x-t.x),t.sa==null?t.a:t.sa))<(t.ty===21?.82:1.15);   /* 21＝時間關的防禦兵，盾面比心靈關的小 */
   function inBar(br,x,y,r){const dx=x-br.x,dy=y-br.y,c=Math.cos(br.a),sn=Math.sin(br.a),lx=dx*c+dy*sn,ly=-dx*sn+dy*c;return Math.abs(lx)<br.w/2+r&&Math.abs(ly)<br.h/2+r}
   function segBar(x1,y1,x2,y2){for(let k=0;k<=30;k++){const u=k/30,x=x1+(x2-x1)*u,y=y1+(y2-y1)*u;for(const br of S.bar)if(br.age>=.5&&inBar(br,x,y,2))return{br,x,y}}return null}
   function fire(){
@@ -193,7 +193,7 @@ function mountShooter(stage,done){
   /* 小兵種類：0 追擊 1 六角射手 2 高速衝撞 3 散射 4 狙擊 5 環彈旋轉 6 重裝；關卡越後面種類越多、血量越高 */
   const POOL=[[[0,.5],[11,.28],[12,.22]],[[0,.22],[1,.2],[13,.3],[11,.14],[12,.14]],[[0,.14],[1,.1],[2,.12],[3,.08],[7,.14],[14,.3],[13,.12]],[[0,.1],[1,.08],[2,.1],[3,.08],[4,.06],[7,.1],[8,.12],[15,.3],[14,.06]],[[0,.05],[1,.03],[2,.07],[3,.03],[11,.14],[5,.04],[7,.06],[8,.07],[9,.05],[10,.04],[16,.26],[15,.03],[20,.17]],[[0,.05],[1,.03],[2,.06],[3,.06],[4,.06],[5,.05],[6,.03],[7,.1],[8,.06],[9,.08],[10,.08],[11,.14],[17,.24],[16,.05]]];
   /* 小兵種類補充：7 雷射兵（蓄力後射出光束）、8 爆裂兵（被擊破時炸成彈環）、9 環繞砲台（繞著你轉並雙發瞄準）、10 佈雷兵（沿路留下地雷） */
-  const EHP=[2,4,1,3,3,4,9,3,2,4,3,5,4,3,4,3,3,4,16,12,6],ER=[11,13,9,13,12,14,20,13,12,14,13,16,14,12,13,13,13,13,25,23,15],ESP=[80,70,175,62,50,44,36,55,62,62,48,70,38,50,34,46,42,44,38,30,40],ECD=[0,2.4,0,2.6,3.2,3,2.2,4.2,0,1.7,1.1,2.2,3,2.4,1.5,2.6,2.8,2.4,2.6,3.4,2.4];
+  const EHP=[2,4,1,3,3,4,9,3,2,4,3,5,4,3,4,3,3,4,16,12,6,12],ER=[11,13,9,13,12,14,20,13,12,14,13,16,14,12,13,13,13,13,25,23,15,21],ESP=[80,70,175,62,50,44,36,55,62,62,48,70,38,50,34,46,42,44,38,30,40,40],ECD=[0,2.4,0,2.6,3.2,3,2.2,4.2,0,1.7,1.1,2.2,3,2.4,1.5,2.6,2.8,2.4,2.6,3.4,2.4,3.0];
   function spawnEn(fty){
     const s=Math.floor(Math.random()*3),st=Math.min(S.stage,5);let x,y;
     if(s==0){x=Math.random()*W;y=-20}else if(s==1){x=W+20;y=Math.random()*H*.6}else{x=-20;y=Math.random()*H*.6}
@@ -378,6 +378,14 @@ function mountShooter(stage,done){
     ctx.globalAlpha=a*.5;ctx.strokeStyle='#d8fff0';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.stroke();
     ctx.restore();
   }
+  /* 時間守衛的援軍：防禦兵在中間、兩名集氣雷射兵在兩旁，同時從同一個方向入場（血量降到 50% 與重塑復活後各出現一組） */
+  function timeSquad(){
+    const s=Math.floor(Math.random()*3);let x,y;
+    if(s==0){x=W*(.25+Math.random()*.5);y=-30}else if(s==1){x=W+30;y=H*(.1+Math.random()*.4)}else{x=-30;y=H*(.1+Math.random()*.4)}
+    const a=Math.atan2(S.p.y-y,S.p.x-x),nx=-Math.sin(a),ny=Math.cos(a);
+    [[21,0],[20,-1],[20,1]].forEach(q=>{spawnEn(q[0]);const e=S.en[S.en.length-1];e.x=x+nx*q[1]*68;e.y=y+ny*q[1]*68;e.ft=q[0]===20?2.5:1.6});
+    S.dn.push({x:W/2,y:60,t:1.4,s:'援軍：防禦兵與雷射兵',c:'#8fffc0'});sfx.warn&&sfx.warn();
+  }
   /* 時間守衛：第一次被擊破時，時間慢下來、停止，然後重塑 */
   function rbStep(dt){
     const r=S.rb,b=S.boss;r.t+=dt;
@@ -385,7 +393,7 @@ function mountShooter(stage,done){
     if(r.t<2)return dt*Math.max(.03,1-r.t/2);
     S.p.inv=Math.max(S.p.inv,.8);
     if(r.t<3.5){const k=(r.t-2)/1.5;b.hp=Math.max(1,b.max*.5*k);b.al=.55+.45*Math.abs(Math.sin(r.t*26));if(!r.s){r.s=1;sfx.rewind&&sfx.rewind()}return 0}
-    b.hp=b.max*.5;b.al=1;b.cast=null;b.sp=2.4;b.live=1;b.f=.2;S.rb=null;S.eb=[];S.hist=[];S.hh=0;
+    b.hp=b.max*.5;b.al=1;b.cast=null;b.sp=2.4;b.live=1;b.f=.2;S.rb=null;S.eb=[];S.hist=[];S.hh=0;timeSquad();
     ring(b.x,b.y,'#2fe07a',260,.7);ring(b.x,b.y,'#fff',150,.5);burst(b.x,b.y,'#2fe07a',80,320);S.flash=.35;S.shake=.5;sfx.blast();
     return 0.0001;
   }
@@ -783,8 +791,10 @@ function mountShooter(stage,done){
           S.boss={boss:1,x:W/2,y:-60,r:44,hp:h,max:h,t:0,rt:2,at:1.5,st:0,ang:0,f:0,live:0,al:1,hid:0,cast:null,sp:4.5,wx:W/2,wy:100,wt:2};
           if(st===6)Object.assign(S.boss,{r:58,ph:1,sh:0,shT:0,shCd:10,last:'',combo:null,sp:2.4,y:-100});banner('警告・'+SG(st).b);sfx.warn()}
       }
-      if(S.stage===5&&(S.ph==='wave'||S.ph==='boss')){if((S.n18||0)<2&&S.pt>=((S.n18||0)===0?5:10)){spawnEn(18);S.n18=(S.n18||0)+1}   /* 整個心靈關只會有 2 隻防禦兵：關卡開始後 5 秒、10 秒各出現一隻，被打倒後不補 */
-        S.a19=(S.a19||0)-dt;if(S.a19<=0){const n19=S.en.filter(q=>q.ty===19).length;if(n19<3){spawnEn(19);S.a19=n19===0?.8:2.2}else S.a19=.5}}
+      if(S.stage===5&&(S.ph==='wave'||S.ph==='boss')){if((S.n18||0)<2&&S.pt>=((S.n18||0)===0?7.5:15)){spawnEn(18);S.n18=(S.n18||0)+1}   /* 整個心靈關只會有 2 隻防禦兵：關卡開始後 7.5 秒、15 秒各出現一隻，被打倒後不補 */
+        S.a19=(S.a19||0)-dt;if(S.a19<=0){const n19=S.en.filter(q=>q.ty===19).length;
+          if(S.pt<30){if(n19<3){spawnEn(19);S.a19=n19===0?.8:2.2}else S.a19=.5}   /* 前 30 秒：維持原本的多隻 */
+          else{if(n19<2){spawnEn(19);S.a19=n19===0?6:10}else S.a19=1.5}}}   /* 30 秒後：場上最多 2 隻，補兵間隔拉長（打光後約 6 秒、否則約 10 秒才補） */
       if(S.boss){
         const b=S.boss,st=S.stage;b.t+=dt;b.ang+=dt;
         if(!b.live){const ty=st===6?130:100;b.y+=(ty-b.y)*dt*2;if(b.y>ty-24){b.live=1;pickWp(b)}}
@@ -802,6 +812,7 @@ function mountShooter(stage,done){
           if(!b.hid&&!(b.cast&&b.cast.freeze)&&!S.rw)barrage(b,st,dt);
         }
         if(S.boss&&st===4&&!S.rw){S.hh+=dt;if(S.hh>=.2){S.hh=0;S.hist.push(snapState());if(S.hist.length>26)S.hist.shift()}}
+        if(S.boss&&st===4&&!S.rbUsed&&!S.boss.sq1&&S.boss.hp>0&&S.boss.hp<=S.boss.max*.5){S.boss.sq1=1;timeSquad()}
         if(S.boss&&st===4&&S.boss.hp<=0&&!S.rbUsed){S.rbUsed=1;S.rb={t:0};S.boss.hp=1;S.boss.cast=null;S.boss.hid=0;S.eb.forEach(q=>{});sfx.rwcharge()}
         if(S.boss&&S.boss.hp<=0){const b2=S.boss;S.dark=0;S.rl=null;S.oo=null;S.mir=null;S.score+=st===6?3000:500;burst(b2.x,b2.y,SG(st).c,90,320);ring(b2.x,b2.y,SG(st).c,160,.7);S.shake=.6;S.flash=.3;sfx.bossdie();S.boss=null;S.eb=[];S.dc=[];S.zones=[];S.rifts=[];S.bar=[];S.hist=[];S.en.forEach(e=>burst(e.x,e.y,SG(st).c,8));S.en=[];if(st===6){S.ph='done';S.drop=null;S.st='snap';S.snap=0;sfx.snap()}else{S.ph='drop';S.drop={x:b2.x,y:b2.y,g:G[st]}}}
       }
@@ -859,6 +870,7 @@ function mountShooter(stage,done){
       else if(e.ty===16){const m=d>340?1:(d<260?-.8:0);e.x+=(Math.cos(a)*m+Math.cos(a+1.57)*.5)*sp*dt;e.y+=(Math.sin(a)*m+Math.sin(a+1.57)*.5)*sp*dt;e.ft-=dt;if(e.ft<=0&&pl){e.ft=Math.max(2.6,3.6-S.stage*.1);for(let i=-1;i<=1;i++){const q=a+i*.9;eb(e.x+Math.cos(q)*34,e.y+Math.sin(q)*34,0,0,lt,50,{hold:.8,v2:310,r:5})}}}
       else if(e.ty===17){const m=d>330?1:(d<250?-1:0);e.x+=(Math.cos(a)*m+Math.cos(a+1.57)*.6)*sp*dt;e.y+=(Math.sin(a)*m+Math.sin(a+1.57)*.6)*sp*dt;e.ft-=dt;if(e.ft<=0&&pl){e.ft=Math.max(2.4,3.3-S.stage*.1);for(let i=-1;i<=1;i++)eb(e.x,e.y,a+i*.26,160,lt,40,{tr:i*.4})}}
       else if(e.ty===18){if(e.sa==null)e.sa=a;const da=angd(a,e.sa),q=1.25*dt;e.sa+=Math.max(-q,Math.min(q,da));const m=d>250?1:(d<180?-.6:0);e.x+=(Math.cos(a)*m+Math.cos(a+1.57)*.35)*sp*dt;e.y+=(Math.sin(a)*m+Math.sin(a+1.57)*.35)*sp*dt;e.ft-=dt;if(e.ft<=0&&pl){e.ft=2.8;for(let i=-1;i<=1;i++)eb(e.x,e.y,e.sa+i*.14,185,'#7ff0ff',60,{r:6})}}
+      else if(e.ty===21){if(e.sa==null)e.sa=a;const da=angd(a,e.sa),q=1.4*dt;e.sa+=Math.max(-q,Math.min(q,da));const m=d>240?1:(d<170?-.6:0);e.x+=(Math.cos(a)*m+Math.cos(a+1.57)*.3)*sp*dt;e.y+=(Math.sin(a)*m+Math.sin(a+1.57)*.3)*sp*dt;e.ft-=dt;if(e.ft<=0&&pl){e.ft=3.2;for(let i=-1;i<=1;i++)eb(e.x,e.y,e.sa+i*.16,180,'#5dff9e',55,{r:6})}}
       else if(e.ty===20){
         if(e.lz>0){e.lz-=dt;if(e.lz>.7){const da=angd(a,e.la),q=1.7*dt;e.la+=Math.max(-q,Math.min(q,da))}if(e.lz<=0){e.fire=3.5;e.ft=6.5;sfx.eLaser()}}
         else if(e.fire>0){e.fire-=dt;const q=.32*dt,da=angd(a,e.la);e.la+=Math.max(-q,Math.min(q,da));const dx=Math.cos(e.la),dy=Math.sin(e.la);HT=pl?beamAt(e.x,e.y,dx,dy,15):null;if(HT)hurt(45,.4,false,HT)}
@@ -866,7 +878,7 @@ function mountShooter(stage,done){
       }
       else if(e.ty===19){const m=d>340?1:(d<260?-1:0);e.x+=Math.cos(a)*m*sp*dt;e.y+=Math.sin(a)*m*sp*dt;e.ft-=dt;e.chg=e.ft<.9&&e.ft>0;if(e.ft<=0&&pl){e.ft=3.4;S.zones.push({x:p.x,y:p.y,R:66,t:0,dur:1.15,c:'#7ff0ff',d:85});const q=Math.random()*6.28;S.zones.push({x:CL(p.x+Math.cos(q)*95,40,W-40),y:CL(p.y+Math.sin(q)*95,40,H-40),R:60,t:0,dur:1.5,c:'#7ff0ff',d:70})}}
       else{e.x+=Math.cos(a)*sp*dt;e.y+=Math.sin(a)*sp*dt}
-      if(S.st==='play'&&(HT=hitAny(e.x,e.y,e.r+12))){hurt([70,90,60,80,80,90,120,90,80,80,80,110,80,80,80,80,80,80,110,90,90][e.ty],.5,false,HT);if(e.ty===8)for(let i=0;i<8;i++)eb(e.x,e.y,i*.785+.3,150,lt,40);burst(e.x,e.y,G[Math.min(S.stage,5)].c,10);return false}
+      if(S.st==='play'&&(HT=hitAny(e.x,e.y,e.r+12))){hurt([70,90,60,80,80,90,120,90,80,80,80,110,80,80,80,80,80,80,110,90,90,90][e.ty],.5,false,HT);if(e.ty===8)for(let i=0;i<8;i++)eb(e.x,e.y,i*.785+.3,150,lt,40);burst(e.x,e.y,G[Math.min(S.stage,5)].c,10);return false}
       return true});
     /* 現實守衛的幻象分身 */
     S.dc=S.dc.filter(d=>{
@@ -1115,6 +1127,7 @@ function mountShooter(stage,done){
       ctx.shadowColor=e.f>0?'#fff':ec;ctx.shadowBlur=12;ctx.fillStyle=e.f>0?'#fff':shade(ec,-.85);ctx.strokeStyle=e.sl>0?'#fff':shade(ec,.55);ctx.lineWidth=1.8;
       if(e.ty===18||e.ty===19){ctx.shadowColor=e.f>0?'#fff':'#7ff0ff';ctx.fillStyle=e.f>0?'#fff':'#06222a';ctx.strokeStyle='#7ff0ff'}
       if(e.ty===20){ctx.shadowColor=e.f>0?'#fff':'#2fe07a';ctx.fillStyle=e.f>0?'#fff':'#042a14';ctx.strokeStyle='#5dff9e'}
+      if(e.ty===21){ctx.shadowColor=e.f>0?'#fff':'#ffd96a';ctx.fillStyle=e.f>0?'#fff':'#1e2208';ctx.strokeStyle='#b8ffd8'}
       const r=e.r;ctx.beginPath();
       if(e.ty===0){ctx.moveTo(r+3,0);ctx.lineTo(-r,-r);ctx.lineTo(-r*.5,0);ctx.lineTo(-r,r)}
       else if(e.ty===1){for(let i=0;i<6;i++)ctx.lineTo(Math.cos(i*1.047)*r,Math.sin(i*1.047)*r)}
@@ -1133,11 +1146,13 @@ function mountShooter(stage,done){
       else if(e.ty===15){ctx.moveTo(r+5,0);ctx.quadraticCurveTo(r*.2,-r*1.1,-r*1.1,-r*.5);ctx.quadraticCurveTo(-r*.5,0,-r*1.1,r*.5);ctx.quadraticCurveTo(r*.2,r*1.1,r+5,0)}
       else if(e.ty===16){ctx.arc(0,0,r,0,7);ctx.moveTo(r*.78,0);ctx.arc(0,0,r*.78,0,7)}
       else if(e.ty===17){ctx.moveTo(r+6,0);ctx.lineTo(r*.2,-r*.55);ctx.lineTo(-r*.3,-r*1.15);ctx.lineTo(-r,-r*.4);ctx.lineTo(-r*.55,0);ctx.lineTo(-r,r*.4);ctx.lineTo(-r*.3,r*1.15);ctx.lineTo(r*.2,r*.55)}
+      else if(e.ty===21){for(let i=0;i<6;i++){const q=i*1.0472,rr=i%2?r*.72:r*1.08;ctx.lineTo(Math.cos(q)*rr,Math.sin(q)*rr)}}
       else if(e.ty===18){for(let i=0;i<8;i++){const q=i*.7854+.39,rr=i%2?r*.86:r;ctx.lineTo(Math.cos(q)*rr,Math.sin(q)*rr)}}
       else if(e.ty===20){ctx.moveTo(r+12,0);ctx.lineTo(r*.3,-r*.35);ctx.lineTo(r*.1,-r*.95);ctx.lineTo(-r*.7,-r*.7);ctx.lineTo(-r,0);ctx.lineTo(-r*.7,r*.7);ctx.lineTo(r*.1,r*.95);ctx.lineTo(r*.3,r*.35)}
       else if(e.ty===19){ctx.rect(-r,-r*.8,r*1.6,r*1.6);ctx.moveTo(r*.6,-r*.2);ctx.rect(r*.6,-r*.22,r*1.15,r*.44)}
       else{for(let i=0;i<8;i++)ctx.lineTo(Math.cos(i*.7854+.39)*r,Math.sin(i*.7854+.39)*r)}
       ctx.closePath();ctx.fill();ctx.stroke();
+      if(e.ty===21){ctx.shadowBlur=0;ctx.strokeStyle='#ffd96a';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(0,0,r*.5,0,7);ctx.stroke();ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(T*3)*r*.4,Math.sin(T*3)*r*.4);ctx.moveTo(0,0);ctx.lineTo(Math.cos(T*.5)*r*.25,Math.sin(T*.5)*r*.25);ctx.stroke();ctx.fillStyle='#5dff9e';ctx.beginPath();ctx.arc(0,0,r*.12,0,7);ctx.fill()}
       if(e.ty===18||e.ty===19){ctx.shadowBlur=0;ctx.fillStyle=e.ty===19&&e.chg?'#e6ffff':'#7ff0ff';ctx.beginPath();ctx.arc(e.ty===19?-r*.1:0,0,r*.28,0,7);ctx.fill();ctx.strokeStyle='#7ff0ff66';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(0,0,r*.62,0,7);ctx.stroke()}
       if(e.ty===20){const on=e.lz>0||e.fire>0;ctx.fillStyle=on?'#eafff2':'#5dff9e';ctx.shadowColor='#2fe07a';ctx.shadowBlur=on?18:8;ctx.beginPath();ctx.arc(r*.4,0,r*.3,0,7);ctx.fill();ctx.shadowBlur=0}
       if(e.ty===7){ctx.fillStyle=e.lz>0||e.fire>0?'#e6ffff':'#7ff0ff';ctx.shadowColor='#7ff0ff';ctx.shadowBlur=10;ctx.beginPath();ctx.arc(r*.35,0,r*.28,0,7);ctx.fill();ctx.shadowBlur=0}
@@ -1153,6 +1168,7 @@ function mountShooter(stage,done){
       else{ctx.ellipse(gx0,0,gr*1.2,gr*.6,0,0,7);ctx.stroke();ctx.beginPath();ctx.arc(gx0,0,gr*.32,0,7);ctx.fill()}
       ctx.restore();
       if(e.ty===18){const sa=e.sa==null?e.a:e.sa;ctx.save();ctx.translate(e.x,e.y);ctx.rotate(sa);ctx.shadowColor='#7ff0ff';ctx.shadowBlur=16;ctx.strokeStyle='#bffaff';ctx.lineWidth=6;ctx.lineCap='round';ctx.globalAlpha=.55+.25*Math.sin(T*6);ctx.beginPath();ctx.arc(0,0,e.r+9,-1.15,1.15);ctx.stroke();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.beginPath();ctx.arc(0,0,e.r+9,-1.15,1.15);ctx.stroke();ctx.restore()}
+      if(e.ty===21){const sa=e.sa==null?e.a:e.sa;ctx.save();ctx.translate(e.x,e.y);ctx.rotate(sa);ctx.shadowColor='#ffd96a';ctx.shadowBlur=12;ctx.strokeStyle='#ffe9a0';ctx.lineWidth=5;ctx.lineCap='butt';ctx.globalAlpha=.6+.25*Math.sin(T*6);ctx.setLineDash([9,5]);ctx.beginPath();ctx.arc(0,0,e.r+7,-.82,.82);ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=1.6;ctx.strokeStyle='#fff';ctx.beginPath();ctx.arc(0,0,e.r+7,-.82,.82);ctx.stroke();ctx.restore()}
       if(e.ty===19&&e.chg){ctx.save();ctx.strokeStyle='#7ff0ff';ctx.globalAlpha=.4+.5*Math.abs(Math.sin(T*16));ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y,e.r+8,0,7);ctx.stroke();ctx.restore()}});
     S.dc.forEach(d=>{const al=Math.min(1,d.age/.5)*.82;{const cv=d.cv||0;if(cv<1)drawLiquid(d,G[2].c,al*(1-cv),d.ang);if(cv>0)drawWheel(d,G[2].c,al*cv)}d.f=Math.max(0,d.f-.016);ctx.fillStyle='#1a1733';ctx.fillRect(d.x-26,d.y-d.r-12,52,5);ctx.fillStyle=G[2].c;ctx.fillRect(d.x-26,d.y-d.r-12,52*Math.max(0,d.hp/d.max),5)});
     if(S.boss){const b=S.boss;
