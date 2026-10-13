@@ -17,9 +17,9 @@ function mountShooter(stage,done){
   const GT={id:'thanos',n:'薩諾斯',c:'#b36bff',b:'瘋狂泰坦・薩諾斯'},SG=i=>i<6?G[i]:GT;
   const CAST={th_charge:'衝撞',th_sword:'斬擊',th_volley:'能量連射',th_rocks:'投擲巨岩',th_beam:'終結光束',th_tp:'空間跳躍',th_slam:'泰坦重擊',th_summon:'召喚軍團',th_blast:'力量爆發',th_meteor:'隕石召喚',th_mind:'心靈鎖定',th_soul:'靈魂汲取',th_shield:'能量護盾',th_stun:'破防',th_stab:'突刺',th_warp:'空間瞬移斬',th_blades:'雙面刃連斬',th_snap:'彈指',th_spiral:'星環旋風',th_gravity:'重力牽引',blast:'力場充能',rush:'巨像衝鋒',tp:'空間跳躍',gate:'空間門陣',dc:'現實分身',soul:'靈魂汲取',mind:'心靈鎖定',psy:'心靈風暴',rw:'時間倒轉'};
   const RATE={base:.22,space:.14,power:.5,reality:.46,soul:.1,time:.09,mind:.32},CHG=.75;
-  const MAXHP=1500;
+  const MAXHP=2000;
   const DC_MAX=10;let HT=null;   /* 現實守衛的分身同時存在上限（分身不會消失，避免無限堆疊） */
-  const HEAL={power:300,space:300,reality:550,soul:450,time:750,mind:MAXHP};   /* 擊敗守衛、拾取寶石後的回血量 */
+  const HEAL={power:350,space:350,reality:600,soul:450,time:750,mind:MAXHP};   /* 擊敗守衛、拾取寶石後的回血量 */
   const hpf=$('hpf'),hpg=$('hpg'),hpt=$('hpt'),muteBtn=$('mute');
 
   /* ---------- 音效（Web Audio 合成，不需要音檔） ---------- */
@@ -160,6 +160,10 @@ function mountShooter(stage,done){
       if(t.sh>0){t.sh-=d;t.f=.05;if(t.sh<=0)thBreak(t);return}
       if(!t.half&&t.hp-d<=t.max*.5){t.hp=t.max*.5;t.f=.08;thHalf(t);return}
     }
+    if(t.boss&&S.stage===5){
+      if(t.invT>0){t.f=.03;burst(t.x+(Math.random()-.5)*50,t.y+(Math.random()-.5)*50,'#fff',2,90);return}
+      if(!t.invUsed&&t.hp-d<=t.max*.1){t.invUsed=1;t.hp=t.max*.1;t.invT=5;t.f=.1;spawnEn(18);S.flash=.25;S.shake=.4;ring(t.x,t.y,'#ff9ee8',200,.6);banner('心靈守衛・無敵護盾（重型護盾兵亂入）');sfx.warn();return}
+    }
     t.hp-=d;t.f=.08}
   function B(a,o){S.pb.push(Object.assign({x:S.p.x+Math.cos(a)*25,y:S.p.y+Math.sin(a)*25,vx:Math.cos(a)*o.s,vy:Math.sin(a)*o.s,l:1.6,r:4,pi:1,c:'#ffe8a8',d:1,hit:[]},o))}
   const angd=(a,b)=>((a-b+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
@@ -176,7 +180,7 @@ function mountShooter(stage,done){
     if(w=='base')B(a,{s:620});
     if(w=='space')B(a,{s:950,d:1.3,pi:3,c:G[1].c});
     if(w=='power'){if(!S.chgF){S.chgF=1;S.fcd=CHG;sfx.pcharge();return}S.chgF=0;B(a,{s:420,d:11,r:16,c:G[0].c,sp:115,l:2});p.vx-=Math.cos(a)*300;p.vy-=Math.sin(a)*300;S.shake=Math.max(S.shake,.22);ring(sx,sy,'#c9a6ff',46,.22);burst(sx,sy,'#b57bff',22,260);burst(sx,sy,'#ffffff',8,200)}
-    if(w=='reality')for(let i=-1.5;i<=1.5;i++)B(a+i*.09,{s:560,d:2.2,r:4.5,c:G[2].c});
+    if(w=='reality')for(let i=-1.5;i<=1.5;i++)B(a+i*.07,{s:560,d:2.6,r:4.5,c:G[2].c});
     if(w=='soul')[-1,1].forEach(o=>B(a,{x:p.x+Math.cos(a)*22+Math.cos(a+1.5708)*o*8,y:p.y+Math.sin(a)*22+Math.sin(a+1.5708)*o*8,s:820,d:1,r:3.2,c:G[3].c,l:1.1}));
     if(w=='time')[[0,.92,8,[48,6]],[-1,.52,4,[36,3]],[1,.52,4,[36,3]]].forEach(q=>B(a,{x:p.x+Math.cos(a)*25+Math.cos(a+1.5708)*q[0]*13,y:p.y+Math.sin(a)*25+Math.sin(a+1.5708)*q[0]*13,s:700,d:q[1],r:q[2]?q[2]:4,rc:q[3],c:G[4].c,sl:1}));
     if(w=='mind'){let cur=t,hit=[t],pts=[[sx,sy]];const bl=segBar(sx,sy,t.x,t.y);
@@ -219,14 +223,16 @@ function mountShooter(stage,done){
     const p=S.p;
     if(st===0){
       /* 力量守衛兩招輪流：力場充能（原有）／巨像衝鋒（新增）。同一時間只會有一個 cast，不會互相衝突 */
-      if(b.alt=!b.alt){b.cast={k:'blast',t:0,dur:1.4,R:270,freeze:1};b.sp=6.5;sfx.charge()}
-      else{b.cast={k:'rush',t:0,dur:99,freeze:1,a:Math.atan2(p.y-b.y,p.x-b.x),go:0,n:0,max:b.hp<b.max*.5?2:1,w:0,aim:.6,wind:.85};b.sp=6;sfx.roar()}
+      b.n3=((b.n3||0)+1)%3;
+      if(b.n3===2){b.cast={k:'quake',t:0,dur:2.6,freeze:1,n:0,z:0,gp:Math.random()*6.28};b.sp=5.5;sfx.roar()}
+      else if(b.n3===1){b.cast={k:'blast',t:0,dur:1.4,R:270,freeze:1};b.sp=5.5;sfx.charge()}
+      else{b.cast={k:'rush',t:0,dur:99,freeze:1,a:Math.atan2(p.y-b.y,p.x-b.x),go:0,n:0,max:b.hp<b.max*.5?2:1,w:0,aim:.6,wind:.85};b.sp=5;sfx.roar()}
     }
     else if(st===1){
       /* 空間守衛兩招輪流：空間跳躍（原有）／空間門陣（新增，四道傳送門同時從不同方向射擊） */
       if(!(b.alt=!b.alt)){
-        const g=[];for(let i=0;i<4;i++){let x,y,k=0;do{const a=Math.random()*6.283,r=230+Math.random()*120;x=p.x+Math.cos(a)*r;y=p.y+Math.sin(a)*r;k++}while((x<60||x>W-60||y<70||y>H-110||g.some(q=>Math.hypot(q.x-x,q.y-y)<170))&&k<30);x=Math.max(60,Math.min(W-60,x));y=Math.max(70,Math.min(H-110,y));g.push({x,y})}
-        b.cast={k:'gate',t:0,dur:2.4,g,v:0,freeze:1};b.sp=3;sfx.tp();return;
+        const g=[];for(let i=0;i<5;i++){let x,y,k=0;do{const a=Math.random()*6.283,r=230+Math.random()*120;x=p.x+Math.cos(a)*r;y=p.y+Math.sin(a)*r;k++}while((x<60||x>W-60||y<70||y>H-110||g.some(q=>Math.hypot(q.x-x,q.y-y)<150))&&k<30);x=Math.max(60,Math.min(W-60,x));y=Math.max(70,Math.min(H-110,y));g.push({x,y,o:Math.random()*1.3,v:0})}
+        g.sort((u,v)=>u.o-v.o);b.cast={k:'gate',t:0,dur:Math.max(...g.map(q=>q.o))+1.85,g,v:0,freeze:1};b.sp=3;sfx.tp();return;
       }
       let x,y,k=0;do{const a=Math.random()*6.283,r=190+Math.random()*150;x=p.x+Math.cos(a)*r;y=p.y+Math.sin(a)*r;k++}while((x<70||x>W-70||y<80||y>H-120)&&k<20);
       x=Math.max(70,Math.min(W-70,x));y=Math.max(80,Math.min(H-120,y));
@@ -234,7 +240,7 @@ function mountShooter(stage,done){
     }
     else if(st===2){
       const pts=[],cn=Math.min(DC_MAX-S.dc.length,(q=>q<.2?1:q<.75?2:3)(Math.random()));if(cn<=0){b.sp=3;return}for(let i=0;i<cn;i++){let x,y,k=0;do{x=90+Math.random()*(W-180);y=80+Math.random()*(H-260);k++}while(Math.hypot(x-p.x,y-p.y)<150&&k<12);pts.push([x,y])}
-      b.cast={k:'dc',t:0,dur:.9,pts,freeze:1};b.sp=10;sfx.glitch();
+      b.cast={k:'dc',t:0,dur:.9,pts,freeze:1};b.sp=8;sfx.glitch();
     }
     else if(st===3){b.cast={k:'soul',t:0,dur:1.3,freeze:0};b.sp=7;sfx.drain()}
     else if(st===4){
@@ -269,6 +275,12 @@ function mountShooter(stage,done){
           else{b.cast=null;pickWp(b)}
         }
       }
+    }else if(c.k==='quake'){
+      /* 巨像震地（力量）：先砸地蓄力，落石轟炸玩家周圍，再連續三圈留缺口的衝擊波；血量過半後多一圈 */
+      if(c.t>=.5+c.z*.18&&c.z<5){c.z++;zoneAt(p.x+(Math.random()-.5)*(c.z===1?0:300),p.y+(Math.random()-.5)*(c.z===1?0:220),64,1.0,'#b57bff',95)}
+      const rn=b.hp<b.max*.5?4:3;
+      if(c.t>=.9+c.n*.45&&c.n<rn){const o=c.gp+c.n*.9,N=30;for(let i=0;i<N;i++){const a=o+i*6.283/N;if(Math.abs(angd(a,o))<.3)continue;eb(b.x,b.y,a,135+c.n*14,col,50,{r:7})}c.n++;ring(b.x,b.y,col,110,.35);S.shake=Math.max(S.shake,.3);sfx.mini()}
+      if(c.t>=c.dur){b.cast=null}
     }else if(c.k==='tp'){
       if(c.t<.1){b.al=1;b.sc=1}
       else if(c.t<.2){const k=(c.t-.1)/.1;b.al=1-k;b.sc=1-.85*k}
@@ -281,12 +293,12 @@ function mountShooter(stage,done){
       if(c.t>=.55){b.al=1;b.sc=1;b.hid=0;b.cast=null}
     }else if(c.k==='gate'){
       /* 空間門陣：四道傳送門打開後，分兩波各自朝玩家射出三連彈 */
-      while(c.v<2&&c.t>=.95+c.v*.65){c.v++;c.g.forEach(q=>{const a=Math.atan2(p.y-q.y,p.x-q.x);for(let i=-1;i<=1;i++)eb(q.x,q.y,a+i*.2,215,shade(col,.5),50);ring(q.x,q.y,col,60,.25);burst(q.x,q.y,'#bfe0ff',10,160)});sfx.pop()}
+      c.g.forEach(q=>{while(q.v<2&&c.t>=q.o+.75+q.v*.6){q.v++;const a=Math.atan2(p.y-q.y,p.x-q.x);for(let i=-1;i<=1;i++)eb(q.x,q.y,a+i*.2,215,shade(col,.5),50);ring(q.x,q.y,col,60,.25);burst(q.x,q.y,'#bfe0ff',10,160);sfx.pop()}})
       if(c.t>=c.dur)b.cast=null;
     }else if(c.k==='dc'){
       if(c.t>=c.dur){
         c.pts.forEach(q=>{S.dc.push({x:q[0],y:q[1],r:40,hp:b.max*.15,max:b.max*.15,f:0,age:0,rt:1.2,at:1,st:.5,sa:Math.random()*6.28,sw:0,acc:Math.random()<.5?9:-9,ang:Math.random()*6,wx:q[0],wy:q[1],wt:0,decoy:1});ring(q[0],q[1],col,70,.4);burst(q[0],q[1],col,26,200)});
-        sfx.glitch();b.cast=null;b.sp=10;   /* 分身出現後 10 秒才能再召喚 */
+        sfx.glitch();b.cast=null;b.sp=8;   /* 分身出現後 8 秒才能再召喚 */
       }
     }else if(c.k==='soul'){
       if(Math.hypot(p.x-b.x,p.y-b.y)>400){burst((b.x+p.x)/2,(b.y+p.y)/2,col,18,120);S.dn.push({x:p.x,y:p.y-24,t:.9,s:'掙脫',c:'#fff'});b.cast=null}
@@ -297,7 +309,7 @@ function mountShooter(stage,done){
       }
     }else if(c.k==='psy'){
       /* 心靈風暴：蓄力 1 秒後，連續擴散 6 圈彈環，每圈留 3 道缺口且缺口逐圈旋轉 */
-      if(c.t>=c.nx&&c.n<6){c.nx+=.43;const o=c.n*.55,N=26;for(let i=0;i<N;i++){const a=o+i*6.283/N;if(Math.sin(a*3-o*3)>.78)continue;eb(b.x,b.y,a,150+c.n*6,i%2?shade(col,.5):col,38,{r:5})}c.n++;ring(b.x,b.y,col,60,.3);sfx.mc()}
+      if(c.t>=c.nx&&c.n<5){c.nx+=.5;const o=c.n*.55,N=22;for(let i=0;i<N;i++){const a=o+i*6.283/N;if(Math.sin(a*3-o*3)>.78)continue;eb(b.x,b.y,a,150+c.n*6,i%2?shade(col,.5):col,38,{r:5})}c.n++;ring(b.x,b.y,col,60,.3);sfx.mc()}
       if(c.t>=c.dur){b.cast=null}
     }else if(c.k==='mind'){
       if(c.t>=c.dur){freezePlayer(1.3);b.cast=null}
@@ -331,7 +343,7 @@ function mountShooter(stage,done){
     const cx=Math.max(170,Math.min(W-170,b.x)),cy=Math.max(130,Math.min(H-130,b.y));
     if(!mirC){mirC=document.createElement('canvas');mirC.width=cv.width;mirC.height=cv.height;mirX=mirC.getContext('2d')}
     S.mir={t0:T,sh:genShards(cx,cy)};
-    b.sh=b.shMax=b.max*.05;b.cast=null;b.sc=1;b.al=1;b.hid=0;b.sp=1.2;
+    b.sh=b.shMax=b.max*.15;b.cast=null;b.sc=1;b.al=1;b.hid=0;b.sp=1.2;
     S.eb=[];S.flash=.45;S.shake=.6;sfx.shatter();ring(b.x,b.y,'#bfffe0',260,.6);burst(b.x,b.y,'#e6fff2',60,320);
     banner('時間守衛・鏡像次元・狂暴');
   }
@@ -394,7 +406,8 @@ function mountShooter(stage,done){
     if(o.ph==='lock'){
       if(o.t>=OO_LOCK){
         const b=S.boss,base=b?Math.atan2(p.y-b.y,p.x-b.x):-1.5708;let tx=null,ty=null;
-        for(const off of [0,.7,-.7,1.4,-1.4,3.1416]){const a=base+off,x=p.x+Math.cos(a)*OO_KB,y=p.y+Math.sin(a)*OO_KB;if(x>=30&&x<=W-30&&y>=40&&y<=H-40){tx=x;ty=y;break}}
+        const hr=b?b.hp/b.max:1,KB=OO_KB*(hr<=.5?Math.min(3,1+2*(1-hr/.5)):1);   /* 魔王血量 50% 以下：越少血擊退越遠，最遠 3 倍 */
+        for(let sc=1;sc>=.3&&tx==null;sc-=.1){const D=Math.max(OO_KB,KB*sc);for(const off of [0,.7,-.7,1.4,-1.4,3.1416]){const a=base+off,x=p.x+Math.cos(a)*D,y=p.y+Math.sin(a)*D;if(x>=30&&x<=W-30&&y>=40&&y<=H-40){tx=x;ty=y;break}}}
         if(tx==null){tx=Math.max(30,Math.min(W-30,p.x+Math.cos(base)*OO_KB));ty=Math.max(40,Math.min(H-40,p.y+Math.sin(base)*OO_KB))}
         o.ph='kb';o.t=0;o.bx=p.x;o.by=p.y;o.a=p.a;o.tx=tx;o.ty=ty;S.chgF=0;
         ring(p.x,p.y,'#ffb066',70,.4);ring(p.x,p.y,'#fff',40,.3);burst(p.x,p.y,'#ffd9a8',30,240);S.shake=Math.max(S.shake,.3);S.flash=.15;sfx.drained();
@@ -456,10 +469,10 @@ function mountShooter(stage,done){
     if(st===6){thBarrage(b,dt);return}
     const p=S.p,col=G[st].c,lt=shade(col,.5),aim=()=>Math.atan2(p.y-b.y,p.x-b.x);
     if(st===0){ /* 力量：緩慢的大型彈，節奏慢 */
-      b.rt-=dt;if(b.rt<=0){b.rt=2.8;const o=Math.random()*6.28;for(let i=0;i<12;i++)eb(b.x,b.y,o+i*6.283/12,125,col,55,{r:8})}
-      b.at-=dt;if(b.at<=0){b.at=3.6;const a=aim();for(let i=-1;i<=1;i++)eb(b.x,b.y,a+i*.22,165,lt,65,{r:9})}
+      b.rt-=dt;if(b.rt<=0){b.rt=b.hp<b.max*.5?2.2:2.8;const o=Math.random()*6.28;for(let i=0;i<12;i++)eb(b.x,b.y,o+i*6.283/12,125,col,55,{r:8})}
+      b.at-=dt;if(b.at<=0){b.at=b.hp<b.max*.5?2.8:3.6;const a=aim();for(let i=-1;i<=1;i++)eb(b.x,b.y,a+i*.22,165,lt,65,{r:9})}
     }else if(st===1){ /* 空間：旋轉十字彈 + 快速外擴環 */
-      b.st-=dt;if(b.st<=0){b.st=.16;b.ang2=(b.ang2||0)+.19;for(let k=0;k<4;k++)eb(b.x,b.y,b.ang2+k*1.5708,185,col,40,{r:4})}
+      b.st-=dt;if(b.st<=0){b.st=.145;b.ang2=(b.ang2||0)+.19;for(let k=0;k<4;k++)eb(b.x,b.y,b.ang2+k*1.5708,185,col,40,{r:4})}
       b.rt-=dt;if(b.rt<=0){b.rt=4;const o=Math.random()*6.28;for(let i=0;i<16;i++)eb(b.x,b.y,o+i*6.283/16,210,lt,45)}
     }else if(st===2){ /* 現實：會轉彎的花瓣彈 + 瞄準三連 */
       realAtk(b,dt);if(S.stage===2&&b.live&&!b.hid)rift(b,dt)
@@ -479,15 +492,15 @@ function mountShooter(stage,done){
       if(!b.wallT)b.wallT=[2,4.6,3.3,6.1];   /* 注意：b.wt 已被移動路徑計時占用，所以牆用 wallT */
       {const act=new Set();S.eb.forEach(q=>{if(q.wl!=null)act.add(q.wl)});
         for(let d=0;d<4;d++){b.wallT[d]-=dt;if(b.wallT[d]>0||act.has(d)||act.size>=2)continue;
-          b.wallT[d]=7.5+Math.random()*1.5;act.add(d);
+          b.wallT[d]=8.5+Math.random()*1.5;act.add(d);
           const vert=d<2,gp=vert?Math.max(100,Math.min(W-100,p.x+(Math.random()-.5)*160)):Math.max(100,Math.min(H-100,p.y+(Math.random()-.5)*160)),n=vert?W:H;
-          for(let u=20;u<n;u+=34){if(Math.abs(u-gp)<82)continue;
+          for(let u=20;u<n;u+=40){if(Math.abs(u-gp)<82)continue;
             if(d===0)eb(u,-10,1.5708,105,col,40,{r:5,wl:0});
             else if(d===1)eb(u,H+10,-1.5708,105,col,40,{r:5,wl:1});
             else if(d===2)eb(-10,u,0,125,col,40,{r:5,wl:2});
             else eb(W+10,u,3.1416,125,col,40,{r:5,wl:3})}}}
-      b.at-=dt;if(b.at<=0){b.at=3;const a=aim();for(let i=-1;i<=1;i++)eb(b.x,b.y,a+i*.2,200,lt,45)}
-      b.st-=dt;if(b.st<=0){b.st=.34;b.ang2=(b.ang2||0)+.27;for(let k=0;k<4;k++)eb(b.x,b.y,b.ang2+k*1.5708,120,col,30)}
+      b.at-=dt;if(b.at<=0){b.at=3.7;const a=aim();for(let i=-1;i<=1;i++)eb(b.x,b.y,a+i*.2,185,lt,45)}
+      b.st-=dt;if(b.st<=0){b.st=.42;b.ang2=(b.ang2||0)+.27;for(let k=0;k<4;k++)eb(b.x,b.y,b.ang2+k*1.5708,110,col,30)}
     }
   }
   /* ================= 第 7 關：最終魔王・薩諾斯 ================= */
@@ -730,6 +743,7 @@ function mountShooter(stage,done){
     ctx.shadowColor='#b98cff';ctx.shadowBlur=14;ctx.fillStyle='#b98cff';ctx.beginPath();ctx.moveTo(0,-91);ctx.lineTo(7,-82);ctx.lineTo(0,-73);ctx.lineTo(-7,-82);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.moveTo(-1,-88);ctx.lineTo(2,-83);ctx.lineTo(-1,-80);ctx.lineTo(-3,-83);ctx.closePath();ctx.fill();
     ctx.restore();
     /* 護盾 */
+    if(b.invT>0){const R=b.r*2.1;ctx.save();ctx.translate(b.x,b.y);ctx.globalAlpha=.45+.3*Math.sin(T*18);ctx.shadowColor='#ff9ee8';ctx.shadowBlur=30;ctx.strokeStyle='#ffd6f6';ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.stroke();ctx.globalAlpha=.12;ctx.fillStyle='#ff9ee8';ctx.fill();ctx.restore()}
     if(b.sh>0){const R=b.r*1.9,a=.35+.4*(b.sh/(b.shMax||b.max*.1));ctx.save();ctx.translate(b.x,b.y);ctx.globalAlpha=a;ctx.shadowColor='#8fe8ff';ctx.shadowBlur=24;ctx.strokeStyle='#bff4ff';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.stroke();
       ctx.lineWidth=1.4;ctx.globalAlpha=a*.7;for(let i=0;i<6;i++){const q=i*1.0472+T*.4;ctx.beginPath();ctx.moveTo(Math.cos(q)*R,Math.sin(q)*R);ctx.lineTo(Math.cos(q+1.0472)*R,Math.sin(q+1.0472)*R);ctx.stroke()}
       ctx.fillStyle='#8fe8ff';ctx.globalAlpha=.1+.07*Math.sin(T*6);ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.fill();ctx.restore()}
@@ -765,7 +779,7 @@ function mountShooter(stage,done){
       S.pt+=dt;
       if(S.ph==='wave'){
         S.sp-=dt;if(S.sp<=0&&S.en.length<(S.stage===5?11:S.stage===4?18:8+S.stage*3)){spawnEn();S.sp=S.stage===5?1.15:S.stage===4?.76:Math.max(.32,1.4-S.stage*.18)}
-        if(S.pt>20){S.ph='boss';const st=S.stage,h=st===6?2250:st===5?610:st===2?Math.round((100+st*100)*1.05):100+st*100;S.hist=[];S.hh=0;S.dc=[];
+        if(S.pt>20){S.ph='boss';const st=S.stage,h=st===6?2250:st===5?610:st===2?Math.round((100+st*100)*1.05):st===0?Math.round(100*1.3):st===1?Math.round(200*1.1):(st===3||st===4)?Math.round((100+st*100)*1.1):100+st*100;S.hist=[];S.hh=0;S.dc=[];
           S.boss={boss:1,x:W/2,y:-60,r:44,hp:h,max:h,t:0,rt:2,at:1.5,st:0,ang:0,f:0,live:0,al:1,hid:0,cast:null,sp:4.5,wx:W/2,wy:100,wt:2};
           if(st===6)Object.assign(S.boss,{r:58,ph:1,sh:0,shT:0,shCd:10,last:'',combo:null,sp:2.4,y:-100});banner('警告・'+SG(st).b);sfx.warn()}
       }
@@ -782,6 +796,7 @@ function mountShooter(stage,done){
           if(st===2&&!b.hid)realMod(b,dt);
           if(!frozen&&!b.hid)roam(b,st===6?70+b.ph*10:(95+st*16)*(st===4&&S.mir?1.45:1),dt);
           if(st===6)b.y=Math.max(125,Math.min(H-150,b.y));
+          if(b.invT>0)b.invT-=dt;
           if(b.cast)castUpdate(b,dt);
           else if(!b.hid){b.sp-=dt;if(b.sp<=0)special(b,st)}
           if(!b.hid&&!(b.cast&&b.cast.freeze)&&!S.rw)barrage(b,st,dt);
@@ -841,8 +856,8 @@ function mountShooter(stage,done){
         if(e.n>0){e.bt-=dt;if(e.bt<=0&&pl){e.bt=.11;e.n--;e.sa+=.5;eb(e.x,e.y,e.sa,170,lt,40)}}
         else{e.ft-=dt;if(e.ft<=0&&pl){e.n=10;e.bt=0;e.sa=a-1;e.ft=2.6}}}
       else if(e.ty===15){const m=d>300?1:(d<220?-.5:0);e.x+=(Math.cos(a)*m+Math.cos(a+1.57)*.4)*sp*dt;e.y+=(Math.sin(a)*m+Math.sin(a+1.57)*.4)*sp*dt;e.ft-=dt;if(e.ft<=0&&pl){e.ft=Math.max(2,3-S.stage*.15);eb(e.x,e.y,a,115,'#fff2c2',60,{r:7,hm:1.7,life:4.5})}}
-      else if(e.ty===16){const m=d>340?1:(d<260?-.8:0);e.x+=(Math.cos(a)*m+Math.cos(a+1.57)*.5)*sp*dt;e.y+=(Math.sin(a)*m+Math.sin(a+1.57)*.5)*sp*dt;e.ft-=dt;if(e.ft<=0&&pl){e.ft=Math.max(2.2,3.2-S.stage*.1);for(let i=-1;i<=1;i++){const q=a+i*.9;eb(e.x+Math.cos(q)*34,e.y+Math.sin(q)*34,0,0,lt,50,{hold:.8,v2:310,r:5})}}}
-      else if(e.ty===17){const m=d>330?1:(d<250?-1:0);e.x+=(Math.cos(a)*m+Math.cos(a+1.57)*.6)*sp*dt;e.y+=(Math.sin(a)*m+Math.sin(a+1.57)*.6)*sp*dt;e.ft-=dt;if(e.ft<=0&&pl){e.ft=Math.max(2,2.9-S.stage*.1);for(let i=-2;i<=2;i++)eb(e.x,e.y,a+i*.2,170,lt,40,{tr:i*.4})}}
+      else if(e.ty===16){const m=d>340?1:(d<260?-.8:0);e.x+=(Math.cos(a)*m+Math.cos(a+1.57)*.5)*sp*dt;e.y+=(Math.sin(a)*m+Math.sin(a+1.57)*.5)*sp*dt;e.ft-=dt;if(e.ft<=0&&pl){e.ft=Math.max(2.6,3.6-S.stage*.1);for(let i=-1;i<=1;i++){const q=a+i*.9;eb(e.x+Math.cos(q)*34,e.y+Math.sin(q)*34,0,0,lt,50,{hold:.8,v2:310,r:5})}}}
+      else if(e.ty===17){const m=d>330?1:(d<250?-1:0);e.x+=(Math.cos(a)*m+Math.cos(a+1.57)*.6)*sp*dt;e.y+=(Math.sin(a)*m+Math.sin(a+1.57)*.6)*sp*dt;e.ft-=dt;if(e.ft<=0&&pl){e.ft=Math.max(2.4,3.3-S.stage*.1);for(let i=-1;i<=1;i++)eb(e.x,e.y,a+i*.26,160,lt,40,{tr:i*.4})}}
       else if(e.ty===18){if(e.sa==null)e.sa=a;const da=angd(a,e.sa),q=1.25*dt;e.sa+=Math.max(-q,Math.min(q,da));const m=d>250?1:(d<180?-.6:0);e.x+=(Math.cos(a)*m+Math.cos(a+1.57)*.35)*sp*dt;e.y+=(Math.sin(a)*m+Math.sin(a+1.57)*.35)*sp*dt;e.ft-=dt;if(e.ft<=0&&pl){e.ft=2.8;for(let i=-1;i<=1;i++)eb(e.x,e.y,e.sa+i*.14,185,'#7ff0ff',60,{r:6})}}
       else if(e.ty===20){
         if(e.lz>0){e.lz-=dt;if(e.lz>.7){const da=angd(a,e.la),q=1.7*dt;e.la+=Math.max(-q,Math.min(q,da))}if(e.lz<=0){e.fire=3.5;e.ft=6.5;sfx.eLaser()}}
@@ -1058,8 +1073,8 @@ function mountShooter(stage,done){
         ctx.globalAlpha=.9;ctx.strokeStyle='#6b2bd0';ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.beginPath();ctx.arc(b.x,b.y,c.R,0,7);ctx.stroke()}
       else if(c.k==='tp'){const kk=c.t<.12?c.t/.12:c.t<.38?1:Math.max(0,1-(c.t-.38)/.17);drawPortal(c.ox,c.oy,kk,col);drawPortal(c.dx,c.dy,kk,col)}
       else if(c.k==='rush'){if(!c.go){const k=Math.min(1,c.w/c.wind),L=520;ctx.lineCap='round';ctx.strokeStyle=col;ctx.globalAlpha=.1+.22*k;ctx.lineWidth=b.r*2;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x+Math.cos(c.a)*L,b.y+Math.sin(c.a)*L);ctx.stroke();ctx.globalAlpha=.45+.45*k;ctx.lineWidth=2.5;ctx.setLineDash([12,9]);ctx.stroke()}}
-      else if(c.k==='gate'){const kk=Math.min(1,c.t/.4)*(c.t>c.dur-.35?Math.max(0,(c.dur-c.t)/.35):1),p=S.p;c.g.forEach(q=>drawPortal(q.x,q.y,kk,col));
-        if(c.t<.95){ctx.strokeStyle=col;ctx.globalAlpha=.2+.4*(c.t/.95);ctx.lineWidth=1.6;ctx.setLineDash([6,8]);c.g.forEach(q=>{ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.lineTo(p.x,p.y);ctx.stroke()})}}
+      else if(c.k==='gate'){const p=S.p;c.g.forEach(q=>{const lt=c.t-q.o;if(lt<0)return;const kk=Math.min(1,lt/.4)*(lt>1.5?Math.max(0,(1.85-lt)/.35):1);drawPortal(q.x,q.y,kk,col);
+          if(lt<.75){ctx.save();ctx.strokeStyle=col;ctx.globalAlpha=.2+.4*(lt/.75);ctx.lineWidth=1.6;ctx.setLineDash([6,8]);ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.restore()}})}
       else if(c.k==='dc'){ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.globalAlpha=.4+.5*(c.t/c.dur);c.pts.forEach(q=>{ctx.beginPath();ctx.arc(q[0],q[1],20+40*(c.t/c.dur),0,7);ctx.stroke()})}
       else if(c.k==='psy'){const k=Math.min(1,c.t/1);ctx.strokeStyle=col;ctx.shadowColor=col;ctx.shadowBlur=18;ctx.lineWidth=3;ctx.globalAlpha=.3+.5*(c.t<1?k:0);for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(b.x,b.y,(c.t<1?70*(1-k)+20:30)+i*22,0,7);ctx.stroke()}}
       else if(c.k==='soul'||c.k==='mind'){const p=S.p;ctx.strokeStyle=col;ctx.shadowColor=col;ctx.shadowBlur=14;ctx.lineWidth=1.5+3*(c.t/c.dur);ctx.globalAlpha=.5+.4*Math.sin(T*30);
