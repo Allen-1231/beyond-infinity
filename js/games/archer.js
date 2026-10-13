@@ -98,7 +98,7 @@ function mountArcher(stage,done){
   function spawnEn(t,x,y,boss){
     const d=ET[t],m=mins(),hm=hpMul(m);
     const e={t,x,y,hp:d.hp*hm,max:d.hp*hm,sp:d.sp*(1+.02*Math.min(m,10)),r:d.r,dm:d.dm*dmMul(m),c:d.c,cd:1+rnd()*3,fl:0,kx:0,ky:0,stop:0,ph:rnd()*6,chill:0,frz:0,burn:null,big:false,ang:0,gem:KEYS.includes(t)};
-    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3600*(1+.3*(A.bossN-1))*(1+.2*m);e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=30*dmMul(m);e.cd=2;e.stop=0}
+    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3000*(1+.3*(A.bossN-1))*(1+.2*m);e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=30*dmMul(m);e.cd=2;e.stop=0}
     A.en.push(e);return e;
   }
   function spawnWave(dt){
