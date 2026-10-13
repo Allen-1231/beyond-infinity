@@ -98,7 +98,7 @@ function mountArcher(stage,done){
   function spawnEn(t,x,y,boss){
     const d=ET[t],m=mins(),hm=hpMul(m)*.92;
     const e={t,x,y,hp:d.hp*hm,max:d.hp*hm,sp:d.sp*(1+.02*Math.min(m,10)),r:d.r,dm:d.dm*dmMul(m)*.92,c:d.c,cd:1+rnd()*3,fl:0,kx:0,ky:0,stop:0,ph:rnd()*6,chill:0,frz:0,burn:null,big:false,ang:0,gem:KEYS.includes(t)};
-    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3000*(1+.3*(A.bossN-1))*(1+.2*m);e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=24*dmMul(m);e.cd=2;e.stop=0}
+    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3000*(1+.3*(A.bossN-1))*(1+.2*m);e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=19*dmMul(m);e.cd=2;e.stop=0}
     A.en.push(e);return e;
   }
   function spawnWave(dt){
@@ -114,7 +114,7 @@ function mountArcher(stage,done){
     /* ===== 寶石守衛：每位 3～4 種專屬技能＋被動彈幕，血量低於一半進入狂暴（技能更猛、多一招） ===== */
   const SKL={pow:['chain','quake','leap'],spc:['warp','gates','beams'],rea:['clones','petals','blink'],sou:['drain','wraiths','devour'],tim:['stasis','rewind','clock','slowzones'],min:['storm','lances','crush','orbs']};
   const SKE={pow:['meteor'],spc:[],rea:[],sou:['rift'],tim:[],min:[]};
-  const BM=1.05,adf=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
+  const BM=.85,adf=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
   function bossAI(e,dt,dd){
     const p=A.p,k=e.t,aim=Math.atan2(p.y-e.y,p.x-e.x),col=e.c,en=e.hp<e.max*.5;
     if(en&&!e.enr){e.enr=1;ringFx(e.x,e.y,320,col,.7);A.shk=Math.max(A.shk,.4);A.bn={s:BN[KEYS.indexOf(k)]+'・狂暴',t:2};GA.noise(.5,.3,150)}
@@ -126,7 +126,7 @@ function mountArcher(stage,done){
       if(e.cd<=0){const pool=SKL[k].concat(en?SKE[k]:[]);let n;do{n=pool[(rnd()*pool.length)|0]}while(n===e.last&&pool.length>1);e.last=n;e.sk={n,t:0};GA.tone(120,.35,'sawtooth',.14,.5)}
       return}
     const s=e.sk,end=()=>{e.sk=null;e.cd=en?1.4:2.2;e.tt=0;e.warn=0};s.t+=dt;
-    const fz=()=>{e.stop=Math.max(e.stop,.08)},zr=(x,y,R,dur,dm)=>slam(x,y,R,dur,dm*.85,col);
+    const fz=()=>{e.stop=Math.max(e.stop,.08)},zr=(x,y,R,dur,dm)=>slam(x,y,R,dur,dm*.7,col);
     switch(s.n){
     case'chain':fz();if(s.i==null){s.i=0;s.a=aim}
       while(s.i<3&&s.t>=.4+s.i*.7){zr(e.x+Math.cos(s.a)*s.i*175,e.y+Math.sin(s.a)*s.i*175,165,.85,34);s.i++}if(s.t>=3)end();break;
@@ -287,9 +287,9 @@ function mountArcher(stage,done){
       if(z.k==='slam'){if(z.t>=z.dur){ringFx(z.x,z.y,z.r,z.c,.4);burst(z.x,z.y,z.c,20,220);A.shk=Math.max(A.shk,.25);GA.noise(.25,.25,300);
         const d=Math.hypot(p.x-z.x,p.y-z.y);if(d<z.r){if(hurtP(z.dm)){p.kx=(p.x-z.x)/(d||1)*320;p.ky=(p.y-z.y)/(d||1)*320}}return false}return true}
       if(z.k==='time'){if(z.t>z.warn&&Math.hypot(p.x-z.x,p.y-z.y)<z.r)p.slow=Math.max(p.slow,.12);return z.t<z.dur}
-      if(z.k==='portal'){z.tk-=dt;if(z.t>.6&&z.tk<=0){z.tk=.5;const a=Math.atan2(p.y-z.y,p.x-z.x);for(let i=-1;i<=1;i++)eshot(z.x,z.y,a+i*.22,225,9*1.05,z.c);GA.tone(650,.05,'square',.05)}return z.t<z.dur}
+      if(z.k==='portal'){z.tk-=dt;if(z.t>.6&&z.tk<=0){z.tk=.5;const a=Math.atan2(p.y-z.y,p.x-z.x);for(let i=-1;i<=1;i++)eshot(z.x,z.y,a+i*.22,225,9*.85,z.c);GA.tone(650,.05,'square',.05)}return z.t<z.dur}
       if(z.k==='beam'){if(z.fol){if(z.fol.hp<=0)return false;z.x=z.fol.x;z.y=z.fol.y}if(z.rot&&z.t>z.warn)z.a+=z.rot*dt;else if(z.rot)z.a+=z.rot*dt*.2;
-        if(z.t>z.warn){z.tk-=dt;const ca=Math.cos(z.a),sa=Math.sin(z.a),dx=p.x-z.x,dy=p.y-z.y,u=dx*ca+dy*sa,v=Math.abs(-dx*sa+dy*ca);if(z.tk<=0&&v<z.w+8&&u>(z.both?-z.len:0)&&u<z.len){z.tk=.3;hurtP(11*dmMul(mins()))}}return z.t<z.dur}
+        if(z.t>z.warn){z.tk-=dt;const ca=Math.cos(z.a),sa=Math.sin(z.a),dx=p.x-z.x,dy=p.y-z.y,u=dx*ca+dy*sa,v=Math.abs(-dx*sa+dy*ca);if(z.tk<=0&&v<z.w+8&&u>(z.both?-z.len:0)&&u<z.len){z.tk=.3;hurtP(9*dmMul(mins()))}}return z.t<z.dur}
       if(z.k==='fire'){z.tk-=dt;if(z.tk<=0){z.tk=.4;for(const e of A.en)if(Math.hypot(e.x-z.x,e.y-z.y)<z.r+e.r)dealt(e,6,false,true,true)}return z.t<z.dur}
       return false});
     A.orbs=A.orbs.filter(o=>{const dx=p.x-o.x,dy=p.y-o.y,d=Math.hypot(dx,dy);if(d<S.mag||o.mg){o.mg=1;const v=330*dt;o.x+=dx/(d||1)*v;o.y+=dy/(d||1)*v}
