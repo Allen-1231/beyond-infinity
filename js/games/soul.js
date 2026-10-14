@@ -1120,13 +1120,13 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   /* —— 真正的末日場景：以提供的 FBX 建築、殘骸、看板與樓梯組裝；失敗時保留原場景 —— */
   const FBX_BASE='assets/';
   let loadedEnvironment=null;
-  function addScript(url){return new Promise((resolve,reject)=>{if(document.querySelector('script[data-soul-loader="'+url+'"]')){resolve();return}const s=document.createElement('script');s.src=url;s.async=true;s.dataset.soulLoader=url;s.onload=resolve;s.onerror=()=>reject(new Error('載入 FBXLoader 失敗：'+url));document.head.appendChild(s)})}
+  function addScript(url){return new Promise((resolve,reject)=>{const existing=document.querySelector('script[data-soul-loader="'+url+'"]');if(existing){if(existing.dataset.loaded==='1'){resolve();return}existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',()=>reject(new Error('載入腳本失敗：'+url)),{once:true});return}const s=document.createElement('script');s.src=url;s.async=true;s.dataset.soulLoader=url;s.onload=()=>{s.dataset.loaded='1';resolve()};s.onerror=()=>reject(new Error('載入腳本失敗：'+url));document.head.appendChild(s)})}
   function loadFbxEnvironment(){
     const files=['building-01.fbx','building-02.fbx','building-03.fbx','building-04.fbx','building-05.fbx','building-06.fbx','building-07.fbx','wreckage-3-types.fbx','billboards-4-types.fbx','fire-stairs.fbx'];
-    return addScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/NURBSUtils.js')
+    return addScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/curves/NURBSUtils.js')
       .then(()=>addScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js'))
       .then(()=>{if(!THREE.FBXLoader)throw new Error('FBXLoader 未可用');const loader=new THREE.FBXLoader();
-        return Promise.all(files.map(name=>fetch(FBX_BASE+name).then(r=>{if(!r.ok)throw new Error(name+' HTTP '+r.status);return r.arrayBuffer()}).then(buf=>({name,obj:loader.parse(buf,'assets/')}))));
+        return Promise.all(files.map(name=>fetch(FBX_BASE+name).then(r=>{if(!r.ok)throw new Error(name+' HTTP '+r.status+'（請確認檔案放在網站的 assets/）');return r.arrayBuffer()}).then(buf=>({name,obj:loader.parse(buf,'assets/')}))));
       }).then(items=>{
         const root=new THREE.Group();root.name='SoulArena_FBX_ApocalypticCity';
         const buildings=items.filter(x=>x.name.startsWith('building-'));
@@ -1159,7 +1159,8 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   const dagP2=loadDagger().catch(err=>{DAG=null;console.warn('[soul] dagger.glb 載入失敗（'+DAG_URL+'），改用內建匕首',err)});
   const drgP=loadDragon().catch(err=>{DRG=null;console.warn('[soul] dragon.glb 載入失敗（'+DRG_URL+'），飛龍改用魂焰外型',err)});
   const bdrP=loadBossDragon().catch(err=>{BDR=null;console.warn('[soul] bigdragon.glb 載入失敗（'+BOSS_URL+'），魔王改用內建人形外型',err)});
-  Promise.all([envP,monP,dagP2,drgP,bdrP]).then(()=>{attachHeld();start.disabled=false;start.textContent='進入戰場'});
+  /* 不讓大型環境 FBX 阻塞遊戲啟動；末日環境在背景載入。 */
+  Promise.all([monP,dagP2,drgP,bdrP]).then(()=>{attachHeld();start.disabled=false;start.textContent='進入戰場'});
   start.onclick=begin;reset();last=performance.now();raf=requestAnimationFrame(loop);
   window.__sa=()=>S;window.__sax={cam:(y,p)=>{yaw=y;pit=p},cast,choose,selectPick,confirmPick,showPick,gainXp,spawn:edgeSpawn,begin,nextWave};window.__stop=cleanup;
 }
