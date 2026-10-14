@@ -148,7 +148,7 @@ function mountSoulArena(stage,done){
     const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(2,2);
     const cl=new THREE.Mesh(new THREE.CircleGeometry(230,32),new THREE.MeshBasicMaterial({map:t,transparent:true,side:THREE.DoubleSide,depthWrite:false,fog:false}));cl.rotation.x=PI/2;cl.position.y=90;scene.add(cl);ENV.push(tt=>{t.offset.x=tt*.004})}
   }
-  /* 成功載入外部環境後隱藏這批程式生成的預設場景；載入失敗時保留原場景。 */
+  /* 記錄預設環境節點；外部 GLB 載入失敗或方向不符時仍保留完整戰場。 */
   const proceduralEnvNodes=scene.children.slice(proceduralEnvStart);
   const dyn=new THREE.Group();scene.add(dyn);
   const dm=new THREE.Object3D(),CC=new THREE.Color();
@@ -1124,8 +1124,8 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     return fetch(ENV_ASSET_URL).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(buf=>{
       const G=parseGLB(buf),js=G.js,roots=(js.scenes[js.scene||0]||js.scenes[0]).nodes||[],assetRoot=new THREE.Group(),modelRoot=new THREE.Group();
       roots.forEach(ni=>modelRoot.add(G.build(ni)));
-      /* 此環境是 Z-up 匯出；旋轉為 Three.js 常用的 Y-up，再自動縮放並落地置中。 */
-      modelRoot.rotation.x=-PI/2;modelRoot.updateMatrixWorld(true);
+      /* glTF/GLB 通常已使用 Y-up；不強制旋轉，避免建築被翻倒。 */
+      modelRoot.rotation.set(0,0,0);modelRoot.updateMatrixWorld(true);
       const bb=new THREE.Box3().setFromObject(modelRoot),size=bb.getSize(new THREE.Vector3()),center=bb.getCenter(new THREE.Vector3());
       if(!Number.isFinite(size.x)||!Number.isFinite(size.z)||Math.max(size.x,size.z)<.01)throw new Error('環境模型沒有可用的網格尺寸');
       const scale=Math.min(2.5,(AR*1.82)/Math.max(size.x,size.z));
@@ -1133,9 +1133,9 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       assetRoot.add(modelRoot);assetRoot.name='SoulArena_ApocalypticEnvironment';
       assetRoot.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide;if(o.material.color&&o.material.color.r+o.material.color.g+o.material.color.b<.08)o.material.color.set(0x777777)}}});
       scene.add(assetRoot);loadedEnvironment=assetRoot;
-      proceduralEnvNodes.forEach(o=>{o.visible=false});props.length=0;
-      scene.background=new THREE.Color(0x100c12);scene.fog=new THREE.Fog(0x100c12,42,145);
-      console.info('[soul] 已載入末日環境：',ENV_ASSET_URL,'縮放',scale);
+      /* 保留原本可玩的地面、照明、火焰與碰撞物；外部模型先以裝飾方式疊加，
+         避免模型座標或材質有問題時整個戰場消失。 */
+      console.info('[soul] 已載入末日環境（保留內建戰場）：',ENV_ASSET_URL,'尺寸',size,'縮放',scale);
       return assetRoot;
     }).catch(err=>{console.warn('[soul] 外部環境載入失敗，保留內建場景：'+ENV_ASSET_URL,err);return null});
   }
