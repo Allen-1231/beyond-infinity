@@ -374,13 +374,13 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   function loadBossDragon(){return fetch(BOSS_URL).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(buf=>{BDR=skinRig(parseGLB(buf))})}
   /* 調色盤：[身體,翅膀,頭頸,尾,腳]；m＝翼膜 [根部,中段,末端,骨]；boss＝暗紅紫，wyr＝幼龍青綠 */
   const PAL={boss:{c:[[.36,.1,.15],[.42,.13,.55],[.78,.22,.16],[.28,.08,.14],[.2,.07,.1]],m:[[.22,.05,.1],[.42,.1,.3],[.6,.14,.5],[.14,.04,.07]]},
-    wyr:{c:[[.16,.46,.36],[.2,.55,.62],[.95,.68,.2],[.12,.34,.28],[.08,.24,.2]],m:[[.08,.22,.24],[.15,.5,.55],[.4,.85,.8],[.06,.2,.18]]}};
+    wyr:{c:[[.14,.3,.7],[.2,.4,.85],[.98,.78,.25],[.1,.2,.55],[.06,.12,.35]],m:[[.9,.35,.08],[1,.62,.14],[1,.85,.35],[.45,.2,.05]]}};
   function bossDragonModel(o){
     o=o||{};const B=BDR,I=B.inst(),g=new THREE.Group(),sc=new THREE.Group(),s=(o.h||6.4)/B.h,wid=o.wid||1.22,PL=PAL[o.pal||'boss'];
     I.play('Idle',true);I.step(0);
     const geo=new THREE.BufferGeometry(),pa=new THREE.BufferAttribute(I.pos,3);if(THREE.DynamicDrawUsage!==undefined&&pa.setUsage)pa.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('position',pa);{const cl=new Float32Array(B.NV*3);for(let v=0;v<B.NV;v++){const c3=PL.c[B.cat[v]];cl[v*3]=c3[0];cl[v*3+1]=c3[1];cl[v*3+2]=c3[2]}geo.setAttribute('color',new THREE.BufferAttribute(cl,3))}if(B.NRM)geo.setAttribute('normal',new THREE.BufferAttribute(B.NRM,3));geo.setIndex(new THREE.BufferAttribute(B.IX,1));
-    const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.55,metalness:.2,emissive:0x2a0610,flatShading:true,side:THREE.DoubleSide});
+    const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.55,metalness:.2,emissive:o.bem!=null?o.bem:0x2a0610,flatShading:true,side:THREE.DoubleSide});
     const mesh=new THREE.Mesh(geo,mat);mesh.frustumCulled=false;sc.add(mesh);sc.scale.set(s*wid,s,s);sc.position.set(-B.cx*s*wid,-B.minY*s-B.h*s/2,-B.cz*s);g.add(sc);   /* 模型中心在原點（會飛，高度由敵人的 alt 決定） */
     /* —— 程式生成的大翅膀：手臂＋四根指骨＋扇形翼膜，會展開、拍動 —— */
     const all=[mat];
@@ -391,7 +391,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       for(let sd=0;sd<2;sd++){let oo=sd*NW;TRI.forEach(t=>t.forEach(i=>{wcol.set(PC[i],(oo++)*3)}));RIB.forEach(()=>{for(let k=0;k<6;k++)wcol.set(PL.m[3],(oo++)*3)})}}
     const wg=new THREE.BufferGeometry(),wa=new THREE.BufferAttribute(wpos,3);if(THREE.DynamicDrawUsage!==undefined&&wa.setUsage)wa.setUsage(THREE.DynamicDrawUsage);
     wg.setAttribute('position',wa);wg.setAttribute('color',new THREE.BufferAttribute(wcol,3));
-    const wmat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.7,metalness:.1,emissive:0x2a0818,flatShading:true,side:THREE.DoubleSide});
+    const wmat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.7,metalness:.1,emissive:o.wem!=null?o.wem:0x2a0818,flatShading:true,side:THREE.DoubleSide});
     const wmesh=new THREE.Mesh(wg,wmat);wmesh.frustumCulled=false;sc.add(wmesh);all.push(wmat);
     const ib1=B.nid('back1'),ib2=B.nid('back2'),WPR={r:.5,A:.42,F:3.2,sw:.1,ph:0};
     const rz=(v,a)=>{const c=Math.cos(a),s2=Math.sin(a);return[v[0]*c-v[1]*s2,v[0]*s2+v[1]*c,v[2]]};
@@ -423,7 +423,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       I.step(dt);pa.needsUpdate=true;
       /* 翅膀姿勢：依招式切換（舉起／猛拍／後掠） */
       let tg;if(k==='gust'&&sk>.55)tg=[.35,.95,11,0];else if(k==='charge')tg=[-.05,.12,8,.85];else if(k==='slam')tg=[1.05,.45,7,0];else if(k)tg=[.95,.2,6,.05];else if(sp>.6)tg=[.45,.55,4.6,.2];else tg=[.5,.42,3.2,.1];
-      const kk=Math.min(1,dt*4);WPR.r+=(tg[0]-WPR.r)*kk;WPR.A+=(tg[1]-WPR.A)*kk;WPR.F+=(tg[2]*(o.ff||1)-WPR.F)*kk;WPR.sw+=(tg[3]-WPR.sw)*kk;WPR.ph+=WPR.F*dt;
+      if(o.wr)tg[0]+=o.wr;const kk=Math.min(1,dt*4);WPR.r+=(tg[0]-WPR.r)*kk;WPR.A+=(tg[1]*(o.fa||1)-WPR.A)*kk;WPR.F+=(tg[2]*(o.ff||1)-WPR.F)*kk;WPR.sw+=(tg[3]-WPR.sw)*kk;WPR.ph+=WPR.F*dt;
       wingUpdate();
       sc.rotation.z=Math.sin(T*1.3+e.ph)*.02}}}
   /* —— 匕首武器：dagger.glb（內嵌貼圖）。載入失敗時改用內建簡易匕首 —— */
@@ -485,7 +485,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   function spawnEn(t,x,z){
     const d=ET[t],w=Math.max(1,S.wave),m=d.boss?1:1+.1*(w-1);
     const useG=!!(GLB&&POOL[t]);
-    const mdl=t==='fbs'&&BDR?bossDragonModel({h:6.4,wid:1.22}):t==='wyr'&&BDR?bossDragonModel({h:2,wid:1.12,pal:'wyr',wsc:.85,ff:1.6}):t==='drg'&&DRG?dragonModel():useG?glbModel(t):d.fly?wispModel():humanoid({col:d.col,eye:d.eye,s:d.s||1,back:t==='spt',armor:t==='brt'||t==='mbs'||t==='fbs',cloth:t==='fbs'?0x201030:t==='mbs'?0x3a1a1a:0x2c2c3a});
+    const mdl=t==='fbs'&&BDR?bossDragonModel({h:6.4,wid:1.22}):t==='wyr'&&BDR?bossDragonModel({h:2,wid:.95,pal:'wyr',wsc:1.9,ff:1.5,fa:1.3,wr:.05,wem:0x5a2808,bem:0x0a1840}):t==='drg'&&DRG?dragonModel():useG?glbModel(t):d.fly?wispModel():humanoid({col:d.col,eye:d.eye,s:d.s||1,back:t==='spt',armor:t==='brt'||t==='mbs'||t==='fbs',cloth:t==='fbs'?0x201030:t==='mbs'?0x3a1a1a:0x2c2c3a});
     if(mdl.armL){mdl.armL.rotation.x=mdl.armR.rotation.x=-1.4}
     const g=mdl.g;g.position.set(x,0,z);g.add(shadow(d.r*1.15));
     let og=null;if(t==='fbs'){og=new THREE.Group();GEM.forEach((q,i)=>{const o=new THREE.Mesh(new THREE.OctahedronGeometry(.45),BM(new THREE.Color(q.c)));const a=i/6*PI*2;o.position.set(Math.cos(a)*3.6,6.8,Math.sin(a)*3.6);og.add(o)});g.add(og)}
@@ -553,7 +553,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
         /* 飛龍／幼龍：在高空繞著玩家盤旋；兩招輪流——噴火（面向玩家連射 7 發扇形火球）／轟炸（地面先出現預警圈，約 1.2 秒後火焰炸開，可跳起躲避） */
         mv=0;if(e.ds==null){e.ds=0;e.bt=2.5+rnd()*2;e.ca=rnd()*6.28;e.dir=rnd()<.5?1:-1;e.alt=d.alt}
         e.alt+=(d.alt+Math.sin(T*.9+e.ph)*.8-e.alt)*Math.min(1,edt*2);e.bt-=edt;
-        if(e.ds===0){e.ca+=edt*.45*e.dir;const tx=p.x+Math.cos(e.ca)*15,tz=p.z+Math.sin(e.ca)*15,ax=tx-e.x,az=tz-e.z,al=Math.hypot(ax,az)||1,v=Math.min(e.sp*1.5,al*1.5);e.x+=ax/al*v*edt;e.z+=az/al*v*edt;
+        if(e.ds===0){if(e.t==='wyr'){/* 幼龍：不盤旋，與玩家保持約 11~16 的距離，太遠就靠近、太近就退開，其餘時間原地小幅漂浮並面向玩家 */const wn=dd>16?1:dd<11?-1:0,vv=wn*e.sp*1.3;e.x+=ux*vv*edt;e.z+=uz*vv*edt}else{e.ca+=edt*.45*e.dir;const tx=p.x+Math.cos(e.ca)*15,tz=p.z+Math.sin(e.ca)*15,ax=tx-e.x,az=tz-e.z,al=Math.hypot(ax,az)||1,v=Math.min(e.sp*1.5,al*1.5);e.x+=ax/al*v*edt;e.z+=az/al*v*edt}
           if(e.bt<=0){e.k=!e.k;if(e.k){e.ds=1;e.bt=1.8;e.fv=0;e.fc=.4;GA.tone(120,.5,'sawtooth',.15,.4)}else{e.ds=2;e.bt=1.4;e.bm=0}}}
         else if(e.ds===1){e.fc-=edt;
           if(e.fc<=0&&e.fv<7){e.fc=.18;e.fv++;const V=13,tt=Math.max(.3,dd/V),vy=(p.y+1.1-e.alt)/tt,a=Math.atan2(dz,dx)+(e.fv-4)*.09;
@@ -804,7 +804,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     /* 射擊 */
     p.fcd-=dt;if(ms.down&&p.fcd<=0)shoot();
     /* 波次 */
-    if(S.q.length){S.sp-=dt;const cap=24+S.wave*2;if(S.sp<=0&&S.en.length<cap){const t=S.q.shift();if((t==='drg'||t==='wyr')&&S.en.filter(q=>q.t===t&&q.hp>0).length>=(t==='wyr'?4:2)){S.q.push(t);S.sp=.6}else edgeSpawn(t);S.sp=Math.max(.3,1.05-.05*S.wave);if(t==='fbs'||t==='mbs'){S.bn={s:ET[t].n+' 現身',t:2.2};GA.noise(.6,.3,200)}}}
+    if(S.q.length){S.sp-=dt;const cap=24+S.wave*2;if(S.sp<=0&&S.en.length<cap){const t=S.q.shift();if((t==='drg'||t==='wyr')&&S.en.filter(q=>q.t===t&&q.hp>0).length>=(t==='wyr'?4:2)){S.q.push(t);S.sp=.6}else if(t==='fbs')startIntro();else edgeSpawn(t);S.sp=Math.max(.3,1.05-.05*S.wave);if(t==='mbs'){S.bn={s:ET[t].n+' 現身',t:2.2};GA.noise(.6,.3,200)}}}
     else if(S.wave===10){S.escort-=dt;if(S.escort<=0&&S.en.length<22){S.escort=7;for(let i=0;i<4;i++)edgeSpawn(i%2?'run':'zom')}}
     else if(!S.en.length&&!S.over){S.gapT-=dt;if(S.gapT<=0){S.gapT=3;if(S.wave>0){S.score+=100*S.wave;heal(Math.round(S.p.max*.12));S.bn={s:'第 '+S.wave+' 波結束',t:1.6}}nextWave()}}
     /* 敵人 */
@@ -855,19 +855,19 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     {let tg=Math.atan2(fx,fz);if(!aiming&&p.mv>.8)tg=Math.atan2(p.vx,p.vz);let df=tg-hy;df=Math.atan2(Math.sin(df),Math.cos(df));hy+=df*Math.min(1,dt*(aiming?32:20));sync.hd=df}
     hero.position.set(p.x,p.y,p.z);hsh.position.set(p.x,.04,p.z);hsh.scale.setScalar(.7*(1-Math.min(.5,p.y*.25)));hero.rotation.y=hy;hero.visible=!(p.inv>0&&S.run&&Math.floor(T*20)%2);
     const mvk=Math.min(1,p.mv/5),ak=p.ak,rc=p.rc,air=p.y>.05?1:0,a=p.sw,sa=Math.sin(a),ca=Math.cos(a),sb=-sa,cb=-ca,vf=p.vx*Math.sin(hy)+p.vz*Math.cos(hy),vr=p.vx*Math.cos(hy)-p.vz*Math.sin(hy);
-    const LD=Math.min(1,(S.landT||0)/.22),HT=Math.min(1,(p.ht||0)/.3),CC=Math.min(1,(S.castT||0)/.55*1.5),up=p.vy>0?1:0;   /* LD 落地緩衝／HT 受擊後仰／CC 施放技能 */
+    const LD=Math.min(1,(S.landT||0)/.22),HT=Math.min(1,(p.ht||0)/.3),CK=Math.min(1,(S.castT||0)/.55*1.5),up=p.vy>0?1:0;   /* LD 落地緩衝／HT 受擊後仰／CK 施放技能 */
     proc.legL.rotation.x=-sa*.95*mvk-air*(up?.7:.4)+LD*.35;proc.legR.rotation.x=-sb*.95*mvk+air*(up?.1:.3)-LD*.15;
     proc.legL.userData.kn.rotation.x=(.1+.95*Math.max(0,ca))*mvk+air*(up?1:.35)+LD*.8;proc.legR.userData.kn.rotation.x=(.1+.95*Math.max(0,cb))*mvk+air*(up?.9:.3)+LD*.8;
     proc.g.position.y=Math.abs(sa)*.07*mvk+Math.sin(T*2.2)*.008*(1-mvk)-LD*.16;proc.g.rotation.y=sa*.1*mvk*(1-ak*.7);proc.g.rotation.z=Math.sin(T*1.1)*.015*(1-mvk);
     proc.tor.scale.y=1+Math.sin(T*2.4)*.012*(1-mvk);
     proc.tor.rotation.x=.12*clamp(vf/7,-.5,1)-.07*rc+Math.sin(T*2.2)*.012+LD*.3-HT*.4;proc.tor.rotation.z=-clamp(vr/7,-1,1)*.1;
-    proc.tor.rotation.y=-sa*.14*mvk*(1-ak)+clamp(sync.hd||0,-.6,.6)*.25+CC*.22;
+    proc.tor.rotation.y=-sa*.14*mvk*(1-ak)+clamp(sync.hd||0,-.6,.6)*.25+CK*.22;
     proc.head.rotation.x=-.1*mvk+.06*rc+clamp(-pit*.6,-.4,.4)-HT*.3+LD*.1;proc.head.rotation.y=-proc.tor.rotation.y*.6;
-    {const sw2=sb*.8*mvk*(1-ak),bx=-(.5+.5*ak)-rc*.1+sw2-air*.35;proc.armR.rotation.x=bx+(-1.75-bx)*CC;proc.armR.rotation.z=-(.08+.25*ak)-air*.45+CC*.12;proc.elbR.rotation.x=-(.4+.3*ak)-Math.max(0,sw2)*.5+CC*.3}
+    {const sw2=sb*.8*mvk*(1-ak),bx=-(.5+.5*ak)-rc*.1+sw2-air*.35;proc.armR.rotation.x=bx+(-1.75-bx)*CK;proc.armR.rotation.z=-(.08+.25*ak)-air*.45+CK*.12;proc.elbR.rotation.x=-(.4+.3*ak)-Math.max(0,sw2)*.5+CK*.3}
     {const yw=hy;let dy=yw-(sync.yw==null?yw:sync.yw);if(dy>PI)dy-=2*PI;if(dy<-PI)dy+=2*PI;sync.yw=yw;sync.sy=(sync.sy||0)+(clamp(dy/Math.max(dt,.001)*.15,-1,1)-(sync.sy||0))*Math.min(1,dt*8);
       proc.capeUpd(T,clamp(Math.max(vf,0)/7,0,1)+air*.35+(HT>0?.2:0)+.05,-sync.sy,clamp(vr/7,-1,1));
       {const fl=Math.abs(sa)*mvk;proc.flapF.rotation.x=-.12-fl*.4-air*.5-clamp(vf/7,-.3,.3)*.4;proc.flapB.rotation.x=.12+fl*.35+air*.5+clamp(vf/7,0,1)*.3}
-      const upd=(m,i)=>{const on=S.gl[i]>0?1:0;if(m.userData.lit!==on){m.userData.lit=on;const c=new THREE.Color(on?GEM[i].c:0x444455);m.color.copy(c);m.emissive.copy(on?c:new THREE.Color(0))}m.emissiveIntensity=on?.9+(i===S.castI?2.2*CC:0):0};
+      const upd=(m,i)=>{const on=S.gl[i]>0?1:0;if(m.userData.lit!==on){m.userData.lit=on;const c=new THREE.Color(on?GEM[i].c:0x444455);m.color.copy(c);m.emissive.copy(on?c:new THREE.Color(0))}m.emissiveIntensity=on?.9+(i===S.castI?2.2*CK:0):0};
       proc.gems.forEach(upd);proc.cgems.forEach(upd)}
     /* 匕首：握持姿勢、揮砍與射擊動畫（持匕首的手臂與匕首同步，位置在軀幹座標系） */
     if(heldD){let rx=S.wm?-.3:-.1,ry=0,pz=.62,rl=0;
@@ -896,17 +896,67 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     n=0;for(const q of S.pa){if(n>=800)break;dm.position.set(q.x,q.y,q.z);dm.rotation.set(q.l*6,q.l*4,0);dm.scale.setScalar(q.s*Math.max(.2,q.l/q.m));dm.updateMatrix();IX.setMatrixAt(n,dm.matrix);IX.setColorAt(n,CC.set(q.c));n++}
     IX.count=n;IX.instanceMatrix.needsUpdate=true;if(IX.instanceColor)IX.instanceColor.needsUpdate=true;
   }
+  /* —— 魔王降臨過場：紅色閃電劃破高空，寶石吞噬者從天而降、落地震盪，之後才開始戰鬥 —— */
+  const INTRO_DUR=6.2,INTRO_LAND=3.7;
+  function startIntro(){
+    const p=S.p,[fx,fz]=fwd();let x=p.x+fx*20,z=p.z+fz*20;const dd=Math.hypot(x,z);if(dd>AR-6){x*=(AR-6)/dd;z*=(AR-6)/dd}
+    const e=spawnEn('fbs',x,z);e.face=Math.atan2(p.x-x,p.z-z);e.g.visible=false;e.alt=62;e.y0=e.alt-e.h/2;
+    S.intro={t:0,e,bolts:[],nb:0,land:false,roar:false,fl:0};S.bn=null;S.shake=0;
+    GA.noise(1.2,.3,120);GA.tone(55,2.2,'sawtooth',.18,.3)}
+  function mkBolt(){const W_=W,H_=H,x0=W_*(.12+rnd()*.76),pts=[[x0,-10]];let x=x0,y=-10;const tgt=H_*(.55+rnd()*.3);
+    while(y<tgt){y+=H_*(.05+rnd()*.07);x+=(rnd()-.5)*W_*.09;pts.push([x,y])}
+    const br=[];for(let i=2;i<pts.length-1;i++)if(rnd()<.4){const b=[pts[i]];let bx=pts[i][0],by=pts[i][1];const dir=rnd()<.5?-1:1;for(let k=0;k<3;k++){bx+=dir*W_*(.02+rnd()*.04);by+=H_*(.03+rnd()*.05);b.push([bx,by])}br.push(b)}
+    return{pts,br,t:.3,m:.3}}
+  function introUpdate(dt){
+    const I=S.intro,e=I.e;I.t+=dt;const t=I.t;
+    /* 特效粒子／環繼續推進；其他敵人、子彈、玩家被凍結 */
+    S.fx=S.fx.filter(f=>{f.t+=dt;const k=f.t/f.dur;if(f.k==='ring'){const r=f.r*Math.min(1,k*1.4);f.m.scale.set(r,r,r);f.m.material.opacity=.9*(1-k)}else f.m.material.opacity=1-k;if(k>=1){scene.remove(f.m);f.m.material.dispose();return false}return true});
+    S.pa=S.pa.filter(q=>{q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vy-=14*dt;if(q.y<.05){q.y=.05;q.vy*=-.3;q.vx*=.6;q.vz*=.6}q.l-=dt;return q.l>0});
+    S.shake=Math.max(0,S.shake-dt);I.fl=Math.max(0,I.fl-dt);
+    /* 閃電：越接近落地越密集 */
+    I.nb-=dt;if(I.nb<=0&&t<INTRO_LAND+.6){I.nb=Math.max(.12,.5-t*.1)+rnd()*.25;I.bolts.push(mkBolt());if(I.bolts.length>5)I.bolts.shift();I.fl=.14;S.shake=Math.max(S.shake,.12+Math.min(.25,t*.07));GA.noise(.25,.22,300+rnd()*500)}
+    for(const b of I.bolts)b.t-=dt;I.bolts=I.bolts.filter(b=>b.t>0);
+    /* 魔王：0.9 秒後現身，從高空俯衝降落（先快後緩），落地時震盪 */
+    if(t>.9){e.g.visible=true;const k=Math.min(1,(t-.9)/(INTRO_LAND-.9)),ez=1-Math.pow(1-k,3),al=5.4+(62-5.4)*(1-ez);e.alt=al;e.y0=al-e.h/2;
+      e.skn=k<1?'gust':null;e.skt=1;e.g.rotation.y=e.face}
+    if(t>=INTRO_LAND&&!I.land){I.land=true;e.alt=5.4;e.y0=e.alt-e.h/2;e.skn=null;e.atk=1.3;I.fl=.5;I.big=1;S.shake=1;ring(e.x,e.z,22,0xff2a3a,.9);ring(e.x,e.z,14,0xffffff,.6);ring(e.x,e.z,30,0xb36bff,1.2);burst(e.x,.4,e.z,'#ff4a4a',40,10,.2);burst(e.x,.4,e.z,'#ffd08a',24,8,.15);GA.noise(1.4,.5,150);GA.tone(50,1.2,'sawtooth',.3,.3)}
+    if(I.land)S.shake=Math.max(S.shake,Math.max(0,.9-(t-INTRO_LAND)*.7));
+    if(t>=INTRO_DUR){S.intro=null;e.skn=null;e.bt=2.5;S.bn={s:'寶石吞噬者・戰鬥開始',t:2};GA.tone(392,.25,'triangle',.14);GA.tone(523,.25,'triangle',.14,0,.1)}}
+  function drawIntro(){
+    const I=S.intro,t=I.t,e=I.e;hx.clearRect(0,0,W,H);
+    /* 暗紅天色＋暈影 */
+    const a0=Math.min(1,t/.6)*(t>INTRO_DUR-.7?Math.max(0,(INTRO_DUR-t)/.7):1);
+    hx.fillStyle='rgba(50,0,8,'+(.38*a0)+')';hx.fillRect(0,0,W,H);
+    const g=hx.createRadialGradient(W/2,H/2,H*.25,W/2,H/2,H*.85);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(20,0,4,'+(.85*a0)+')');hx.fillStyle=g;hx.fillRect(0,0,W,H);
+    /* 閃電 */
+    hx.save();hx.lineCap='round';hx.lineJoin='round';
+    for(const b of I.bolts){const k=Math.max(0,b.t/b.m);hx.globalAlpha=Math.min(1,k*1.6);
+      const draw1=(pts,w)=>{hx.beginPath();pts.forEach((q,i)=>i?hx.lineTo(q[0],q[1]):hx.moveTo(q[0],q[1]));hx.strokeStyle='rgba(255,40,60,.55)';hx.lineWidth=w*3.2;hx.stroke();hx.strokeStyle='#ff5a66';hx.lineWidth=w*1.6;hx.stroke();hx.strokeStyle='#fff3f3';hx.lineWidth=w*.6;hx.stroke()};
+      draw1(b.pts,2.6);for(const br of b.br)draw1(br,1.2)}
+    hx.restore();
+    /* 全螢幕閃光 */
+    if(I.fl>0){const k=Math.min(1,I.fl/.14);hx.fillStyle=I.big&&I.fl>.2?'rgba(255,240,240,'+Math.min(.9,I.fl*1.6)+')':'rgba(255,50,70,'+(.28*k)+')';hx.fillRect(0,0,W,H)}
+    /* 電影黑邊 */
+    const bar=H*.11*Math.min(1,t/.5)*(t>INTRO_DUR-.5?Math.max(0,(INTRO_DUR-t)/.5):1);hx.fillStyle='#000';hx.fillRect(0,0,W,bar);hx.fillRect(0,H-bar,W,bar);
+    /* 文字：落地後浮現 */
+    if(t>INTRO_LAND+.2){const k=Math.min(1,(t-INTRO_LAND-.2)/.7),fo=t>INTRO_DUR-.6?Math.max(0,(INTRO_DUR-t)/.6):1;hx.save();hx.globalAlpha=k*fo;hx.textAlign='center';hx.shadowColor='#ff2a3a';hx.shadowBlur=26;hx.fillStyle='#ffe9e9';
+      hx.font='bold '+Math.round(H*.085)+'px sans-serif';const sc=1.25-.25*k;hx.translate(W/2,H*.3);hx.scale(sc,sc);hx.fillText('寶石吞噬者',0,0);hx.shadowBlur=10;hx.font=Math.round(H*.03)+'px sans-serif';hx.fillStyle='#ffb0b8';hx.fillText('最終魔王',0,H*.06);hx.restore()}
+    if(t<INTRO_LAND-1.2){hx.save();hx.globalAlpha=.75*Math.min(1,t/.5);hx.textAlign='center';hx.fillStyle='#ff8a94';hx.font='bold '+Math.round(H*.035)+'px sans-serif';hx.fillText('天空正在撕裂……',W/2,H*.78);hx.restore()}
+  }
   function camUpdate(){
     const p=S.p,cp=Math.cos(pit),dx=-Math.sin(yaw)*cp,dy=Math.sin(pit),dz=-Math.cos(yaw)*cp,[rx,rz]=rgt(),D=5.2;
     let x=p.x-dx*D+rx*.85,y=2.6+p.y*.55-dy*D,z=p.z-dz*D+rz*.85;y=Math.max(.6,y);
     const sk=S.shake;x+=(rnd()-.5)*sk*.7;y+=(rnd()-.5)*sk*.7;z+=(rnd()-.5)*sk*.7;
     {const tf=60+Math.min(1,p.mv/7.5)*4;camUpdate.f=(camUpdate.f||60)+(tf-(camUpdate.f||60))*.12;if(Math.abs(cam.fov-camUpdate.f)>.03){cam.fov=camUpdate.f;cam.updateProjectionMatrix()}}   /* 跑動時視野微微拉開 */
+    if(S.intro){const I=S.intro,e=I.e,t=I.t,k=Math.min(1,t/INTRO_DUR),tf=t<INTRO_LAND?62-8*Math.min(1,t/INTRO_LAND):54-4*Math.min(1,(t-INTRO_LAND)/2);
+      if(Math.abs(cam.fov-tf)>.03){cam.fov=tf;cam.updateProjectionMatrix();camUpdate.f=tf}
+      const ty=t<.9?e.alt*.6:e.y0+e.h*.55;cam.position.set(x,Math.max(1.6,y),z);cam.lookAt(e.x,ty,e.z);plight.position.set(p.x,3,p.z);return}
     cam.position.set(x,y,z);cam.lookAt(x+dx*20,y+dy*20,z+dz*20);plight.position.set(p.x,3,p.z);
   }
   const sp2d=(x,y,z)=>{proj.set(x,y,z).project(cam);return proj.z<1?[(proj.x+1)/2*W,(1-proj.y)/2*H]:null};
   const SKL=['右鍵','Shift','G','E','F','Q'];
   function draw(){
-    hx.clearRect(0,0,W,H);const p=S.p;
+    if(S.intro){drawIntro();return}hx.clearRect(0,0,W,H);const p=S.p;
     hx.save();hx.globalAlpha=.55;hx.fillStyle=fps<45?'#ff8a5c':'#c9c2d8';hx.font='11px monospace';hx.textAlign='right';hx.fillText(fps+' FPS・畫質 '+Math.round(qf*100)+'%',W-8,H-7);hx.restore();
     if(S.slow){hx.fillStyle='rgba(47,224,122,.12)';hx.fillRect(0,0,W,H)}
     if(S.flash>0){hx.fillStyle='rgba(255,40,40,'+Math.min(.35,S.flash*1.2)+')';hx.fillRect(0,0,W,H)}
@@ -959,7 +1009,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     if(++fN%45===0){qT+=.75;if(fAvg>21&&qf>.55){qf=Math.max(.55,qf-.15);qCap=Math.min(qCap,qf+.15);qT=0}else if(fAvg<18.5&&qf<qCap&&qT>6){qf=Math.min(qCap,qf+.1);qT=0}}
     applyQ();
     const paused=S.run&&!S.pick&&!S.over&&hadLock&&!locked&&!fb;if(paused&&pz.hidden)pz.hidden=false;
-    if(S.run&&!S.pick&&!S.over&&!paused)update(dt);else T+=dt;
+    if(S.run&&!S.pick&&!S.over&&!paused){if(S.intro){T+=dt;introUpdate(dt)}else update(dt)}else T+=dt;
     sync(dt);camUpdate();draw();R.render(scene,cam);
   }
   let warmed=false;
