@@ -57,6 +57,7 @@ function mountSoulArena(stage,done){
   const M=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.85,metalness:.1,flatShading:true},o||{}));
   const BM=(c,o)=>new THREE.MeshBasicMaterial(Object.assign({color:c,toneMapped:false},o||{}));
   const props=[],ENV=[];   /* ENV：每幀會呼叫的環境動畫（岩漿呼吸、火焰、灰燼、雲） */
+  const proceduralEnvStart=scene.children.length;
   {
    const mkC=n=>{const c=document.createElement('canvas');c.width=c.height=n;return c};
    const mkT=(c,rep)=>{const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rep,rep);t.anisotropy=4;return t};
@@ -147,6 +148,8 @@ function mountSoulArena(stage,done){
     const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(2,2);
     const cl=new THREE.Mesh(new THREE.CircleGeometry(230,32),new THREE.MeshBasicMaterial({map:t,transparent:true,side:THREE.DoubleSide,depthWrite:false,fog:false}));cl.rotation.x=PI/2;cl.position.y=90;scene.add(cl);ENV.push(tt=>{t.offset.x=tt*.004})}
   }
+  /* 成功載入外部環境後隱藏這批程式生成的預設場景；載入失敗時保留原場景。 */
+  const proceduralEnvNodes=scene.children.slice(proceduralEnvStart);
   const dyn=new THREE.Group();scene.add(dyn);
   const dm=new THREE.Object3D(),CC=new THREE.Color();
   function inst(geo,mat,max){const m=new THREE.InstancedMesh(geo,mat,max);m.frustumCulled=false;m.count=0;m.setColorAt(0,CC.set('#fff'));scene.add(m);return m}
@@ -1114,12 +1117,35 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   function cleanup(){cancelAnimationFrame(raf);try{document.exitPointerLock&&document.exitPointerLock()}catch(e){}
     document.removeEventListener('pointerlockchange',onLock);document.removeEventListener('pointerlockerror',onLockErr);document.removeEventListener('mousemove',onMove);removeEventListener('mouseup',onUp);
     removeEventListener('keydown',kd);removeEventListener('keyup',ku);removeEventListener('blur',bl);try{R.dispose();R.forceContextLoss()}catch(e){}GA.stopMusic()}
+  /* —— 外部環境：使用專案內 assets/apocalyptic-scene.glb（可用 window.SOUL_ENVIRONMENT_URL 覆寫） —— */
+  const ENV_ASSET_URL=window.SOUL_ENVIRONMENT_URL||'assets/apocalyptic-scene.glb';
+  let loadedEnvironment=null;
+  function loadEnvironment(){
+    return fetch(ENV_ASSET_URL).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(buf=>{
+      const G=parseGLB(buf),js=G.js,roots=(js.scenes[js.scene||0]||js.scenes[0]).nodes||[],assetRoot=new THREE.Group(),modelRoot=new THREE.Group();
+      roots.forEach(ni=>modelRoot.add(G.build(ni)));
+      /* 此環境是 Z-up 匯出；旋轉為 Three.js 常用的 Y-up，再自動縮放並落地置中。 */
+      modelRoot.rotation.x=-PI/2;modelRoot.updateMatrixWorld(true);
+      const bb=new THREE.Box3().setFromObject(modelRoot),size=bb.getSize(new THREE.Vector3()),center=bb.getCenter(new THREE.Vector3());
+      if(!Number.isFinite(size.x)||!Number.isFinite(size.z)||Math.max(size.x,size.z)<.01)throw new Error('環境模型沒有可用的網格尺寸');
+      const scale=Math.min(2.5,(AR*1.82)/Math.max(size.x,size.z));
+      modelRoot.scale.setScalar(scale);modelRoot.position.set(-center.x*scale,-bb.min.y*scale,-center.z*scale);
+      assetRoot.add(modelRoot);assetRoot.name='SoulArena_ApocalypticEnvironment';
+      assetRoot.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide;if(o.material.color&&o.material.color.r+o.material.color.g+o.material.color.b<.08)o.material.color.set(0x777777)}}});
+      scene.add(assetRoot);loadedEnvironment=assetRoot;
+      proceduralEnvNodes.forEach(o=>{o.visible=false});props.length=0;
+      scene.background=new THREE.Color(0x100c12);scene.fog=new THREE.Fog(0x100c12,42,145);
+      console.info('[soul] 已載入末日環境：',ENV_ASSET_URL,'縮放',scale);
+      return assetRoot;
+    }).catch(err=>{console.warn('[soul] 外部環境載入失敗，保留內建場景：'+ENV_ASSET_URL,err);return null});
+  }
   start.disabled=true;start.textContent='載入模型中…';
+  const envP=loadEnvironment();
   const monP=fetch(GLB_URL).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(b=>{GLB=parseGLB(b)}).catch(err=>{GLB=null;console.warn('[soul] model.glb 載入失敗（'+GLB_URL+'），改用內建怪物模型',err)});
   const dagP2=loadDagger().catch(err=>{DAG=null;console.warn('[soul] dagger.glb 載入失敗（'+DAG_URL+'），改用內建匕首',err)});
   const drgP=loadDragon().catch(err=>{DRG=null;console.warn('[soul] dragon.glb 載入失敗（'+DRG_URL+'），飛龍改用魂焰外型',err)});
   const bdrP=loadBossDragon().catch(err=>{BDR=null;console.warn('[soul] bigdragon.glb 載入失敗（'+BOSS_URL+'），魔王改用內建人形外型',err)});
-  Promise.all([monP,dagP2,drgP,bdrP]).then(()=>{attachHeld();start.disabled=false;start.textContent='進入戰場'});
+  Promise.all([envP,monP,dagP2,drgP,bdrP]).then(()=>{attachHeld();start.disabled=false;start.textContent='進入戰場'});
   start.onclick=begin;reset();last=performance.now();raf=requestAnimationFrame(loop);
   window.__sa=()=>S;window.__sax={cam:(y,p)=>{yaw=y;pit=p},cast,choose,selectPick,confirmPick,showPick,gainXp,spawn:edgeSpawn,begin,nextWave};window.__stop=cleanup;
 }
