@@ -1117,30 +1117,44 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   function cleanup(){cancelAnimationFrame(raf);try{document.exitPointerLock&&document.exitPointerLock()}catch(e){}
     document.removeEventListener('pointerlockchange',onLock);document.removeEventListener('pointerlockerror',onLockErr);document.removeEventListener('mousemove',onMove);removeEventListener('mouseup',onUp);
     removeEventListener('keydown',kd);removeEventListener('keyup',ku);removeEventListener('blur',bl);try{R.dispose();R.forceContextLoss()}catch(e){}GA.stopMusic()}
-  /* —— 外部環境：使用專案內 assets/apocalyptic-scene.glb（可用 window.SOUL_ENVIRONMENT_URL 覆寫） —— */
-  const ENV_ASSET_URL=window.SOUL_ENVIRONMENT_URL||'assets/apocalyptic-scene.glb';
+  /* —— 真正的末日場景：以提供的 FBX 建築、殘骸、看板與樓梯組裝；失敗時保留原場景 —— */
+  const FBX_BASE='assets/';
   let loadedEnvironment=null;
-  function loadEnvironment(){
-    return fetch(ENV_ASSET_URL).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(buf=>{
-      const G=parseGLB(buf),js=G.js,roots=(js.scenes[js.scene||0]||js.scenes[0]).nodes||[],assetRoot=new THREE.Group(),modelRoot=new THREE.Group();
-      roots.forEach(ni=>modelRoot.add(G.build(ni)));
-      /* glTF/GLB 通常已使用 Y-up；不強制旋轉，避免建築被翻倒。 */
-      modelRoot.rotation.set(0,0,0);modelRoot.updateMatrixWorld(true);
-      const bb=new THREE.Box3().setFromObject(modelRoot),size=bb.getSize(new THREE.Vector3()),center=bb.getCenter(new THREE.Vector3());
-      if(!Number.isFinite(size.x)||!Number.isFinite(size.z)||Math.max(size.x,size.z)<.01)throw new Error('環境模型沒有可用的網格尺寸');
-      const scale=Math.min(2.5,(AR*1.82)/Math.max(size.x,size.z));
-      modelRoot.scale.setScalar(scale);modelRoot.position.set(-center.x*scale,-bb.min.y*scale,-center.z*scale);
-      assetRoot.add(modelRoot);assetRoot.name='SoulArena_ApocalypticEnvironment';
-      assetRoot.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide;if(o.material.color&&o.material.color.r+o.material.color.g+o.material.color.b<.08)o.material.color.set(0x777777)}}});
-      scene.add(assetRoot);loadedEnvironment=assetRoot;
-      /* 保留原本可玩的地面、照明、火焰與碰撞物；外部模型先以裝飾方式疊加，
-         避免模型座標或材質有問題時整個戰場消失。 */
-      console.info('[soul] 已載入末日環境（保留內建戰場）：',ENV_ASSET_URL,'尺寸',size,'縮放',scale);
-      return assetRoot;
-    }).catch(err=>{console.warn('[soul] 外部環境載入失敗，保留內建場景：'+ENV_ASSET_URL,err);return null});
+  function addScript(url){return new Promise((resolve,reject)=>{if(document.querySelector('script[data-soul-loader="'+url+'"]')){resolve();return}const s=document.createElement('script');s.src=url;s.async=true;s.dataset.soulLoader=url;s.onload=resolve;s.onerror=()=>reject(new Error('載入 FBXLoader 失敗：'+url));document.head.appendChild(s)})}
+  function loadFbxEnvironment(){
+    const files=['building-01.fbx','building-02.fbx','building-03.fbx','building-04.fbx','building-05.fbx','building-06.fbx','building-07.fbx','wreckage-3-types.fbx','billboards-4-types.fbx','fire-stairs.fbx'];
+    return addScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/NURBSUtils.js')
+      .then(()=>addScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js'))
+      .then(()=>{if(!THREE.FBXLoader)throw new Error('FBXLoader 未可用');const loader=new THREE.FBXLoader();
+        return Promise.all(files.map(name=>fetch(FBX_BASE+name).then(r=>{if(!r.ok)throw new Error(name+' HTTP '+r.status);return r.arrayBuffer()}).then(buf=>({name,obj:loader.parse(buf,'assets/')}))));
+      }).then(items=>{
+        const root=new THREE.Group();root.name='SoulArena_FBX_ApocalypticCity';
+        const buildings=items.filter(x=>x.name.startsWith('building-'));
+        const wreck=items.find(x=>x.name==='wreckage-3-types.fbx');
+        const signs=items.find(x=>x.name==='billboards-4-types.fbx');
+        const stairs=items.find(x=>x.name==='fire-stairs.fbx');
+        function prepare(obj,targetHeight){
+          obj.updateMatrixWorld(true);let b=new THREE.Box3().setFromObject(obj),sz=b.getSize(new THREE.Vector3());
+          if(!Number.isFinite(sz.y)||Math.max(sz.x,sz.y,sz.z)<.001)throw new Error('FBX 模型沒有有效尺寸');
+          const s=targetHeight/Math.max(sz.y,sz.x*.35,sz.z*.35);obj.scale.multiplyScalar(s);obj.updateMatrixWorld(true);
+          b.setFromObject(obj);const c=b.getCenter(new THREE.Vector3());obj.position.x-=c.x;obj.position.z-=c.z;obj.position.y-=b.min.y;
+          obj.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>{m.side=THREE.DoubleSide;if(m.color&&m.color.r+m.color.g+m.color.b<.08)m.color.set(0x55505a)})}}});return obj;
+        }
+        /* 七棟不同廢墟圍成城市天際線，入口方向留空，中央戰鬥區仍可玩。 */
+        buildings.forEach((it,i)=>{const a=(i/buildings.length)*Math.PI*2+.18,r=39+(i%3)*2.6,o=prepare(it.obj,17+(i%3)*4);o.position.x+=Math.cos(a)*r;o.position.z+=Math.sin(a)*r;o.rotation.y=-a+Math.PI/2;root.add(o)});
+        /* 多個殘骸群散落在中外圈，避免中央生成區被塞滿。 */
+        if(wreck)for(let i=0;i<7;i++){const a=i*2.399,r=17+(i%4)*5,o=prepare(wreck.obj.clone(true),3.2+(i%3)*.6);o.position.x+=Math.cos(a)*r;o.position.z+=Math.sin(a)*r;o.rotation.y=a*.8;root.add(o)}
+        if(signs)for(let i=0;i<4;i++){const a=i*Math.PI/2+.4,r=29,o=prepare(signs.obj.clone(true),7.5);o.position.x+=Math.cos(a)*r;o.position.z+=Math.sin(a)*r;o.rotation.y=-a+Math.PI/2;root.add(o)}
+        if(stairs){const a=.85,o=prepare(stairs.obj,8);o.position.x+=Math.cos(a)*24;o.position.z+=Math.sin(a)*24;o.rotation.y=-a+Math.PI/2;root.add(o)}
+        /* 只留下原本地面、邊界環、法陣與熔岩外環；隱藏原本的圓形石牆／柱子／小擺設。 */
+        proceduralEnvNodes.forEach((o,i)=>{if(i>=4)o.visible=false});props.length=0;
+        root.traverse(o=>{if(o.isMesh&&o.material&&o.material.color&&o.material.color.r+o.material.color.g+o.material.color.b<.08)o.material.color.set(0x55505a)});
+        scene.add(root);loadedEnvironment=root;scene.background=new THREE.Color(0x17131a);scene.fog=new THREE.Fog(0x17131a,48,135);
+        console.info('[soul] FBX 末日城市已組裝：',items.map(x=>x.name));return root;
+      }).catch(err=>{console.warn('[soul] FBX 末日場景載入失敗，保留原戰場：',err);return null});
   }
   start.disabled=true;start.textContent='載入模型中…';
-  const envP=loadEnvironment();
+  const envP=loadFbxEnvironment();
   const monP=fetch(GLB_URL).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(b=>{GLB=parseGLB(b)}).catch(err=>{GLB=null;console.warn('[soul] model.glb 載入失敗（'+GLB_URL+'），改用內建怪物模型',err)});
   const dagP2=loadDagger().catch(err=>{DAG=null;console.warn('[soul] dagger.glb 載入失敗（'+DAG_URL+'），改用內建匕首',err)});
   const drgP=loadDragon().catch(err=>{DRG=null;console.warn('[soul] dragon.glb 載入失敗（'+DRG_URL+'），飛龍改用魂焰外型',err)});
