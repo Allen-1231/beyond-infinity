@@ -114,6 +114,10 @@ main.home{min-height:calc(100vh - 68px);display:flex;align-items:center;justify-
   main.play .hint{margin-top:6px}
   .stg{margin-inline:auto;width:100%}
 
+  /* 打字遊戲：版面加寬，兩側不留大片空白 */
+  main[data-g=typing]{max-width:2200px;padding-inline:12px}
+  main[data-g=typing] .fsbtn{right:12px}
+
   /* 寶石反應：點擊區高度跟著視窗 */
   main[data-g=tap] .stg{max-width:1280px}
   main[data-g=tap] #box{height:clamp(280px,calc(100vh - var(--hh) - 170px),640px)}
@@ -155,7 +159,7 @@ main.home{min-height:calc(100vh - 68px);display:flex;align-items:center;justify-
 .ty-ov[hidden]{display:none}.ty-t{font-size:32px;font-weight:800;color:#2fe07a}.ty-ov p{margin:0;max-width:460px;color:var(--fg)}
 
 .ty-wrap{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#07060f}
-.ty-cv{display:block;margin:0 auto;width:min(100%,calc((100vh - 200px)*1.5));min-width:min(100%,520px);height:auto;aspect-ratio:900/600;touch-action:manipulation}
+.ty-cv{display:block;margin:0 auto;width:min(100%,calc((100vh - 165px)*2));min-width:min(100%,520px);height:auto;aspect-ratio:1200/600;touch-action:manipulation}
 .ty-hid{position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;border:0;padding:0}
 .ty-leg{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px 14px;text-align:left;max-width:640px;font-size:13px}
 .ty-leg div{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center}.ty-leg i{width:10px;height:10px;border-radius:50%;display:inline-block}.ty-leg span{color:var(--mut);flex-basis:100%;padding-left:18px}
@@ -232,7 +236,7 @@ html.fsl{overflow:hidden}
 .vt-tl{position:relative;overflow:hidden;border-radius:6px;cursor:pointer;aspect-ratio:1}.vt-tl svg{pointer-events:none}
 .vt-em{background:#0b1e13;cursor:default;box-shadow:inset 0 0 0 1px #2fe07a33}
 .vt-tn{position:absolute;left:5px;top:3px;font-size:12px;font-weight:800;color:#2fe07a;text-shadow:0 0 4px #000}
-.stg.fs .ty-cv{width:min(100%,calc((100vh - 120px)*1.5))!important}
+.stg.fs .ty-cv{width:min(100%,calc((100vh - 110px)*2))!important}
 .stg.fs .ar-cv{width:min(100%,calc((100vh - 140px)*2))!important}
 .stg.fs .tnl-box{width:min(100%,calc((100vh - 110px)*1.607));margin:0 auto}
 .stg.fs .shw{width:min(100%,calc((100vh - 110px)*1.6 + 182px));margin:0 auto}
