@@ -127,7 +127,7 @@ function mountArcher(stage,done){
     const m=mins(),rate=Math.min(8,1.7+.75*m);A.sp-=dt;if(A.sp>0)return;A.sp=1/rate*(.6+rnd()*.8);if(A.en.length>=170)return;
     const W2=BASE.filter(k=>k==='zom'||ET[k].from<=m).map(k=>[k,k==='zom'?Math.max(5,10-1.4*m):Math.min(6,2.6+.35*(m-ET[k].from))]).concat(KEYS.filter(k=>ET[k].from<=m).map(k=>[k,Math.min(7,2.8+.55*(m-ET[k].from))]));
     let r=rnd()*W2.reduce((a,q)=>a+q[1],0),t='zom';for(const q of W2){if(r<q[1]){t=q[0];break}r-=q[1]}
-    const a=rnd()*TAU,R=Math.hypot(W,H)/2+20+rnd()*80,n=t==='zom'?(m>1&&rnd()<.25?2:1):t==='run'?2+(rnd()*2|0):1;
+    const a=rnd()*TAU,R=690+rnd()*80,n=t==='zom'?(m>1&&rnd()<.25?2:1):t==='run'?2+(rnd()*2|0):1;
     for(let i=0;i<n;i++)spawnEn(t,A.p.x+Math.cos(a+i*.2)*R,A.p.y+Math.sin(a+i*.2)*R);
     if(A.t>=BOSS_EVERY*(A.bossN+1)&&A.bosses.length<3){A.bossN++;const k=KEYS[(A.bossN-1)%6];const e=spawnEn(k,A.p.x+Math.cos(a)*R,A.p.y+Math.sin(a)*R,true);A.boss=e;A.bn={s:BN[(A.bossN-1)%6]+'降臨',t:2.6};A.bosses.push(e);GA.noise(.6,.3,200)}
   }
@@ -294,7 +294,7 @@ function mountArcher(stage,done){
     A.bosses=A.bosses.filter(b=>b.hp>0&&A.en.includes(b));A.boss=A.bosses[0]||null;
     if(A.pull&&A.pull.t>0){A.pull.t-=dt;const dx=A.pull.x-p.x,dy=A.pull.y-p.y,d=Math.hypot(dx,dy)||1;if(d>40){p.x+=dx/d*150*dt;p.y+=dy/d*150*dt}}
     spawnWave(dt);
-    A.en=A.en.filter(e=>{if(e.hp<=0){killE(e);return false}enemyUpdate(e,dt);if(Math.hypot(e.x-p.x,e.y-p.y)>Math.hypot(W,H)/2+520&&!e.boss)return false;return true});
+    A.en=A.en.filter(e=>{if(e.hp<=0){killE(e);return false}enemyUpdate(e,dt);if(Math.hypot(e.x-p.x,e.y-p.y)>1200&&!e.boss)return false;return true});
     /* 敵人分離（簡易） */
     {const g=new Map();for(const e of A.en){const k=Math.floor(e.x/40)+','+Math.floor(e.y/40);(g.get(k)||g.set(k,[]).get(k)).push(e)}
      for(const e of A.en){const cx=Math.floor(e.x/40),cy=Math.floor(e.y/40);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const c=g.get((cx+a)+','+(cy+b));if(!c)continue;for(const o of c){if(o===e)continue;const dx=e.x-o.x,dy=e.y-o.y,d=Math.hypot(dx,dy),m=(e.r+o.r)*.8;if(d<m&&d>.01){const f=(m-d)*.3*(e.boss?.1:1);e.x+=dx/d*f;e.y+=dy/d*f}}}}}
