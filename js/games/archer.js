@@ -50,8 +50,8 @@ function mountArcher(stage,done){
   const pickBox=h('div',{class:'ar-pick',hidden:''});
   const startB=h('button',{class:'btn',type:'button'},'開始戰鬥');startB.onclick=()=>begin('gun');
   const ov=h('div',{class:'ty-ov'},h('div',{class:'ty-t',style:'color:#c9a6ff'},'無限寶石：生存戰'),
-    h('p',{},'敵人無窮無盡，而你只有一把突擊步槍。真正危險的是敵人：行屍、疾行者、巨漢、自爆者各有各的打法，而且帶著六顆無限寶石力量的特殊兵種和寶石守衛會很快登場，每一分鐘就有一位守衛降臨。擊倒敵人會自動獲得經驗，每升一級選一種強化，把自己組合成獨一無二的戰鬥流派。能撐多久，就是你的分數。'),startB);
-  stage.append(hud,h('div',{class:'ty-wrap'},cv,ov,pickBox),chips,h('div',{class:'hint'},'WASD／方向鍵／拖曳 移動　・　空白鍵 衝刺（無敵）　・　自動瞄準射擊　・　升級時按 1–3 或點選強化　・　每一分鐘一位守衛，寶石敵人很快出現'));
+    h('p',{},'敵人無窮無盡，每一分鐘皆有 Boss，存活越久越多分數！'),startB);
+  stage.append(hud,h('div',{class:'ty-wrap'},cv,ov,pickBox),chips,h('div',{class:'hint'},'WASD／方向鍵／拖曳 移動　・　空白鍵 衝刺（無敵）　・　自動瞄準射擊　・　升級時按 1–3 或點選強化'));
   const ctx=cv.getContext('2d');ctx.setTransform(cv.width/W,0,0,cv.height/H,0,0);
   let A=null,raf=0,last=0;const keys={},joy={on:false,ox:0,oy:0,x:0,y:0};
   const lv=id=>A.up[id]||0;
