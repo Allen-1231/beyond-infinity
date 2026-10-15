@@ -1,6 +1,6 @@
 /* ===== 遊戲 4：打字遊戲（時間寶石）：仿 ZType——打字擊落以無限寶石為主題的敵艦 ===== */
 function mountTyping(stage,done){
-  const W=900,H=600,dpr=Math.min(devicePixelRatio||1,2),PX=450,PY=548,DANGER=498;
+  const W=1200,H=600,dpr=Math.min(devicePixelRatio||1,2),PX=W/2,PY=548,DANGER=498;
   const WORDS=('cat sun map red box hat pen cup dog sky key ice fox bag net toy gem war sea fly joy star moon fire rock wind jump blue gold hero ship fast rain tree book lake bird king dark gate time mind soul '+
     'planet silver bridge shield thunder dragon forest castle golden magic rocket window garden pocket orange yellow camera pirate throne energy puzzle jungle marble winter summer button cookie ladder basket candle island desert spirit '+
     'universe gauntlet monster journey weather fantasy mission captain science balance courage freedom victory machine gravity library kingdom history mystery evening teacher process network company culture complete explore diamond crystal pattern venture '+
@@ -16,7 +16,7 @@ function mountTyping(stage,done){
     time:{n:'時間・沙漏艦',c:'#2fe07a',r:29,u:7,d:'忽快忽慢；擊落後時間凍結 3 秒'},
     mind:{n:'心靈・幻影艦',c:'#ffd52e',r:29,u:8,d:'單字會閃爍隱藏'}};
   const ORDER=Object.keys(KINDS);
-  const hud=h('div',{class:'hud'}),hpS=h('span'),sS=h('span'),wS=h('span'),cS=h('span');hud.append(hpS,sS,wS,cS,GA.muteBtn());
+  const hud=h('div',{class:'hud'}),hpS=h('span'),sS=h('span'),wS=h('span'),aS=h('span'),cS=h('span');hud.append(hpS,sS,wS,aS,cS,GA.muteBtn());
   const cv=h('canvas',{width:Math.round(W*dpr),height:Math.round(H*dpr),class:'ty-cv'});
   const inp=h('input',{class:'ty-hid',type:'text',autocomplete:'off',autocapitalize:'off',autocorrect:'off',spellcheck:'false','aria-label':'typing'});
   const start=h('button',{class:'btn'},'出擊');
@@ -40,14 +40,14 @@ function mountTyping(stage,done){
   function spawn(k){
     const [lo,hi]=baseLen();let w;
     if(k==='power')w=pickWord(lo+2,hi+3);else if(k==='space')w=pickWord(lo-1,hi-1);else if(k==='soul')w=pickWord(lo-1,hi);else w=pickWord(lo,hi);
-    S.en.push(mk(k,70+rnd()*760,-30,w));
+    S.en.push(mk(k,70+rnd()*(W-140),-30,w));
   }
   const SENT=['the void swallows every last star','surrender now and your world will live','our fleet darkens the sky above you','no light escapes this iron fortress','every engine answers to my command','your defenses are nothing but dust','the armada has waited long enough','bow before the shadow of the throne','there is no escape from the abyss','a thousand cannons now take aim','this is the end of your little war','fall silent beneath our endless wings','the stars will burn for our glory','hear the engines of a dying galaxy','nothing stands before the black fleet','your last hope sinks into the dark'];
   /* 魔王每 5 波一位：奇數位＝薩諾斯、偶數位＝巨型戰艦；血條（句子）數 = 2 + 魔王序號，每次多一條 */
   function spawnBoss(){
     const idx=Math.round(S.wave/5),war=idx%2===0,bars=2+idx,pool=war?SENT:PHRASES,ph=[];
     while(ph.length<bars){const q=pool.slice().sort(()=>rnd()-.5);if(ph.length&&q[0]===ph[ph.length-1])q.push(q.shift());ph.push(...q)}ph.length=bars;
-    S.en.push(war?mk('boss',450,-130,ph[0],{r:100,segs:ph,si:0,x0:450,war:1,fireT:0}):mk('boss',450,-90,ph[0],{r:80,segs:ph,si:0,x0:450}));S.boss=true;
+    S.en.push(war?mk('boss',W/2,-130,ph[0],{r:100,segs:ph,si:0,x0:W/2,war:1,fireT:0}):mk('boss',W/2,-90,ph[0],{r:80,segs:ph,si:0,x0:W/2}));S.boss=true;
   }
   function orb(x,y,n){
     GA.tone(280,.2,'sine',.12,2);
@@ -65,13 +65,17 @@ function mountTyping(stage,done){
     const w=S.wave,n=Math.min(60,4+w*2+(w<=4?1:w===5?-2:easy(w)?-4:0)+(w===6?1:w===7?2:w===10?-3:0)),boss=w%5===0;S.q=[];
     const un=ORDER.filter(k=>KINDS[k].u<=w);
     un.filter(k=>KINDS[k].u===w).forEach(k=>S.q.push(k));
-    while(S.q.length<(boss?Math.ceil(n/2):n))S.q.push(un[Math.floor(rnd()*un.length)]);
+    const pool=w===7?un.filter(k=>k!=='time'):un;   /* 第 7 波：隨機補位不再抽到時間艦 */
+    while(S.q.length<(boss?Math.ceil(n/2):n))S.q.push(pool[Math.floor(rnd()*pool.length)]);
+    const toTime=c=>{let m=0;for(const i of S.q.map((k,i)=>i).sort(()=>rnd()-.5)){if(m>=c)break;if(S.q[i]!=='time'){S.q[i]='time';m++}}};
+    if(w===6)toTime(4);   /* 第 6 波：4 架換成綠色時間艦 */
+    if(w===7)toTime(1);   /* 第 7 波：開場那 1 架 + 這 1 架 = 共 2 架時間艦 */
     S.q.sort(()=>rnd()-.5);if(boss)S.q.unshift('BOSS');
     S.sp=0;S.interval=Math.max(.42,2.4-w*.09)*(w<=4?.9:w===5?1.25:w===7?1.1:easy(w)?1.2:w===6?.96:w===10?1.12:1);
     S.banner='第 '+w+' 波'+(boss?(Math.round(w/5)%2===0?'　深淵無畏艦':'　薩諾斯降臨'):'');
   }
   function hudUp(){
-    hpS.textContent='防線 '+Math.max(0,Math.round(S.hp))+'%';sS.textContent='分數 '+S.score;wS.textContent='第 '+S.wave+' 波';cS.textContent='連擊 ×'+Math.min(5,1+Math.floor(S.combo/10))+'（'+S.combo+'）';
+    hpS.textContent='防線 '+Math.max(0,Math.round(S.hp))+'%';sS.textContent='分數 '+S.score;wS.textContent='第 '+S.wave+' 波';aS.textContent='準確率：'+(S.okCh+S.badCh?Math.round(S.okCh/(S.okCh+S.badCh)*100):100)+'%';cS.textContent='連擊 ×'+Math.min(5,1+Math.floor(S.combo/10))+'（'+S.combo+'）';
     hpS.style.color=S.hp<30?'#ff7a7a':'';
   }
   function hurt(d){GA.noise(.35,.4,1500);GA.tone(110,.3,'sawtooth',.28,.4);S.hp-=d;S.flash=.35;S.shake=.3;S.combo=0;if(S.hp<=0&&!S.over)finish()}
@@ -133,15 +137,15 @@ function mountTyping(stage,done){
     if(!fr)for(const e of S.en){
       if(e.dead)continue;e.t+=dt;e.hf=Math.max(0,(e.hf||0)-dt);
       if(e.k==='power')e.y+=vy*.55*dt;
-      else if(e.k==='space'){e.y+=vy*dt;e.bl-=dt;if(e.bl<=0){e.bl=2+rnd()*1.8;GA.noise(.12,.15,3500,0,true);explode(e.x,e.y,'#2f7bff',10,120);e.x=clamp(e.x+(rnd()<.5?-1:1)*(90+rnd()*100),50,850);explode(e.x,e.y,'#2f7bff',10,120)}}
-      else if(e.k==='reality'){e.y+=vy*.9*dt;e.x=clamp(e.x0+Math.sin(e.t*1.4+e.ph)*40,40,860)}
-      else if(e.k==='soul'){if(e.y<150)e.y+=70*dt;else e.y+=3*dt;e.x=clamp(e.x0+Math.sin(e.t*.8+e.ph)*90,50,850);e.fire-=dt;if(e.fire<=0&&e.y>40){e.fire=Math.max(1.6,4.2-S.wave*.1);orb(e.x,e.y+26)}}
+      else if(e.k==='space'){e.y+=vy*dt;e.bl-=dt;if(e.bl<=0){e.bl=2+rnd()*1.8;GA.noise(.12,.15,3500,0,true);explode(e.x,e.y,'#2f7bff',10,120);e.x=clamp(e.x+(rnd()<.5?-1:1)*(90+rnd()*100),50,W-50);explode(e.x,e.y,'#2f7bff',10,120)}}
+      else if(e.k==='reality'){e.y+=vy*.9*dt;e.x=clamp(e.x0+Math.sin(e.t*1.4+e.ph)*40,40,W-40)}
+      else if(e.k==='soul'){if(e.y<150)e.y+=70*dt;else e.y+=3*dt;e.x=clamp(e.x0+Math.sin(e.t*.8+e.ph)*90,50,W-50);e.fire-=dt;if(e.fire<=0&&e.y>40){e.fire=Math.max(1.6,4.2-S.wave*.1);orb(e.x,e.y+26)}}
       else if(e.k==='time')e.y+=vy*clamp(1.15+1.1*Math.sin(e.t*1.3+e.ph),.2,2.4)*dt;
-      else if(e.k==='mind'){e.y+=vy*.85*dt;e.x=clamp(e.x0+Math.sin(e.t*2.2+e.ph)*65,40,860)}
-      else if(e.k==='drone'){e.y+=vy*1.3*dt;e.x=clamp(e.x+Math.sin(e.t*3+e.ph)*20*dt,30,870)}
+      else if(e.k==='mind'){e.y+=vy*.85*dt;e.x=clamp(e.x0+Math.sin(e.t*2.2+e.ph)*65,40,W-40)}
+      else if(e.k==='drone'){e.y+=vy*1.3*dt;e.x=clamp(e.x+Math.sin(e.t*3+e.ph)*20*dt,30,W-30)}
       else if(e.k==='orb'){e.x+=e.vx*dt;e.y+=e.vy*dt}
-      else if(e.k==='boss'&&e.war){e.x=450+Math.sin(e.t*.3)*18;if(e.y<135)e.y+=45*dt;else e.y+=3.6*dt;e.fireT=Math.max(0,e.fireT-dt);e.fire-=dt;if(e.fire<=0&&e.y>40){e.fire=Math.max(2.1,3.8-S.wave*.04);e.fireT=.25;orb(e.x+(rnd()-.5)*700,e.y+70)}}
-      else if(e.k==='boss'){e.x=450+Math.sin(e.t*.55)*250;if(e.y<110)e.y+=45*dt;else e.y+=4.5*dt}
+      else if(e.k==='boss'&&e.war){e.x=W/2+Math.sin(e.t*.3)*18;if(e.y<135)e.y+=45*dt;else e.y+=3.6*(S.wave===10?.5:1)*dt;e.fireT=Math.max(0,e.fireT-dt);e.fire-=dt;if(e.fire<=0&&e.y>40){e.fire=Math.max(2.1,3.8-S.wave*.04)*(S.wave===10?2:1);e.fireT=.25;orb(e.x+(rnd()-.5)*(W-200),e.y+70)}}
+      else if(e.k==='boss'){e.x=W/2+Math.sin(e.t*.55)*330;if(e.y<110)e.y+=45*dt;else e.y+=4.5*dt}
       if(e.k==='orb'){if(Math.hypot(e.x-PX,e.y-PY)<30){e.dead=1;hurt(6);explode(e.x,e.y,'#ff9a1f',14,150)}}
       else if(e.y>=DANGER-(e.war?115:e.k==='boss'?30:0)){e.dead=1;hurt(e.k==='boss'?55:e.k==='power'?20:e.k==='drone'?6:11);explode(e.x,e.y,'#ff5a5a',26,220)}
     }
