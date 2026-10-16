@@ -1,8 +1,10 @@
 /* ===== 遊戲：靈魂戰場（靈魂寶石）：3D 第三人稱射擊——WASD 移動、滑鼠瞄準，殺殭屍與怪物，升級選擇機體或六顆寶石的能力，擊敗最終魔王或倒下為止 ===== */
 function mountSoulArena(stage,done){
   if(!window.THREE){stage.append(h('p',{class:'mut'},'3D 引擎載入失敗，請重新整理頁面。'));return}
-  const W=900,H=600,dpr=Math.min(devicePixelRatio||1,1.5),PI=Math.PI,rnd=Math.random,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),AR=56;
+  const W=960,H=540,dpr=Math.min(devicePixelRatio||1,1.5),PI=Math.PI,rnd=Math.random,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),AR=56;
   const OR='#ff9a1f',LT='#ffd08a';
+  /* 版面：遊戲畫面撐滿視窗，畫面以外的標題／說明／導覽列全部縮小 */
+  const SACSS='main.play:has(.sa-box){max-width:none;padding:2px 6px 4px}main.play:has(.sa-box) .ty-wrap{width:fit-content;max-width:100%;margin:0 auto}main.play:has(.sa-box) h1{font-size:13px;margin:0;line-height:1.2;letter-spacing:1px}main.play:has(.sa-box) .hud{font-size:11px;margin:0 0 2px}main.play:has(.sa-box) .hint{font-size:10px;margin-top:2px;line-height:1.3}main.play:has(.sa-box) .fsbtn{top:2px;right:8px;padding:1px 8px;font-size:11px}body:has(.sa-box) header{padding:3px 12px;gap:6px}body:has(.sa-box) .logo{font-size:13px}body:has(.sa-box) nav a{padding:2px 8px;font-size:12px}';
   const GEM=[
     {id:'power',n:'力量',c:'#a24bff',sk:'震地重擊'},{id:'space',n:'空間',c:'#2f7bff',sk:'空間躍遷'},{id:'reality',n:'現實',c:'#ff3b3b',sk:'幻象分身'},
     {id:'soul',n:'靈魂',c:'#ff9a1f',sk:'靈魂汲取'},{id:'time',n:'時間',c:'#2fe07a',sk:'時間遲滯'},{id:'mind',n:'心靈',c:'#ffd52e',sk:'心靈風暴'}];
@@ -34,7 +36,7 @@ function mountSoulArena(stage,done){
     fbs:{n:'寶石吞噬者',hp:75000,bars:5,alt:5.4,sp:2.2,r:3,h:6.4,dm:45,at:1.4,xp:0,sc:3000,col:0x3a2a5a,eye:0xff9a1f,s:3.1,boss:1}};
   const xpNeed=l=>10+(l-1)*6;
   const hud=h('div',{class:'hud'}),aS=h('span'),bS=h('span'),cS=h('span');hud.append(aS,bS,cS,GA.muteBtn());
-  const box=h('div',{class:'sa-box',style:'position:relative;width:min(100%,calc((100vh - 200px)*1.5));min-width:min(100%,520px);margin:0 auto;aspect-ratio:3/2'});
+  const box=h('div',{class:'sa-box',style:'position:relative;width:min(calc(100vw - 16px),calc((100vh - 104px)*16/9));min-width:min(100%,520px);margin:0 auto;aspect-ratio:16/9'});
   const hc=h('canvas',{width:Math.round(W*dpr),height:Math.round(H*dpr),style:'position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:none'});
   const pickBox=h('div',{class:'ar-pick',hidden:''});
   const pz=h('div',{class:'ty-ov',hidden:'',style:'cursor:pointer;background:rgba(7,6,15,.7)'},h('div',{class:'ty-t',style:'color:'+OR},'已暫停'),h('p',{},'點擊畫面繼續（滑鼠會被鎖定在畫面內，按 Esc 可隨時暫停）'));
@@ -46,7 +48,7 @@ function mountSoulArena(stage,done){
   );
   const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(dpr);R.setSize(W,H,false);R.setClearColor(0x120a10);
   R.domElement.style.cssText='position:absolute;inset:0;width:100%;height:100%;display:block';
-  box.append(R.domElement,hc,pickBox,pz,ov);stage.append(hud,h('div',{class:'ty-wrap'},box),h('div',{class:'hint'},'WASD 移動　・　滑鼠瞄準、左鍵攻擊、R／滾輪 切換武器　・　空白鍵 跳躍　・　右鍵／Shift／G／E／F／Q 寶石技能　・　升級時點選卡片再按確認（或 1–3 選、Enter 確認）　・　Esc 暫停'));
+  box.append(R.domElement,hc,pickBox,pz,ov);stage.append(h('style',{},SACSS),hud,h('div',{class:'ty-wrap'},box),h('div',{class:'hint'},'WASD 移動　・　滑鼠瞄準、左鍵攻擊、R／滾輪 切換武器　・　空白鍵 跳躍　・　右鍵／Shift／G／E／F／Q 寶石技能　・　升級時點選卡片再按確認（或 1–3 選、Enter 確認）　・　Esc 暫停'));
   const hx=hc.getContext('2d');hx.setTransform(hc.width/W,0,0,hc.height/H,0,0);
   /* —— 場景 —— */
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x2b141c);scene.fog=new THREE.Fog(0x2b141c,22,100);
@@ -338,7 +340,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     const order=[],vis=new Array(N).fill(false),add=i=>{if(vis[i])return;if(par[i]>=0)add(par[i]);vis[i]=true;order.push(i)};for(let i=0;i<N;i++)add(i);
     const RT=nd.map(n=>n.translation||[0,0,0]),RQ=nd.map(n=>n.rotation||[0,0,0,1]),RS=nd.map(n=>(n.scale||[1,1,1]).slice());
     ['wing_lower.L','wing_lower.R'].forEach(nm=>{const i=nd.findIndex(n=>n.name===nm);if(i>=0)RS[i]=[.001,.001,.001]});   /* 原本的小翅膀縮到看不見，改用程式生成的大翅膀 */
-    ['jaw_upper','jaw_lower','tongue'].forEach(nm=>{const i=nd.findIndex(n=>n.name===nm);if(i>=0)RS[i]=[window.__RSJ||1.2,window.__RSJ||1.2,window.__RSJ||1.2]});   /* 頭部放大：更有壓迫感 */
+    ['jaw_upper','jaw_lower','tongue'].forEach(nm=>{const i=nd.findIndex(n=>n.name===nm);if(i>=0)RS[i]=[window.__RSJ||1,window.__RSJ||1,window.__RSJ||1]});   /* 頭部放大：更有壓迫感 */
     const clips={};(js.animations||[]).forEach(a=>{let t0=1e9,t1=0;const ch=a.channels.filter(c=>c.target.node!=null&&(c.target.path==='rotation'||c.target.path==='translation'||c.target.path==='scale')).map(c=>{const s=a.samplers[c.sampler],t=G.acc(s.input),v=G.acc(s.output);t0=Math.min(t0,t[0]);t1=Math.max(t1,t[t.length-1]);return{n:c.target.node,p:c.target.path,t,v}});clips[a.name]={ch,t0,t1,d:Math.max(.01,t1-t0)}});
     /* 頂點分區（0 身體／1 翅膀／2 頭頸／3 尾／4 腳）：檔案本身沒有貼圖，顏色由調色盤決定 */
     const cat=new Uint8Array(NV);
@@ -382,7 +384,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     o=o||{};const B=BDR,I=B.inst(),g=new THREE.Group(),sc=new THREE.Group(),s=(o.h||6.4)/B.h,wid=o.wid||1.22,PL=PAL[o.pal||'boss'];
     I.play('Idle',true);I.step(0);
     const geo=new THREE.BufferGeometry(),pa=new THREE.BufferAttribute(I.pos,3);if(THREE.DynamicDrawUsage!==undefined&&pa.setUsage)pa.setUsage(THREE.DynamicDrawUsage);
-    geo.setAttribute('position',pa);{const cl=new Float32Array(B.NV*3);for(let v=0;v<B.NV;v++){const c3=PL.c[B.cat[v]];cl[v*3]=c3[0];cl[v*3+1]=c3[1];cl[v*3+2]=c3[2]}geo.setAttribute('color',new THREE.BufferAttribute(cl,3))}if(B.NRM)geo.setAttribute('normal',new THREE.BufferAttribute(B.NRM,3));geo.setIndex(new THREE.BufferAttribute(B.IX,1));
+    geo.setAttribute('position',pa);{const cl=new Float32Array(B.NV*3);for(let v=0;v<B.NV;v++){const c3=PL.c[B.cat[v]];cl[v*3]=c3[0];cl[v*3+1]=c3[1];cl[v*3+2]=c3[2]}geo.setAttribute('color',new THREE.BufferAttribute(cl,3))}if(B.NRM)geo.setAttribute('normal',new THREE.BufferAttribute(B.NRM,3));if(!B.IXF){const f=[];for(let i=0;i<B.IX.length;i+=3){const a=B.IX[i],b=B.IX[i+1],c=B.IX[i+2];if(B.cat[a]===2&&B.cat[b]===2&&B.cat[c]===2)continue;f.push(a,b,c)}B.IXF=new B.IX.constructor(f)}geo.setIndex(new THREE.BufferAttribute(B.IXF,1));   /* 原模型的頭（單薄、有破面）整個移除，改用下方自建的實心龍頭 */
     const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.55,metalness:.2,emissive:o.bem!=null?o.bem:0x2a0610,flatShading:true,side:THREE.DoubleSide});
     const mesh=new THREE.Mesh(geo,mat);mesh.frustumCulled=false;sc.add(mesh);sc.scale.set(s*wid,s,s);sc.position.set(-B.cx*s*wid,-B.minY*s-B.h*s/2,-B.cz*s);g.add(sc);   /* 模型中心在原點（會飛，高度由敵人的 alt 決定） */
     /* —— 程式生成的大翅膀：手臂＋四根指骨＋扇形翼膜，會展開、拍動 —— */
@@ -420,12 +422,21 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       toothM=new THREE.MeshStandardMaterial({color:0xf3ecd6,roughness:.35,metalness:.1,flatShading:true,emissive:0x221e14}),
       spkM=new THREE.MeshStandardMaterial({color:o.spk!=null?o.spk:0x3a0a12,roughness:.5,metalness:.3,flatShading:true,emissive:0x240610}),
       eyeM=new THREE.MeshBasicMaterial({color:eyeCol}),pupM=new THREE.MeshBasicMaterial({color:0x080204}),nosM=new THREE.MeshBasicMaterial({color:0xff6a1a});
-    const KH=window.__RSJ||1.2,JJ=[0,.3076,.25],Q=a=>[JJ[0]+(a[0]-JJ[0])*KH,JJ[1]+(a[1]-JJ[1])*KH,JJ[2]+(a[2]-JJ[2])*KH],finM=new THREE.MeshStandardMaterial({color:o.fin!=null?o.fin:0x8a1030,roughness:.7,flatShading:true,side:THREE.DoubleSide,emissive:0x2a0610});
+    const KH=window.__RSJ||1,JJ=[0,.3076,.25],Q=a=>[JJ[0]+(a[0]-JJ[0])*KH,JJ[1]+(a[1]-JJ[1])*KH,JJ[2]+(a[2]-JJ[2])*KH],finM=new THREE.MeshStandardMaterial({color:o.fin!=null?o.fin:0x8a1030,roughness:.7,flatShading:true,side:THREE.DoubleSide,emissive:0x2a0610});
     const Y3=new THREE.Vector3(0,1,0),V3=a=>{const q=Q(a);return new THREE.Vector3(q[0],q[1],q[2])};
     const limb=(G,pts,r0,r1,mt,seg)=>{for(let i=0;i<pts.length-1;i++){const a=V3(pts[i]),b=V3(pts[i+1]),d=b.clone().sub(a),L=d.length(),k0=i/(pts.length-1),k1=(i+1)/(pts.length-1),
         m=new THREE.Mesh(new THREE.CylinderGeometry(Math.max(.0006,(r0+(r1-r0)*k1)*KH),Math.max(.001,(r0+(r1-r0)*k0)*KH),L*1.04,seg||5),mt);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(Y3,d.normalize());G.add(m)}};
     const both=(fn)=>{fn(1);fn(-1)};
     const hU=new THREE.Group(),hL=new THREE.Group(),hH=new THREE.Group(),hN=new THREE.Group(),DR=[[hU,B.nid('jaw_upper')],[hL,B.nid('jaw_lower')],[hH,B.nid('neck3')],[hN,B.nid('neck2')]];
+    /* —— 自建實心龍頭：沿 z 軸一圈圈放樣（封閉、不會鏤空），上顎跟 jaw_upper、下顎跟 jaw_lower 骨頭動 —— */
+    const hc=PL.c[2],headM=new THREE.MeshStandardMaterial({color:new THREE.Color(hc[0],hc[1],hc[2]),roughness:.55,metalness:.2,emissive:o.bem!=null?o.bem:0x2a0610,flatShading:true,side:THREE.DoubleSide});all.push(headM);
+    const loft=(G,rings,sd)=>{sd=sd||8;const pos=[],idx=[];rings.forEach(([z,cy,hw,ht,hb])=>{for(let k=0;k<sd;k++){const a=k/sd*Math.PI*2,c=Math.cos(a),n=Math.sin(a);const q=Q([hw*c,cy+(n>0?ht:hb)*n,z]);pos.push(q[0],q[1],q[2])}});
+      const R=rings.length;for(let i=0;i<R-1;i++)for(let k=0;k<sd;k++){const a=i*sd+k,b=i*sd+(k+1)%sd,c=(i+1)*sd+k,d=(i+1)*sd+(k+1)%sd;idx.push(a,b,c,b,d,c)}
+      const e0=Q([0,rings[0][1],rings[0][0]-.015]),e1=Q([0,rings[R-1][1],rings[R-1][0]+.02]);pos.push(e0[0],e0[1],e0[2],e1[0],e1[1],e1[2]);const n0=R*sd,n1=R*sd+1;
+      for(let k=0;k<sd;k++){idx.push(n0,(k+1)%sd,k);idx.push(n1,(R-1)*sd+k,(R-1)*sd+(k+1)%sd)}
+      const g2=new THREE.BufferGeometry();g2.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pos),3));g2.setIndex(idx);g2.computeVertexNormals();G.add(new THREE.Mesh(g2,headM))};
+    loft(hU,[[.1,.265,.06,.07,.065],[.15,.285,.078,.075,.06],[.2,.295,.082,.06,.05],[.25,.29,.07,.045,.045],[.3,.28,.062,.05,.05],[.355,.268,.052,.04,.04],[.405,.256,.04,.032,.03],[.43,.25,.022,.016,.014]]);
+    loft(hL,[[.17,.215,.05,.02,.03],[.23,.21,.052,.02,.03],[.3,.2,.044,.018,.026],[.37,.19,.034,.016,.02],[.425,.186,.022,.012,.014]],7);
     both(sx=>{
       /* 主角：粗壯、向後上方彎曲再外揚（龍的招牌輪廓） */
       limb(hU,[[sx*.05,.37,.2],[sx*.075,.4,.15],[sx*.105,.44,.09],[sx*.135,.49,.03],[sx*.16,.54,-.03],[sx*.185,.575,-.1]],.024,.003,hornM,6);
@@ -514,7 +525,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   function reset(){if(S){(S.bf||[]).forEach(f=>scene.remove(f.m));S.fx.forEach(f=>scene.remove(f.m));S.zn.forEach(z=>scene.remove(z.m))}clearDyn();
     S={run:false,over:false,win:false,t:0,wave:0,kills:0,score:0,lvl:1,xp:0,need:xpNeed(1),
       p:{x:0,y:0,vy:0,z:12,hp:150,max:150,inv:0,fcd:0,mv:0,vx:0,vz:0,sw:0},bl:{hp:0,dmg:0,rate:0,spd:0,mag:0,multi:0},gl:[0,0,0,0,0,0],cd:[0,0,0,0,0,0],
-      en:[],pb:[],eb:[],orbs:[],pa:[],fx:[],cl:[],wells:[],zn:[],dn:[],aura:null,slow:null,q:[],sp:0,gapT:1.5,bn:null,pick:null,boss:null,flash:0,shake:0,hm:0,tm:1,sp2:0,sp2t:0,escort:0,blinkInv:0,lt:[],wm:0,dg:[],swT:0,swDir:1,kick:0,bf:[],gust:null};   /* wm：武器模式 0 飛刀射擊／1 近戰揮砍 */
+      en:[],pb:[],eb:[],orbs:[],pa:[],fx:[],cl:[],wells:[],zn:[],dn:[],aura:null,slow:null,q:[],sp:0,gapT:1.5,bn:null,pick:null,boss:null,flash:0,shake:0,hm:0,tm:1,sp2:0,sp2t:0,escort:0,blinkInv:0,lt:[],wm:0,dg:[],swT:0,swDir:1,kick:0,bf:[],gust:null,dead:[],bwin:0};   /* wm：武器模式 0 飛刀射擊／1 近戰揮砍 */
     yaw=0;pit=-.1;ay=ap=0;hy=Math.PI;
   }
   const dmgMul=()=>1+.18*S.bl.dmg,rateMul=()=>(1+.14*S.bl.rate)*(S.slow&&S.slow.t>0?1.3:1),spdMul=()=>1+.08*S.bl.spd;
@@ -545,17 +556,64 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   }
   function edgeSpawn(t){let x=0,z=0;for(let k=0;k<8;k++){const a=rnd()*PI*2,r=26+rnd()*14;x=S.p.x+Math.cos(a)*r;z=S.p.z+Math.sin(a)*r;const dd=Math.hypot(x,z);if(dd>AR-3){x*=(AR-3)/dd;z*=(AR-3)/dd}if(Math.hypot(x-S.p.x,z-S.p.z)>18)break}return spawnEn(t,x,z)}
   function hurtE(e,d,c,quiet){
-    if(e.hp<=0)return;e.hp-=d;e.fl=.1;if(!quiet){dnum(e.x,e.y0+e.h+.3,e.z,Math.round(d),c||'#fff');burst(e.x,e.y0+e.h*.6,e.z,e.t==='wsp'?'#ff9a1f':'#8a1020',3,3)}
+    if(e.hp<=0)return;e.hp-=d;e.fl=.1;if(!quiet&&!e.boss)esfx(e,'hurt');if(!quiet){dnum(e.x,e.y0+e.h+.3,e.z,Math.round(d),c||'#fff');burst(e.x,e.y0+e.h*.6,e.z,e.t==='wsp'?'#ff9a1f':'#8a1020',3,3)}
     return d;
   }
+  /* —— 怪物音效（依距離衰減）：atk 攻擊／hurt 受擊／die 死亡／land 墜地 —— */
+  function esfx(e,k){
+    const p=S.p,dd=Math.hypot(e.x-p.x,e.z-p.z),v=Math.max(.12,1/(1+dd/9)),tp=e.t;
+    if(!GA.gate('e'+tp+k,k==='hurt'?110:k==='atk'?150:k==='land'?200:60))return;
+    const tn=(f,d,ty,vol,sl,t0)=>GA.tone(f,d,ty,vol*v,sl,t0),ns=(d,vol,fr,t0,hp)=>GA.noise(d,vol*v,fr,t0,hp);
+    if(tp==='zom'){if(k==='atk'){tn(110,.3,'sawtooth',.1,.6);ns(.2,.08,700)}else if(k==='hurt')tn(160+rnd()*30,.1,'square',.05,.6);else if(k==='die'){tn(120,.7,'sawtooth',.12,.35);ns(.5,.1,500);tn(55,.25,'sine',.2,.5,.55)}}
+    else if(tp==='run'){if(k==='atk'){ns(.15,.1,3500,0,true);tn(300,.12,'square',.07,.5)}else if(k==='hurt')tn(520,.08,'square',.05,.6);else if(k==='die'){tn(700,.35,'square',.09,.2);ns(.2,.08,3000,0,true)}}
+    else if(tp==='brt'){if(k==='atk'){tn(70,.25,'sine',.3,.5);ns(.18,.18,2500,0,true)}else if(k==='hurt'){ns(.07,.12,3500,0,true);tn(240,.06,'square',.04)}else if(k==='die'){ns(.5,.25,3000,0,true);tn(65,.7,'sine',.35,.4,.35);ns(.6,.2,400,.35)}}
+    else if(tp==='spt'){if(k==='atk'){tn(300,.12,'sine',.08,2.2);tn(450,.1,'sine',.06,1.8,.07)}else if(k==='hurt')tn(500,.06,'sine',.06,.7);else if(k==='die'){ns(.4,.2,900);for(let i=0;i<4;i++)tn(260+i*70,.08,'sine',.08,1.8,i*.08)}}
+    else if(tp==='bat'){if(k==='atk'){tn(2000,.22,'square',.07,.45);ns(.2,.08,5000,0,true)}else if(k==='hurt')tn(2400,.06,'square',.05,.7);else if(k==='die'){tn(2200,.5,'square',.08,.15);ns(.1,.1,2000,.5)}}
+    else if(tp==='gar'){if(k==='atk'){tn(900,.15,'sawtooth',.07,.5);ns(.25,.08,2500,0,true)}else if(k==='hurt')tn(700,.08,'sawtooth',.05,.6);else if(k==='die'){tn(1000,.9,'sawtooth',.09,.1);ns(.4,.22,1200,.85)}}
+    else if(tp==='wsp'){if(k==='atk')ns(.18,.1,5000,0,true);else if(k==='die'){[900,1200,1500,1900].forEach((f,i)=>tn(f,.1,'sine',.08,1,i*.04));ns(.2,.1,6000,0,true)}else if(k==='hurt')tn(1100,.05,'sine',.04)}
+    else if(tp==='wyr'||tp==='drg'){if(k==='atk'){tn(tp==='drg'?100:150,.5,'sawtooth',.18,.4);ns(.4,.14,1100)}else if(k==='hurt')tn(220,.1,'sawtooth',.05,.7);
+      else if(k==='die'){tn(tp==='drg'?90:140,1.1,'sawtooth',.22,.3);tn(1100,1.4,'sine',.07,.1,.2)}else if(k==='land'){ns(.8,.4,300);tn(48,.8,'sine',.4,.4)}}
+    else if(tp==='mbs'){if(k==='atk'){tn(70,.4,'sawtooth',.2,.5);ns(.3,.18,500)}else if(k==='die'){tn(60,1.6,'sawtooth',.26,.3);ns(1.2,.3,300)}else if(k==='land'){ns(.9,.45,250);tn(40,1,'sine',.45,.4)}}
+    else if(tp==='fbs'){if(k==='atk')tn(60,.35,'sawtooth',.16,.5);else if(k==='die'){roarSfx(1);tn(40,2.2,'sawtooth',.25,.3)}else if(k==='land'){ns(1.4,.6,200);tn(36,1.4,'sine',.5,.4)}}
+  }
+  /* —— 各怪物專屬死亡動畫：殭屍後仰倒地／疾行屍撲倒滑行／重甲屍跪下再重重倒下／酸液怪融化成一灘／蝠魔與空襲者旋轉墜地／龍從空中墜落，躺一陣子才沉入地面 —— */
+  const DDUR={zom:2.2,run:1.8,brt:3,spt:2.2,bat:2,gar:2.4,wyr:3.4,drg:3.8,wsp:.7,mbs:3.8,fbs:5};
+  function startDeath(e){
+    const tp=e.t,fly=e.alt!=null&&tp!=='wsp'&&tp!=='mbs';e.g.rotation.order='YXZ';
+    S.dead.push({e,t:0,dur:DDUR[tp]||2,y:e.alt!=null?e.alt:tp==='wsp'?1.1:0,vy:0,land:0,ry:(rnd()-.5)*10,fly,x0:e.x,z0:e.z,f0:e.face,fx:Math.sin(e.face),fz:Math.cos(e.face),sp:0});
+    if(tp==='spt')ring(e.x,e.z,2.4,0x3aa05a,1.4,.1);
+    if(tp==='wsp')burst(e.x,1.1,e.z,'#ffd08a',22,7,.14);
+    if(e.mdl&&e.mdl.anim){e.skn=tp==='fbs'||tp==='wyr'?'charge':null;e.skt=0;e.atk=0}
+    esfx(e,'die')}
+  function impactFx(e,big){const R=big?1:.45;ring(e.x,e.z,(big?26:9)*R+4,0xffd08a,.8,.12);ring(e.x,e.z,(big?18:6)*R+3,0xff6a2a,.6,.12);burst(e.x,.3,e.z,'#b8a080',big?40:16,big?9:5,.18);S.shake=Math.max(S.shake,big?1:.3);esfx(e,'land')}
+  function deathUpdate(dt){
+    const ease=u=>u<0?0:u>1?1:u*u*(3-2*u);
+    S.dead=S.dead.filter(D=>{const e=D.e,g=e.g,tp=e.t;D.t+=dt;const t=D.t,dur=D.dur,tail=Math.min(.9,dur*.3),sink=Math.max(0,t-(dur-tail))/tail;
+      let x=D.x0,z=D.z0,y=D.fly?D.y:(tp==='wsp'?D.y:0),rx=0,rz=0,ry=D.f0,sx=1,sy=1,sz=1;
+      if(tp==='zom'){rx=-PI/2*ease(t/.6);y=Math.sin(Math.min(1,t/.6)*PI)*.25;x-=D.fx*.5*ease(t/.6);z-=D.fz*.5*ease(t/.6);if(!D.land&&t>.55){D.land=1;burst(e.x,.15,e.z,'#9a8a6a',6,2.5,.1);GA.tone(70,.15,'sine',.12*Math.max(.2,1/(1+Math.hypot(e.x-S.p.x,e.z-S.p.z)/9)),.5)}y-=sink*1.8}
+      else if(tp==='run'){const u=ease(t/.3);rx=PI/2*u;D.sp=Math.max(0,4.5*(1-t/.7));x+=D.fx*D.sp*Math.min(t,.7)*.5;z+=D.fz*D.sp*Math.min(t,.7)*.5;y=Math.sin(Math.min(1,t/.3)*PI)*.35;if(!D.land&&t>.3){D.land=1;burst(e.x+D.fx*1.2,.15,e.z+D.fz*1.2,'#9a8a6a',8,3,.1)}y-=sink*1.4}
+      else if(tp==='brt'){const k1=ease(t/.9),k2=ease((t-1.1)/.5);rx=.45*k1+(PI/2-.45)*k2;y=-.35*k1;x+=D.fx*1.2*k2;z+=D.fz*1.2*k2;ry+=Math.sin(t*30)*.03*(1-k1);if(!D.land&&t>1.55){D.land=1;impactFx({x:x,z:z,t:'brt'},false);burst(x,.3,z,'#7a6a8a',18,6,.16)}y-=sink*2.4}
+      else if(tp==='spt'){const u=ease(t/.9);sy=1-.88*u;sx=sz=1+.6*u;y=0;if(sink>0){sx=sz=(1+.6)*(1-sink);sy=.12*(1-sink)}if(t<.7&&rnd()<.25)burst(e.x,.3,e.z,'#6cff4a',2,3,.1)}
+      else if(tp==='bat'||tp==='gar'){D.vy-=20*dt;D.y+=D.vy*dt;const gy=tp==='bat'?.35:.5;if(D.y<=gy){D.y=gy;if(!D.land){D.land=1;D.vy=0;burst(e.x,.3,e.z,tp==='bat'?'#a860d0':'#9fe8ff',14,5,.14);S.shake=Math.max(S.shake,.2);esfx(e,'land');GA.noise(.25,.14*Math.max(.15,1/(1+Math.hypot(e.x-S.p.x,e.z-S.p.z)/9)),600)}}
+        y=D.y;if(!D.land){rz=t*D.ry*1.3;rx=t*5;x+=D.fx*t*1.5;z+=D.fz*t*1.5}else{rz=(D.ry>0?1:-1)*1.4+Math.sin(t*40)*.04*Math.max(0,1-(t-.6)*2);rx=.3}
+        if(D.land)D.sp=1;if(sink>0){sx=sy=sz=1-sink}}
+      else if(tp==='wyr'||tp==='drg'||tp==='fbs'){const big=tp==='fbs',rest=big?2.3:tp==='drg'?.9:.8;D.vy-=(big?13:16)*dt;if(D.vy<-26)D.vy=-26;D.y+=D.vy*dt;
+        if(D.y<=rest){D.y=rest;if(!D.land){D.land=1;D.vy=0;D.lt=t;impactFx(e,big);if(big){ring(e.x,e.z,40,0xb36bff,1.3,.12)}}}
+        y=D.y;const roll=D.ry>0?1:-1,fa=D.land?1:ease(t/(big?1.6:1.1));rz=roll*(big?1.35:1.1)*fa;rx=D.land?.25:.7*fa;if(!D.land){x+=D.fx*t*(big?1.2:2.2);z+=D.fz*t*(big?1.2:2.2);if(rnd()<.35)burst(e.x+(rnd()-.5)*4,D.y+(rnd()-.5)*2,e.z+(rnd()-.5)*4,rnd()<.5?'#ff9a3a':'#ff4a2a',3,4,.2)}
+        else if(big&&rnd()<.08){burst(e.x+(rnd()-.5)*6,1+rnd()*2,e.z+(rnd()-.5)*4,'#ff8a3a',6,5,.2);if(rnd()<.3)esfx(e,'land')}
+        if(sink>0)y-=sink*(big?4.5:2.5)}
+      else if(tp==='mbs'){const k1=ease(t/1.4);rx=-PI/2*k1;y=-.4*k1;if(!D.land&&t>1.3){D.land=1;impactFx(e,false);esfx(e,'land')}if(D.land&&rnd()<.2)burst(e.x+(rnd()-.5)*3,.4,e.z+(rnd()-.5)*3,'#ff5a2a',3,3,.16);y-=sink*3.2}
+      else if(tp==='wsp'){const u=Math.min(1,t/.7);sx=sy=sz=1-u;ry+=u*14;y=D.y+u*.8}
+      g.position.set(x,y,z);g.rotation.set(rx,ry,rz);g.scale.set(sx,sy,sz);
+      if(e.mdl&&e.mdl.anim&&(tp==='wyr'||tp==='fbs')){e.alt=y;e.x=x;e.z=z;e.mdl.anim(e,T)}
+      if(t>=dur){dyn.remove(g);disp(g);return false}return true})}
   function killE(e){
     const d=e.d;S.kills++;S.score+=d.sc;burst(e.x,e.y0+e.h*.5,e.z,e.t==='wsp'?'#ffb060':'#a01428',e.boss?60:14,e.boss?9:5,.16);
-    GA.tone(e.boss?90:260+rnd()*80,.15,'sine',.12,.3);
     if(d.xp>0){const n=e.boss?10:1;for(let i=0;i<n;i++){const gi=Math.floor(rnd()*6);S.orbs.push({x:e.x+(rnd()-.5)*(e.boss?4:.4),z:e.z+(rnd()-.5)*(e.boss?4:.4),v:e.boss?3:d.xp,k:'xp',c:GEM[gi].c,ph:rnd()*6})}}
     if(!e.boss&&rnd()<.04)S.orbs.push({x:e.x,z:e.z,v:20,k:'hp',c:'#ff6a8a',ph:0});
     if(lvl(3)>=5)heal(3);
-    dyn.remove(e.g);disp(e.g);
-    if(e.t==='fbs'){S.score+=3000;win()}
+    startDeath(e);
+    if(e.t==='fbs'){S.score+=3000;S.bwin=3.4}
   }
   const heal=v=>{const p=S.p;if(p.hp<p.max){const q=Math.min(v,p.max-p.hp);p.hp+=q;if(v>=3)dnum(p.x,2.4,p.z,'+'+Math.round(q),'#6dff9a')}};
   function hurtP(d){const p=S.p;if(p.inv>0||S.over)return false;p.hp-=d;p.inv=.35;p.ht=.3;S.flash=.3;S.shake=Math.min(.5,.12+d/80);burst(p.x,1.2,p.z,'#d01030',8,4);GA.tone(150,.2,'sawtooth',.2,.5);GA.noise(.12,.15,1200);if(p.hp<=0)finish(false);return true}
@@ -568,7 +626,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     if(e.stun>0){e.stun-=dt}
     else{
       const dx=p.x-e.x,dz=p.z-e.z,dd=Math.hypot(dx,dz)||1,ux=dx/dd,uz=dz/dd;let mv=1;
-      e.face=Math.atan2(ux,uz);e.at-=edt;e.wk+=edt*e.sp*1.6;
+      e.face=Math.atan2(ux,uz);e.at-=edt;e.wk+=edt*e.sp*1.6;const at0=e.at;
       if(e.t==='spt'){if(dd<11)mv=dd<7?-.8:0;if(e.at<=0&&dd<26){e.at=d.at;eshot(e.x,1.3,e.z,p.x,p.z,12,d.dm,'#9bff3a',.35);GA.tone(420,.1,'sine',.08,.5)}}
       else if(e.t==='mbs'){e.bt-=edt;e.b2-=edt;
         if(e.bt<=0){e.bt=4.5;zone(p.x,p.z,5,1.1,40);GA.tone(110,.3,'sawtooth',.18,.4)}
@@ -613,6 +671,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       else if(dd<e.r+.75&&e.at<=0&&p.y<.8){e.at=d.at;hurtP(d.dm);e.lunge=.2}
       const sp=e.sp*mv*(e.lunge>0?1.8:1);if(e.lunge>0)e.lunge-=dt;
       if(!(e.t==='mbs'||e.t==='fbs')||dd>e.r+.6){e.x+=ux*sp*edt;e.z+=uz*sp*edt}
+      if(e.at>at0+.1&&e.t!=='fbs')esfx(e,'atk');
     }
     for(const o of S.en){if(o===e||o.hp<=0)continue;const dx=e.x-o.x,dz=e.z-o.z,dd=Math.hypot(dx,dz),m=(e.r+o.r)*.85;if(dd<m&&dd>.001){const f=(m-dd)*.5;e.x+=dx/dd*f*(e.boss?.2:1);e.z+=dz/dd*f*(e.boss?.2:1)}}
     if(!d.fly&&!(e.t==='fbs'&&e.alt!=null))resolve(e,e.r*.6);
@@ -888,9 +947,10 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     /* 波次 */
     if(S.q.length){S.sp-=dt;const cap=24+S.wave*2;if(S.sp<=0&&S.en.length<cap){const t=S.q.shift();if((t==='drg'||t==='wyr')&&S.en.filter(q=>q.t===t&&q.hp>0).length>=(t==='wyr'?4:2)){S.q.push(t);S.sp=.6}else if(t==='fbs')startIntro();else edgeSpawn(t);S.sp=Math.max(.3,1.05-.05*S.wave);if(t==='mbs'){S.bn={s:ET[t].n+' 現身',t:2.2};GA.noise(.6,.3,200)}}}
     else if(S.wave===10){S.escort-=dt;if(S.escort<=0&&S.en.length<22){S.escort=7;for(let i=0;i<4;i++)edgeSpawn(i%2?'run':'zom')}}
-    else if(!S.en.length&&!S.over){S.gapT-=dt;if(S.gapT<=0){S.gapT=3;if(S.wave>0){S.score+=100*S.wave;heal(Math.round(S.p.max*.12));S.bn={s:'第 '+S.wave+' 波結束',t:1.6}}nextWave()}}
+    else if(!S.en.length&&!S.over&&!S.bwin){S.gapT-=dt;if(S.gapT<=0){S.gapT=3;if(S.wave>0){S.score+=100*S.wave;heal(Math.round(S.p.max*.12));S.bn={s:'第 '+S.wave+' 波結束',t:1.6}}nextWave()}}
     /* 敵人 */
     S.en=S.en.filter(e=>{if(e.hp<=0){killE(e);if(S.boss===e)S.boss=null;return false}enemyUpdate(e,dt);return true});
+    deathUpdate(dt);if(S.bwin>0){S.bwin-=dt;if(S.bwin<=0){S.bwin=0;win()}}
     for(const w of S.wells){w.t-=dt;for(const e of S.en){const dx=w.x-e.x,dz=w.z-e.z,d=Math.hypot(dx,dz);if(d<w.r&&d>.4&&!e.boss){e.x+=dx/d*6*dt;e.z+=dz/d*6*dt}}}
     S.wells=S.wells.filter(w=>w.t>0);
     if(S.aura){const a=S.aura;a.t-=dt;a.k-=dt;if(a.k<=0){a.k=.35;ring(p.x,p.z,a.R,0xff9a1f,.45)}const ls=lvl(3)>=3?.3:.17;let tot=0;
@@ -979,12 +1039,33 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     IX.count=n;IX.instanceMatrix.needsUpdate=true;if(IX.instanceColor)IX.instanceColor.needsUpdate=true;
   }
   /* —— 魔王降臨過場：紅色閃電劃破高空，寶石吞噬者從天而降、落地震盪，之後才開始戰鬥 —— */
-  const INTRO_DUR=15.2,INTRO_LAND=9,INTRO_T0=1.2,INTRO_DROP=7.6,CUTS=[2.75,5.55,7.95,9.75,12.75],TITLE0=10.2;   /* 總長／落地時間／開始現身／俯衝重擊時間（秒） */
+  const INTRO_DUR=16,INTRO_LAND=10.6,INTRO_T0=1.6,CUTS=[2.7,5.4,8,10.4,12.8],TITLE0=13.1;   /* 總長／落地(懸停)時間／開始現身／鏡頭切換點／標題出現（秒） */
+  /* —— 過場專屬音效／音樂（全用 WebAudio 合成） —— */
+  function lightningSfx(){
+    GA.noise(.07,.5,5000,0,true);GA.tone(3200,.22,'sawtooth',.14,.03);GA.tone(1500,.3,'square',.06,.05,.02);
+    for(let i=0;i<5;i++)GA.noise(.03,.18,4000+rnd()*3000,.06+i*.045+rnd()*.03,true);
+    GA.noise(1.7,.3,260,.2);GA.tone(48,1.5,'sine',.3,.4,.16)}
+  function roarSfx(big){GA.tone(110,1.3,'sawtooth',big?.26:.2,.35);GA.tone(165,1.1,'square',.08,.4,.05);GA.noise(1.2,big?.34:.26,900);GA.tone(58,1.5,'sine',.28,.5)}
+  let introMus=null;
+  function stopIntroMusic(){if(introMus){clearInterval(introMus.iv);introMus=null}}
+  function introMusic(alive){
+    stopIntroMusic();GA.stopMusic();const c=GA.ctx();if(!c)return;const m={step:0,t0:c.currentTime+.05,iv:0};introMus=m;
+    const ST=.25,roots=[55,55,58.27,51.91],mt=GA.mtof;
+    const play=(st,off)=>{const bar=Math.floor(st/16),r=roots[bar%4];
+      if(st%16===0){GA.tone(r,4.2,'sawtooth',.07,.97,off);GA.tone(r*1.5,4.2,'triangle',.05,.98,off);GA.tone(r/2,4.4,'sine',.1,.98,off)}
+      if(st%8===0&&st>=8)GA.tone(r*4,3.6,'triangle',.035,.99,off+.02),GA.tone(r*4.76,3.6,'triangle',.03,.99,off+.02),GA.tone(r*6,3.6,'triangle',.028,.99,off+.02);   /* 合唱般的小調和弦 */
+      const beat=st<20?8:st<36?4:2;if(st%beat===0&&st<43){GA.tone(78,.3,'sine',.38,.3,off);GA.noise(.12,.16,350,off)}   /* 心跳／定音鼓，越來越密 */
+      if(st>=24&&st<42){const k=st-24;GA.tone(180*(1+k*.14),.3,'sawtooth',.018+k*.0045,.9,off)}                       /* 上升的緊張音 */
+      if(st%4===0&&st<43)GA.noise(.9,.05,500+st*18,off);                                                              /* 風暴底噪 */
+      if(st>=44&&st%4===0){const k=(st-44)/4,rr=[55,55,65.4,58.27,55][k%5];GA.tone(rr*2,.9,'sawtooth',.11,.98,off);GA.tone(rr*3,.9,'sawtooth',.07,.98,off);GA.tone(rr,1.0,'sine',.2,.98,off)}   /* 落地後的沉重銅管 */
+    };
+    m.iv=setInterval(()=>{if(!alive()){stopIntroMusic();return}const c2=GA.ctx();if(!c2)return;
+      for(;;){const tt=m.t0+m.step*ST-c2.currentTime;if(tt>.3)break;play(m.step,Math.max(0,tt));m.step++}},60)}
   function startIntro(){
-    const p=S.p,[fx,fz]=fwd();let x=p.x+fx*20,z=p.z+fz*20;const dd=Math.hypot(x,z);if(dd>AR-6){x*=(AR-6)/dd;z*=(AR-6)/dd}
-    const e=spawnEn('fbs',x,z);e.face=Math.atan2(p.x-x,p.z-z);e.g.visible=false;e.alt=62;e.y0=e.alt-e.h/2;
-    S.intro={t:0,e,bolts:[],nb:0,land:false,roar:false,fl:0,C:{x,z},P:{x:p.x,z:p.z},F:[fx,fz],th0:Math.atan2(-fz,-fx)+(rnd()<.5?-1:1)*.9,lk:null,ph:0,shot:0};S.bn=null;S.shake=0;
-    GA.noise(1.2,.3,120);GA.tone(55,2.2,'sawtooth',.18,.3)}
+    const p=S.p,[fx,fz]=fwd();let x=p.x+fx*22,z=p.z+fz*22;const dd=Math.hypot(x,z);if(dd>AR-6){x*=(AR-6)/dd;z*=(AR-6)/dd}
+    const e=spawnEn('fbs',x,z);e.face=Math.atan2(p.x-x,p.z-z);e.g.visible=false;e.alt=75;e.y0=e.alt-e.h/2;
+    S.intro={t:0,e,bolts:[],nb:0,land:false,roar:false,fl:0,C:{x,z},P:{x:p.x,z:p.z},F:[fx,fz],lk:null,ph:0,shot:0};S.bn=null;S.shake=0;
+    introMusic(()=>S.intro&&stage.isConnected);GA.noise(1.2,.3,120);GA.tone(55,2.2,'sawtooth',.18,.3)}
   const vx_=e=>Math.sin(e.face),vz_=e=>Math.cos(e.face);
   function mkBolt(){const W_=W,H_=H,x0=W_*(.12+rnd()*.76),pts=[[x0,-10]];let x=x0,y=-10;const tgt=H_*(.55+rnd()*.3);
     while(y<tgt){y+=H_*(.05+rnd()*.07);x+=(rnd()-.5)*W_*.09;pts.push([x,y])}
@@ -997,44 +1078,40 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     S.pa=S.pa.filter(q=>{q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vy-=14*dt;if(q.y<.05){q.y=.05;q.vy*=-.3;q.vx*=.6;q.vz*=.6}q.l-=dt;return q.l>0});
     S.shake=Math.max(0,S.shake-dt);I.fl=Math.max(0,I.fl-dt);
     /* 閃電：越接近落地越密集 */
-    I.nb-=dt;if(I.nb<=0&&t<INTRO_LAND+.6){I.nb=Math.max(.12,.5-t*.1)+rnd()*.25;I.bolts.push(mkBolt());if(I.bolts.length>5)I.bolts.shift();I.fl=.14;S.shake=Math.max(S.shake,.12+Math.min(.25,t*.07));GA.noise(.25,.22,300+rnd()*500)}
+    I.nb-=dt;if(I.nb<=0&&t<INTRO_LAND+.6){I.nb=Math.max(.12,.5-t*.1)+rnd()*.25;I.bolts.push(mkBolt());if(I.bolts.length>5)I.bolts.shift();I.fl=.14;S.shake=Math.max(S.shake,.12+Math.min(.25,t*.07));lightningSfx()}
     for(const b of I.bolts)b.t-=dt;I.bolts=I.bolts.filter(b=>b.t>0);
-    /* 魔王：0.9 秒後現身，從高空俯衝降落（先快後緩），落地時震盪 */
-    /* 魔王：螺旋盤旋 1.75 圈降下（半徑與高度逐漸縮小），最後收翅膀俯衝重重砸地 */
-    if(t>=INTRO_T0&&t<INTRO_LAND){if(!e.g.visible){e.g.visible=true;I.fl=.35;GA.noise(.8,.3,200)}
-      const C=I.C,k=Math.min(1,(t-INTRO_T0)/(INTRO_DROP-INTRO_T0)),ek=k*k*(3-2*k)*.35+k*.65,th=I.th0+ek*PI*2*1.75,rr=26*Math.pow(1-ek,1.15)+.01,
-        ox=e.x,oz=e.z;let al;
-      if(t<INTRO_DROP){al=16+(60-16)*Math.pow(1-ek,1.3);e.skn='gust';e.skt=1}
-      else{const d=Math.min(1,(t-INTRO_DROP)/(INTRO_LAND-INTRO_DROP));al=5.4+(16-5.4)*(1-d*d*d);e.skn='charge';e.skt=1}
-      e.x=C.x+Math.cos(th)*rr;e.z=C.z+Math.sin(th)*rr;e.alt=Math.max(5.4,al);e.y0=e.alt-e.h/2;
-      const vx=e.x-ox,vz=e.z-oz;if(vx*vx+vz*vz>1e-6&&t<INTRO_DROP)e.face=Math.atan2(vx,vz);
-      const bank=t<INTRO_DROP?-.38*Math.min(1,rr/8):0;I.bk=(I.bk||0)+(bank-(I.bk||0))*Math.min(1,dt*5);e.g.rotation.z=I.bk;
-      I.ph+=dt;if(I.ph>1.1&&t<INTRO_DROP){I.ph=0;GA.noise(.7,.18,350+rnd()*200)}}
-    /* 電影運鏡：六個鏡頭，之間以「淡出→淡入」切換；每個鏡頭內都有推軌／環繞／跟拍運動 */
+    /* 魔王：從高空雲層正上方「直線」降下（不盤旋），一路拍動巨翼，最後在空中煞住、懸停 */
+    if(t>=INTRO_T0&&t<INTRO_LAND){if(!e.g.visible){e.g.visible=true;I.fl=.4;roarSfx(0)}
+      const C=I.C,k=Math.min(1,(t-INTRO_T0)/(INTRO_LAND-INTRO_T0)),al=5.4+69.6*Math.pow(1-k,1.7);
+      e.x=C.x+Math.sin(t*.9)*.5;e.z=C.z+Math.cos(t*.7)*.5;e.alt=al;e.y0=al-e.h/2;e.skn='gust';e.skt=1;
+      e.g.rotation.z=Math.sin(t*1.3)*.05;
+      if(!I.r1&&t>CUTS[1]+.4){I.r1=1;roarSfx(0);if(e.mdl&&e.mdl.roar)e.mdl.roar()}
+      I.ph+=dt;if(I.ph>.9){I.ph=0;GA.noise(.7,.16,350+rnd()*200)}}
+    /* 電影運鏡：六個鏡頭，之間以「淡出→淡入」切換。全程貼近龍：側面伴飛→臉部特寫→仰拍巨翼→煞停→英雄環繞 */
     {const C=I.C,P=I.P,[fx,fz]=I.F,sm=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u)},
-        bp=new THREE.Vector3(e.x,e.g.visible?e.alt:50,e.z);let sh=0;for(let i=0;i<CUTS.length;i++)if(t>=CUTS[i])sh=i+1;
+        bp=new THREE.Vector3(e.x,e.g.visible?e.alt:60,e.z);let sh=0;for(let i=0;i<CUTS.length;i++)if(t>=CUTS[i])sh=i+1;
       const t0=CUTS[sh-1]||0,t1=CUTS[sh]||INTRO_DUR,u=(t-t0)/(t1-t0);let cx,cy,cz,tx,ty,tz,fv,rate=6;
-      const hw=()=>{const v=e.g.localToWorld(new THREE.Vector3(...e.mdl.head()));return v};
-      if(sh===0){   /* ① 玩家身後的低角度：仰望撕裂的天空，鏡頭緩緩升起、微微橫搖 */
-        cx=P.x-fx*12-fz*5+fz*u*3;cz=P.z-fz*12+fx*5-fx*u*3;cy=1.6+u*2.2;tx=C.x+fz*(-8+u*16);tz=C.z-fx*(-8+u*16);ty=20+u*18;fv=70-u*10;rate=3}
-      else if(sh===1){   /* ② 遠景環繞：繞著降臨點盤旋，龍在雲層中現身 */
-        const ph=Math.atan2(P.z-C.z,P.x-C.x)-.5+u*1.1;cx=C.x+Math.cos(ph)*(46-u*8);cz=C.z+Math.sin(ph)*(46-u*8);cy=7+u*3;tx=bp.x;tz=bp.z;ty=bp.y;fv=50-u*8;rate=5}
-      else if(sh===2){   /* ③ 跟拍：鏡頭貼著龍飛，從側後方繞到側前方 */
-        const fa=Math.atan2(vz_(e),vx_(e)),a=fa+Math.PI*.5+(u-.3)*1.5;cx=bp.x+Math.cos(a)*(13-u*3);cz=bp.z+Math.sin(a)*(13-u*3);cy=bp.y+3-u*2;tx=bp.x;tz=bp.z;ty=bp.y;fv=56-u*8;rate=9}
-      else if(sh===3){   /* ④ 地面低角度仰拍：龍俯衝、砸地（落地瞬間強烈震動） */
-        cx=C.x-fx*17+fz*(4-u*8);cz=C.z-fz*17-fx*(4-u*8);cy=.9+u*.5;tx=C.x;tz=C.z;ty=Math.max(e.alt,5.4)+1.2;fv=62-u*16;rate=12}
-      else if(sh===4){   /* ⑤ 特寫：繞著龍頭由側面轉向正面，緩緩推近（咆哮） */
-        const H=hw(),fa=Math.atan2(vz_(e),vx_(e)),a=fa+1.45-u*1.2,d=17-u*7;cx=H.x+Math.cos(a)*d;cz=H.z+Math.sin(a)*d;cy=H.y+.8+u*.6;tx=H.x;tz=H.z;ty=H.y+.2;fv=34-u*8;rate=40}
-      else{   /* ⑥ 拉遠：低機位正面，龍張開雙翼，鏡頭向後退並微微上揚，隨後淡出進入戰鬥 */
-        const fa=Math.atan2(vz_(e),vx_(e)),a=fa+.45-u*.35,d=15+u*14;cx=e.x+Math.cos(a)*d;cz=e.z+Math.sin(a)*d;cy=1.6+u*3.4;tx=e.x;tz=e.z;ty=e.alt+.8+u*1.2;fv=52-u*6;rate=40}
+      const hw=()=>e.g.localToWorld(new THREE.Vector3(...e.mdl.head())),fa=Math.atan2(vz_(e),vx_(e));
+      if(sh===0){   /* ① 玩家身後低角度，仰望被撕裂的紅色天空 */
+        cx=P.x-fx*10-fz*4+fz*u*3;cz=P.z-fz*10+fx*4-fx*u*3;cy=1.4+u*1.8;tx=C.x+fz*(-6+u*12);tz=C.z-fx*(-6+u*12);ty=24+u*14;fv=72-u*10;rate=3}
+      else if(sh===1){   /* ② 在空中貼近龍的側面伴飛，一邊環繞一邊隨它下降 */
+        const a=fa+Math.PI*.5-.5+u*.9,d=19-u*3;cx=bp.x+Math.cos(a)*d;cz=bp.z+Math.sin(a)*d;cy=bp.y+2+Math.sin(u*3)*1.2;tx=bp.x;tz=bp.z;ty=bp.y+.5;fv=44-u*6;rate=14}
+      else if(sh===2){   /* ③ 臉部特寫：發光的眼睛、獠牙，鏡頭緩緩推近、微微繞行 */
+        const H=hw(),a=fa+.55-u*.5,d=14-u*4.5;cx=H.x+Math.sin(a)*d;cz=H.z+Math.cos(a)*d;cy=H.y+.9-u*.4;tx=H.x;tz=H.z;ty=H.y+.1;fv=30-u*5;rate=40}
+      else if(sh===3){   /* ④ 低角度仰拍：從龍的下方看雙翼遮天，緩緩後退 */
+        const side=u*1.2-.6;cx=bp.x+vx_(e)*(6+u*5)+vz_(e)*side*6;cz=bp.z+vz_(e)*(6+u*5)-vx_(e)*side*6;cy=Math.max(1.1,bp.y*.18);tx=bp.x;tz=bp.z;ty=bp.y+1;fv=74-u*8;rate=18}
+      else if(sh===4){   /* ⑤ 煞停：低機位正面，鏡頭推向龍頭，衝擊波掃過地面 */
+        const H=hw(),a=fa+.25*(1-u),d=24-u*11;cx=H.x+Math.sin(a)*d;cz=H.z+Math.cos(a)*d;cy=1.8+u*2.2;tx=H.x;tz=H.z;ty=H.y-.3;fv=54-u*14;rate=30}
+      else{   /* ⑥ 英雄環繞：繞著龍頭由側面轉向正面，推近（咆哮＋標題） */
+        const H=hw(),a=fa+Math.PI*.5-u*1.25,d=18-u*7;cx=H.x+Math.sin(a)*d;cz=H.z+Math.cos(a)*d;cy=H.y+.9+u*.6;tx=H.x;tz=H.z;ty=H.y+.2;fv=34-u*8;rate=40}
       if(sh!==I.shot){I.shot=sh;I.lk=null}
       const tg=new THREE.Vector3(tx,ty,tz);if(!I.lk)I.lk=tg.clone();else I.lk.lerp(tg,1-Math.exp(-dt*rate));
       I.cp=[cx,cy,cz];I.ct=I.lk;I.fv=fv}
-    if(t>=INTRO_LAND&&!I.land){I.land=true;e.g.visible=true;e.skn='roar';e.skt=1;e.x=I.C.x;e.z=I.C.z;e.face=Math.atan2(I.P.x-e.x,I.P.z-e.z);e.g.rotation.z=0;e.alt=5.4;e.y0=e.alt-e.h/2;e.skn=null;e.atk=1.3;I.fl=.5;I.big=1;S.shake=1;ring(e.x,e.z,22,0xff2a3a,.9);ring(e.x,e.z,14,0xffffff,.6);ring(e.x,e.z,30,0xb36bff,1.2);burst(e.x,.4,e.z,'#ff4a4a',40,10,.2);burst(e.x,.4,e.z,'#ffd08a',24,8,.15);GA.noise(1.4,.5,150);GA.tone(50,1.2,'sawtooth',.3,.3)}
+    if(t>=INTRO_LAND&&!I.land){I.land=true;e.g.visible=true;e.skn='roar';e.skt=1;e.x=I.C.x;e.z=I.C.z;e.face=Math.atan2(I.P.x-e.x,I.P.z-e.z);e.g.rotation.z=0;e.alt=5.4;e.y0=e.alt-e.h/2;e.atk=1.3;I.fl=.5;I.big=1;S.shake=1;ring(e.x,e.z,22,0xff2a3a,.9);ring(e.x,e.z,14,0xffffff,.6);ring(e.x,e.z,30,0xb36bff,1.2);burst(e.x,.4,e.z,'#ff4a4a',40,10,.2);burst(e.x,.4,e.z,'#ffd08a',24,8,.15);GA.noise(1.4,.5,150);GA.tone(50,1.2,'sawtooth',.3,.3);roarSfx(1)}
     if(I.land)S.shake=Math.max(S.shake,Math.max(0,.9-(t-INTRO_LAND)*.7));
     if(I.land&&!I.r2&&t>INTRO_LAND+1.2){I.r2=1;e.atk=1.4;GA.noise(1.2,.35,120);GA.tone(70,1.1,'sawtooth',.22,.3)}
     if(I.skip&&t<INTRO_DUR-.8){I.skip=0;I.t=INTRO_DUR-.8}
-    if(t>=INTRO_DUR){S.intro=null;S.fiT=performance.now();e.skn=null;e.bt=2.5;S.bn={s:'寶石吞噬者・戰鬥開始',t:2};GA.tone(392,.25,'triangle',.14);GA.tone(523,.25,'triangle',.14,0,.1)}}
+    if(t>=INTRO_DUR){S.intro=null;stopIntroMusic();GA.music('boss',()=>stage.isConnected&&S&&!S.over);S.fiT=performance.now();e.skn=null;e.bt=2.5;S.bn={s:'寶石吞噬者・戰鬥開始',t:2};GA.tone(392,.25,'triangle',.14);GA.tone(523,.25,'triangle',.14,0,.1)}}
   function drawIntro(){
     const I=S.intro,t=I.t,e=I.e;hx.clearRect(0,0,W,H);
     /* 暗紅天色＋暈影 */
@@ -1052,7 +1129,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     /* 電影黑邊 */
     const bar=H*.11*Math.min(1,t/.5)*(t>INTRO_DUR-.5?Math.max(0,(INTRO_DUR-t)/.5):1);hx.fillStyle='#000';hx.fillRect(0,0,W,bar);hx.fillRect(0,H-bar,W,bar);
     /* 文字：落地後浮現 */
-    if(t>TITLE0&&t<CUTS[4]+.1){const k=Math.min(1,(t-TITLE0)/.7),fo=Math.min(1,Math.max(0,(CUTS[4]-t)/.4));hx.save();hx.globalAlpha=k*fo;hx.textAlign='center';hx.shadowColor='#ff2a3a';hx.shadowBlur=26;hx.fillStyle='#ffe9e9';
+    if(t>TITLE0&&t<INTRO_DUR-.3){const k=Math.min(1,(t-TITLE0)/.7),fo=Math.min(1,Math.max(0,(INTRO_DUR-.9-t)/.4));hx.save();hx.globalAlpha=k*fo;hx.textAlign='center';hx.shadowColor='#ff2a3a';hx.shadowBlur=26;hx.fillStyle='#ffe9e9';
       hx.font='bold '+Math.round(H*.085)+'px sans-serif';const sc=1.25-.25*k;hx.translate(W/2,H*.3);hx.scale(sc,sc);hx.fillText('寶石吞噬者',0,0);hx.shadowBlur=10;hx.font=Math.round(H*.03)+'px sans-serif';hx.fillStyle='#ffb0b8';hx.fillText('最終魔王',0,H*.06);hx.restore()}
     if(t<2.6){hx.save();hx.globalAlpha=.75*Math.min(1,t/.5);hx.textAlign='center';hx.fillStyle='#ff8a94';hx.font='bold '+Math.round(H*.035)+'px sans-serif';hx.fillText('天空正在撕裂……',W/2,H*.78);hx.restore()}
     /* 鏡頭切換：淡出→淡入（黑場）、結尾淡出 */
@@ -1144,5 +1221,5 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   const bdrP=loadBossDragon().catch(err=>{BDR=null;console.warn('[soul] bigdragon.glb 載入失敗（'+BOSS_URL+'），魔王改用內建人形外型',err)});
   Promise.all([monP,dagP2,drgP,bdrP]).then(()=>{attachHeld();start.disabled=false;start.textContent='進入戰場'});
   start.onclick=begin;reset();last=performance.now();raf=requestAnimationFrame(loop);
-  window.__sa=()=>S;window.__sax={seek:t=>{while(S.intro&&S.intro.t<t)introUpdate(1/30)},hv:()=>{const I=BDR.inst();I.play('Idle',true);I.step(0);const o={nv:BDR.NV,cat:Array.from(BDR.cat),pos:Array.from(I.pos),ix:Array.from(BDR.IX),j:{}};['jaw_upper','jaw_lower','neck1','neck2','neck3','tongue','back1','back2'].forEach(n=>{const m=I.W[BDR.nid(n)];o.j[n]=[m[12],m[13],m[14]]});return o},head:e=>{const v=e.g.localToWorld(new THREE.Vector3(...e.mdl.head()));return[v.x,v.y,v.z]},cam:(y,p)=>{yaw=y;pit=p},cast,choose,selectPick,confirmPick,showPick,gainXp,spawn:edgeSpawn,begin,nextWave};window.__stop=cleanup;
+  window.__sa=()=>S;window.__sax={seek:t=>{while(S.intro&&S.intro.t<t)introUpdate(1/30)},hv:(an,tt)=>{const I=BDR.inst();I.play(an||'Idle',true);I.step(0);if(tt)for(let q=0;q<tt*30;q++)I.step(1/30);const o={nv:BDR.NV,cat:Array.from(BDR.cat),pos:Array.from(I.pos),ix:Array.from(BDR.IX),j:{}};['jaw_upper','jaw_lower','neck1','neck2','neck3','tongue','back1','back2'].forEach(n=>{const m=I.W[BDR.nid(n)];o.j[n]=[m[12],m[13],m[14]]});return o},head:e=>{const v=e.g.localToWorld(new THREE.Vector3(...e.mdl.head()));return[v.x,v.y,v.z]},cam:(y,p)=>{yaw=y;pit=p},cast,choose,selectPick,confirmPick,showPick,gainXp,spawn:edgeSpawn,begin,nextWave};window.__stop=cleanup;
 }
