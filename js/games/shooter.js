@@ -19,7 +19,7 @@ function mountShooter(stage,done){
   const RATE={base:.22,space:.14,power:.5,reality:.46,soul:.1,time:.09,mind:.32},CHG=.75;
   const MAXHP=2000;
   const DC_MAX=10;let HT=null;   /* 現實守衛的分身同時存在上限（分身不會消失，避免無限堆疊） */
-  const HEAL={power:350,space:350,reality:600,soul:600,time:850,mind:MAXHP};   /* 擊敗守衛、拾取寶石後的回血量 */
+  const HEAL={power:350,space:350,reality:635,soul:635,time:900,mind:MAXHP};   /* 擊敗守衛、拾取寶石後的回血量 */
   const hpf=$('hpf'),hpg=$('hpg'),hpt=$('hpt'),muteBtn=$('mute');
 
   /* ---------- 音效（Web Audio 合成，不需要音檔） ---------- */
