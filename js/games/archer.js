@@ -15,7 +15,7 @@ function mountArcher(stage,done){
     {id:'shield',n:'護盾',max:3,c:'#bff4ff',d:l=>'每 '+[14,10,7][l]+' 秒自動擋下一次傷害'},
     {id:'leech',n:'吸血',max:4,c:'#ff6a7a',d:l=>'造成傷害的 3% 轉為生命'},
     {id:'burn',n:'灼燒',max:4,c:'#ff9a3d',d:l=>'命中使敵人燃燒，每秒受傷提升'},
-    {id:'break',n:'破甲',max:4,c:'#ffcf6a',d:l=>'攻擊無視魔王 '+(l*20)+'% 的防禦力'},
+    {id:'break',n:'破甲',max:4,c:'#ffcf6a',d:l=>'魔王防禦力 -'+(l*5)+'%（每級 -5%，滿級 -20%）'},
     {id:'chain',n:'連鎖閃電',max:4,c:'#ffe680',d:l=>'命中有機率放出閃電，連鎖數 +1'},
     {id:'explode',n:'爆裂',max:4,c:'#ff7a5a',d:l=>'命中有機率爆炸，範圍與傷害提高'},
     {id:'thorns',n:'荊棘',max:3,c:'#a0ff9a',d:l=>'被敵人碰到時反傷並擊退'},
@@ -76,7 +76,7 @@ function mountArcher(stage,done){
   function dealt(e,d,crit,nop,quiet){
     if(e.hp<=0)return;const S=stt(),p=A.p;
     const az=crit&&A.evo.azure;
-    if(e.boss){const df=bossDef(mins()),ig=az?1:Math.min(1,.2*lv('break'));d*=1-df*(1-ig)}
+    if(e.boss){const df=az?0:Math.max(0,bossDef(mins())-.05*lv('break'));d*=1-df}
     e.hp-=d;e.fl=.1;if(!quiet)dnum(e.x,e.y-e.r,Math.round(d),crit?'#ffd52e':'#fff');
     if(S.leech)p.hp=Math.min(p.max,p.hp+d*S.leech);
     if(lv('burn'))e.burn={t:3,dps:4*lv('burn')};
