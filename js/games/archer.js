@@ -15,7 +15,7 @@ function mountArcher(stage,done){
     {id:'shield',n:'護盾',max:3,c:'#bff4ff',d:l=>'每 '+[14,10,7][l]+' 秒自動擋下一次傷害'},
     {id:'leech',n:'吸血',max:4,c:'#ff6a7a',d:l=>'造成傷害的 3% 轉為生命'},
     {id:'burn',n:'灼燒',max:4,c:'#ff9a3d',d:l=>'命中使敵人燃燒，每秒受傷提升'},
-    {id:'chill',n:'冰緩',max:4,c:'#8fe8ff',d:l=>'命中使敵人減速 '+(l*8+20)+'%'},
+    {id:'break',n:'破甲',max:4,c:'#ffcf6a',d:l=>'攻擊無視魔王 '+(l*20)+'% 的防禦力'},
     {id:'chain',n:'連鎖閃電',max:4,c:'#ffe680',d:l=>'命中有機率放出閃電，連鎖數 +1'},
     {id:'explode',n:'爆裂',max:4,c:'#ff7a5a',d:l=>'命中有機率爆炸，範圍與傷害提高'},
     {id:'thorns',n:'荊棘',max:3,c:'#a0ff9a',d:l=>'被敵人碰到時反傷並擊退'},
@@ -24,12 +24,12 @@ function mountArcher(stage,done){
     {id:'ricochet',n:'跳彈',max:3,c:'#9fffd0',d:l=>'子彈命中後彈向下一名敵人，+1 次'}];
   const UPB=Object.fromEntries(UP.map(u=>[u.id,u]));
   const EVO=[
-    {id:'fire',n:'火網',g:'紅',c:'#ff4a4a',need:{burn:2,explode:2},d:'爆炸會留下燃燒的地面'},
-    {id:'zero',n:'絕對零度',g:'藍',c:'#4aa8ff',need:{chill:2,crit:2},d:'暴擊會把敵人凍結 1 秒，被冰緩的敵人受到的暴擊 +50%'},
+    {id:'fire',n:'火網',g:'紅',c:'#ff4a4a',need:{burn:2,explode:2},d:'爆炸範圍擴大 35%'},
+    {id:'azure',n:'蒼穹裂擊',g:'藍',c:'#4aa8ff',need:{break:2,crit:2},d:'暴擊完全無視魔王防禦，並引發小型爆炸'},
     {id:'storm',n:'雷暴',g:'黃',c:'#ffe14a',need:{chain:2,atk:2},d:'閃電連鎖 +3，敵人死亡時也會放出閃電'},
     {id:'undying',n:'不死之身',g:'紫',c:'#b57aff',need:{leech:2,hp:2,shield:1},d:'致命傷害時復活一次，回復一半生命'},
     {id:'sun',n:'貫日',g:'橘',c:'#ff9a2a',need:{multi:2,pierce:2},d:'子彈額外穿透 1 名敵人，每穿透一名敵人傷害 +20%'},
-    {id:'venom',n:'毒荊棘',g:'綠',c:'#4ade6a',need:{thorns:2,regen:2},d:'被碰到時釋放毒霧：範圍傷害並使敵人中毒；再生效果 +50%'}];
+    {id:'venom',n:'毒荊棘',g:'綠',c:'#4ade6a',need:{thorns:2,regen:2},d:'被碰到時召喚毒藤蔓砸向附近敵人，中毒 3 秒（藤蔓砸下後迅速消失）；再生效果 +10%'}];
   const ET={
     zom:{n:'行屍',hp:16,sp:52,r:11,dm:8,xp:1,c:'#8aa87a',sc:10},
     run:{n:'疾行者',hp:8,sp:128,r:8,dm:5,xp:1,c:'#d6e06a',sc:12,from:.4},
@@ -59,7 +59,7 @@ function mountArcher(stage,done){
   const lv=id=>A.up[id]||0;
   const cm=()=>A&&EVO.every(ev=>A.evo[ev.id])?1.1:1;
   function stt(){return{
-    atk:15*(1+.2*lv('atk'))*cm(),rate:3.2*(1+.15*lv('rate'))*cm(),crit:.05+.1*lv('crit'),maxhp:Math.round((500+60*lv('hp'))*cm()),regen:1.6*lv('regen')*(A.evo.venom?1.5:1),sp:185*(1+.08*lv('speed')),
+    atk:15*(1+.2*lv('atk'))*cm(),rate:3.2*(1+.15*lv('rate'))*cm(),crit:.05+.1*lv('crit'),maxhp:Math.round((500+60*lv('hp'))*cm()),regen:1.6*lv('regen')*(A.evo.venom?1.1:1),sp:185*(1+.08*lv('speed')),
     mag:90,xpm:1+.2*lv('magnet'),dcd:3.6*Math.pow(.8,lv('dash')),ddist:130*(1+.15*lv('dash')),leech:.03*lv('leech')}}
   function begin(wp){
     A={wp:'gun',t:0,p:{mv:0,wk:0,fl:0,x:0,y:0,hp:500,max:500,inv:0,dash:0,dx:0,dy:-1,dcd:0,face:-PI/2,atk:.3,shT:0,sh:false,conf:0,slow:0,rg:0},up:{},evo:{},lvl:1,xp:0,need:8,score:0,kills:0,en:[],pb:[],eb:[],orbs:[],pa:[],dn:[],zn:[],fx:[],bl:{a:0},sp:0,bossN:0,bk:0,bosses:[],boss:null,pull:null,over:false,pick:null,shk:0,flash:0,bn:null,revived:false,hbT:0,mus:''};
@@ -75,18 +75,18 @@ function mountArcher(stage,done){
   /* —— 傷害 —— */
   function dealt(e,d,crit,nop,quiet){
     if(e.hp<=0)return;const S=stt(),p=A.p;
-    if(crit&&A.evo.zero&&e.chill>0)d*=1.5;
+    const az=crit&&A.evo.azure;
+    if(e.boss){const df=bossDef(mins()),ig=az?1:Math.min(1,.2*lv('break'));d*=1-df*(1-ig)}
     e.hp-=d;e.fl=.1;if(!quiet)dnum(e.x,e.y-e.r,Math.round(d),crit?'#ffd52e':'#fff');
     if(S.leech)p.hp=Math.min(p.max,p.hp+d*S.leech);
     if(lv('burn'))e.burn={t:3,dps:4*lv('burn')};
-    if(lv('chill')){e.chill=2.2;e.chillK=.2+.08*lv('chill')}
-    if(crit&&A.evo.zero)e.frz=1;
+    if(az&&!nop)explode(e.x,e.y,62,d*.35);
     if(nop)return;
     if(lv('chain')&&rnd()<.18+.05*lv('chain'))lightning(e,lv('chain')+(A.evo.storm?3:0),d*.6);
     if(lv('explode')&&rnd()<.1+.04*lv('explode')){const R=52+10*lv('explode');explode(e.x,e.y,R,d*.8)}
   }
-  function explode(x,y,R,d){ringFx(x,y,R,'#ff7a5a',.35);burst(x,y,'#ff9a5a',14,200);GA.noise(.12,.12,900);for(const o of A.en)if(Math.hypot(o.x-x,o.y-y)<R+o.r)dealt(o,d,false,true);
-    if(A.evo.fire)A.zn.push({k:'fire',x,y,r:R*.8,t:0,dur:4,tk:0})}
+  function explode(x,y,R,d){if(A.evo.fire)R*=1.35;ringFx(x,y,R,'#ff7a5a',.35);burst(x,y,'#ff9a5a',14,200);GA.noise(.12,.12,900);for(const o of A.en)if(Math.hypot(o.x-x,o.y-y)<R+o.r)dealt(o,d,false,true);
+}
   function lightning(from,n,d){let cur=from;const hit=[from];for(let i=0;i<n;i++){const b=nearest(cur.x,cur.y,170,e=>!hit.includes(e));if(!b)break;hit.push(b);boltFx(cur,b);dealt(b,d,false,true);cur=b}}
   function hurtP(d){const p=A.p;if(A.over||p.dash>0||p.inv>0)return false;
     if(p.sh){p.sh=false;p.shT=0;p.inv=.5;ringFx(p.x,p.y,40,'#bff4ff',.4);GA.tone(900,.15,'sine',.12);return false}
@@ -95,13 +95,13 @@ function mountArcher(stage,done){
   /* —— 敵人 —— */
   const mins=()=>A.t/60;
   /* 難度曲線：前 3 分鐘維持原樣，之後小兵血量與傷害階段性大幅上升 */
-  const hpMul=m=>(1+.24*m+.012*m*m+(m>3?1.1*(m-3)+.07*(m-3)*(m-3):0))*(1+.05*Math.floor(m)),bossF=m=>(m<3?.95:m<4?1:1.5)*(m>8?Math.pow(1.25,m-8):1);
+  const bossDef=m=>Math.min(.8,.06*Math.pow(1.28,m)),hpMul=m=>(1+.24*m+.012*m*m+(m>3?1.1*(m-3)+.07*(m-3)*(m-3):0))*(1+.05*Math.floor(m)),bossF=m=>(m<3?.95:m<4?1:1.5)*(m>8?Math.pow(1.25,m-8):1);
   const dmMul=m=>1+.04*m+(m>3?.25*(m-3)+.008*(m-3)*(m-3):0);
   const BOSS_EVERY=60;
   function spawnEn(t,x,y,boss){
     const d=ET[t],m=mins(),hm=hpMul(m)*.92*(m>=7?1.5:1);
     const e={t,x,y,hp:d.hp*hm,max:d.hp*hm,sp:d.sp*(1+.02*Math.min(m,10)),r:d.r,dm:d.dm*dmMul(m)*.92*(m>=7?1.3:1),c:d.c,cd:1+rnd()*3,fl:0,kx:0,ky:0,stop:0,ph:rnd()*6,chill:0,frz:0,burn:null,big:false,ang:0,gem:KEYS.includes(t)};
-    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3000*(1+.3*(A.bossN-1))*(1+.2*m)*(1+(m>3?.3*(m-3)+.02*(m-3)*(m-3):0))*bossF(m)*(1+.05*Math.floor(m));e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=19*dmMul(m)*(m>=3?1.8:1);e.cd=2;e.stop=0}
+    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3000*(1+.3*(A.bossN-1))*(1+.2*m)*(1+(m>3?.3*(m-3)+.02*(m-3)*(m-3):0))*bossF(m)*(1+.05*Math.floor(m));e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=19*dmMul(m)*(m>=3?1.8:1)*(m>=5?1.4:1);e.cd=2;e.stop=0}
     A.en.push(e);return e;
   }
   function spawnWave(dt){
@@ -119,7 +119,7 @@ function mountArcher(stage,done){
   const SKE={pow:['meteor'],spc:[],rea:[],sou:['rift'],tim:[],min:[]};
   const BM=.85,adf=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
   function bossAI(e,dt,dd){
-    const p=A.p,k=e.t,aim=Math.atan2(p.y-e.y,p.x-e.x),col=e.c,rage=e.hp<e.max*.5,hd=A.t>=240,en=rage||hd,BF=A.t>=180?1.9:1,SF=(hd?1.18:1)*(rage?1.08:1),CF=hd?.7:1;
+    const p=A.p,k=e.t,aim=Math.atan2(p.y-e.y,p.x-e.x),col=e.c,rage=e.hp<e.max*.5,hd=A.t>=240,en=rage||hd,BF=(A.t>=180?1.9:1)*(A.t>=300?1.45:1),SF=(hd?1.18:1)*(rage?1.08:1),CF=hd?.7:1;
     if(rage&&!e.enr){e.enr=1;ringFx(e.x,e.y,320,col,.7);A.shk=Math.max(A.shk,.4);A.bn={s:BN[KEYS.indexOf(k)]+'・狂暴',t:2};GA.noise(.5,.3,150)}
     const sh=(a,sp,dm,o)=>eshot(e.x,e.y,a,sp*SF,Math.round(dm*BM*BF),col,o);
     e.cd-=dt;e.pc=(e.pc==null?2.5:e.pc)-dt;e.ht=(e.ht==null?0:e.ht)-dt;
@@ -214,6 +214,7 @@ function mountArcher(stage,done){
   }
   function enemyUpdate(e,dt){
     const p=A.p;e.fl=Math.max(0,e.fl-dt);e.chill=Math.max(0,e.chill-dt);
+    if(e.pois){e.pois.t-=dt;e.hp-=e.pois.dps*dt;if(e.pois.t<=0)e.pois=null}
     if(e.burn){e.burn.t-=dt;e.hp-=e.burn.dps*dt;if(e.burn.t<=0)e.burn=null}
     e.x+=e.kx*dt;e.y+=e.ky*dt;const kd=Math.pow(.03,dt);e.kx*=kd;e.ky*=kd;
     if(e.frz>0){e.frz-=dt;return}
@@ -223,8 +224,8 @@ function mountArcher(stage,done){
     if(e.dashT>0){e.ang=e.da;e.x+=Math.cos(e.da)*520*dt;e.y+=Math.sin(e.da)*520*dt}
     else if(e.stop>0){e.stop-=dt}
     else{let mv=1;if((e.t==='spc'||e.t==='min'||e.t==='sou'||e.t==='spt')&&dd<(e.big?260:190))mv=dd<(e.big?200:140)?-.5:0;if(e.vol>0)mv=0;
-      let s=e.sp*mv*(e.chill>0?1-(e.chillK||.3):1);if(e.t==='run'){const z=Math.sin(A.t*5+e.ph)*.5;e.x+=-dy/dd*s*z*dt;e.y+=dx/dd*s*z*dt}e.x+=dx/dd*s*dt;e.y+=dy/dd*s*dt}
-    if(e.dm>0&&dd<e.r+12){const cdm=e.dashT>0?e.dm*1.8:e.dm;if(hurtP(cdm)||p.inv>0){}if(lv('thorns')&&!e.thT){e.thT=.5;if(A.evo.venom){ringFx(p.x,p.y,110,'#4ade6a',.5);burst(p.x,p.y,'#4ade6a',14,180);for(const o of A.en)if(o.hp>0&&Math.hypot(o.x-p.x,o.y-p.y)<110+o.r){dealt(o,12*lv('thorns'),false,true,true);o.burn={t:4,dps:10+6*lv('thorns')}}}dealt(e,10*lv('thorns'),false,true);e.kx-=dx/dd*260;e.ky-=dy/dd*260}}
+      let s=e.sp*mv;if(e.t==='run'){const z=Math.sin(A.t*5+e.ph)*.5;e.x+=-dy/dd*s*z*dt;e.y+=dx/dd*s*z*dt}e.x+=dx/dd*s*dt;e.y+=dy/dd*s*dt}
+    if(e.dm>0&&dd<e.r+12){const cdm=e.dashT>0?e.dm*1.8:e.dm;if(hurtP(cdm)||p.inv>0){}if(lv('thorns')&&!e.thT){e.thT=.5;if(A.evo.venom){const vt=A.en.filter(o=>o.hp>0&&Math.hypot(o.x-p.x,o.y-p.y)<300).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y)).slice(0,3+lv('thorns'));for(const o of vt){A.fx.push({k:'vine',x:o.x,y:o.y,t:0,l:.4,ph:rnd()*6});dealt(o,14*lv('thorns'),false,true,true);o.pois={t:3,dps:10+6*lv('thorns')}}if(vt.length){burst(p.x,p.y,'#4ade6a',8,120);GA.tone(180,.12,'triangle',.07,.5)}}dealt(e,10*lv('thorns'),false,true);e.kx-=dx/dd*260;e.ky-=dy/dd*260}}
     if(e.thT)e.thT=Math.max(0,e.thT-dt)||0;
   }
   function killE(e){
@@ -393,7 +394,7 @@ function mountArcher(stage,done){
     ctx.shadowBlur=0;
     if(en){ctx.strokeStyle='rgba(255,60,60,'+(.35+.25*Math.sin(T*8))+')';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,r*1.2+4*Math.sin(T*6),0,TAU);ctx.stroke()}
     if(e.frz>0){ctx.fillStyle='rgba(150,230,255,.55)';ctx.beginPath();ctx.arc(0,0,r+2,0,TAU);ctx.fill()}
-    else if(e.chill>0){ctx.strokeStyle='rgba(150,230,255,.8)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,r+3,0,TAU);ctx.stroke()}
+    else if(e.chill>0){ctx.strokeStyle='rgba(255,200,80,.85)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,r+3,0,TAU);ctx.stroke()}
     if(e.burn){ctx.fillStyle='rgba(255,140,40,.7)';ctx.beginPath();ctx.arc((rnd()-.5)*r,-r*.6-rnd()*5,3,0,TAU);ctx.fill()}
     ctx.restore();
     if(e.warn>0){ctx.save();ctx.strokeStyle='rgba(255,70,50,.55)';ctx.lineWidth=e.r*1.2;ctx.setLineDash([10,8]);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(e.da)*420,e.y+Math.sin(e.da)*420);ctx.stroke();ctx.restore()}
@@ -489,7 +490,7 @@ function mountArcher(stage,done){
     if(e.big){ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.beginPath();ctx.arc(0,0,r+10+3*Math.sin(T*4),0,TAU);ctx.stroke();ctx.setLineDash([])}
     ctx.rotate(-(e.ang||0));
     if(e.frz>0){ctx.fillStyle='rgba(150,230,255,.55)';ctx.beginPath();ctx.arc(0,0,r+2,0,TAU);ctx.fill()}
-    else if(e.chill>0){ctx.strokeStyle='rgba(150,230,255,.8)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,r+3,0,TAU);ctx.stroke()}
+    else if(e.chill>0){ctx.strokeStyle='rgba(255,200,80,.85)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,r+3,0,TAU);ctx.stroke()}
     if(e.burn){ctx.fillStyle='rgba(255,140,40,.7)';ctx.beginPath();ctx.arc((Math.random()-.5)*r,-r*.6-Math.random()*5,3,0,TAU);ctx.fill()}
     ctx.restore();
     if(e.warn>0){ctx.save();ctx.strokeStyle='rgba(255,70,50,.55)';ctx.lineWidth=e.r*1.2;ctx.setLineDash([10,8]);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(e.da)*300,e.y+Math.sin(e.da)*300);ctx.stroke();ctx.restore()}
@@ -553,6 +554,7 @@ function mountArcher(stage,done){
       if(p.conf>0){ctx.fillStyle='#ffd52e';ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillText('? ?',p.x,p.y-32)}}
     for(const f of A.fx){const k=f.t/f.l;ctx.save();
       if(f.k==='ring'){ctx.globalAlpha=1-k;ctx.strokeStyle=f.c;ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,f.r*k,0,TAU);ctx.stroke()}
+      else if(f.k==='vine'){const k=f.t/f.l,dr=Math.min(1,k/.35),al=k<.35?1:Math.max(0,1-(k-.35)/.65);ctx.globalAlpha=al;ctx.lineCap='round';for(let v=0;v<3;v++){const bx=f.x+(v-1)*9;ctx.strokeStyle=v===1?'#2c9e4b':'#4ade6a';ctx.lineWidth=7-v;ctx.beginPath();ctx.moveTo(bx+Math.sin(f.ph+v)*14,f.y-190);for(let q=1;q<=6;q++){const yy=f.y-190+(q/6)*190*dr;ctx.lineTo(bx+Math.sin(f.ph+v+q*1.3)*(14-q*2),yy)}ctx.stroke()}if(k>.3&&k<.6){ctx.strokeStyle='#4ade6a';ctx.globalAlpha=.6*(1-(k-.3)/.3);ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,10+(k-.3)*120,0,TAU);ctx.stroke()}}
       else if(f.k==='bolt'){ctx.globalAlpha=1-k;ctx.strokeStyle=f.c;ctx.lineWidth=2.5;ctx.shadowColor=f.c;ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(f.a.x,f.a.y);for(let i=1;i<6;i++){const u=i/6;ctx.lineTo(f.a.x+(f.b.x-f.a.x)*u+(Math.random()-.5)*14,f.a.y+(f.b.y-f.a.y)*u+(Math.random()-.5)*14)}ctx.lineTo(f.b.x,f.b.y);ctx.stroke()}
       else if(f.k==='slash'){ctx.globalAlpha=.9*(1-k);ctx.strokeStyle='#e6f0ff';ctx.shadowColor='#8fd3ff';ctx.shadowBlur=14;ctx.lineWidth=7*(1-k)+1;ctx.beginPath();ctx.arc(f.x,f.y,f.R*(.75+.25*k),f.a-f.half,f.a+f.half);ctx.stroke()}
       ctx.restore()}
