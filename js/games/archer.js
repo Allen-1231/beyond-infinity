@@ -1,6 +1,6 @@
 /* ===== 遊戲 1：無限寶石：生存戰（力量寶石）——Roguelite 生存。你只有一把槍或一把刀，敵人才擁有寶石的力量；每升一級選一種強化，慢慢組成自己的流派 ===== */
 function mountArcher(stage,done){
-  const W=1200,H=600,dpr=Math.min(devicePixelRatio||1,2),PI=Math.PI,TAU=PI*2,rnd=Math.random,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const W=1200,H=675,dpr=Math.min(devicePixelRatio||1,2),PI=Math.PI,TAU=PI*2,rnd=Math.random,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const GC=['#a24bff','#2f7bff','#ff3b3b','#ff9a1f','#2fe07a','#ffd52e'];
   /* —— 強化（全部適用突擊步槍） —— */
   const UP=[
@@ -11,7 +11,7 @@ function mountArcher(stage,done){
     {id:'regen',n:'再生',max:4,c:'#9be84a',d:l=>'每秒回復 +1.6 生命'},
     {id:'speed',n:'疾行',max:4,c:'#9fe8ff',d:l=>'移動速度 +8%'},
     {id:'magnet',n:'求知',max:3,c:'#c9a6ff',d:l=>'經驗獲得 +20%'},
-    {id:'dash',n:'迅影',max:3,c:'#b9a6ff',d:l=>'衝刺冷卻 -20%，衝刺距離 +15%'},
+    {id:'dash',n:'迅影',max:3,c:'#b9a6ff',d:l=>'儲存槽回充 -20%，衝刺距離 +15%'},
     {id:'shield',n:'護盾',max:3,c:'#bff4ff',d:l=>'每 '+[14,10,7][l]+' 秒自動擋下一次傷害'},
     {id:'leech',n:'吸血',max:4,c:'#ff6a7a',d:l=>'造成傷害的 3% 轉為生命'},
     {id:'burn',n:'灼燒',max:4,c:'#ff9a3d',d:l=>'命中使敵人燃燒，每秒受傷提升'},
@@ -19,15 +19,17 @@ function mountArcher(stage,done){
     {id:'chain',n:'連鎖閃電',max:4,c:'#ffe680',d:l=>'命中有機率放出閃電，連鎖數 +1'},
     {id:'explode',n:'爆裂',max:4,c:'#ff7a5a',d:l=>'命中有機率爆炸，範圍與傷害提高'},
     {id:'thorns',n:'荊棘',max:3,c:'#a0ff9a',d:l=>'被敵人碰到時反傷並擊退'},
-    {id:'multi',n:'多重槍口',max:3,c:'#8fd3ff',d:l=>'每次多射 1 發'},
+    {id:'multi',n:'多重槍口',max:3,c:'#8fd3ff',d:l=>l>=3?'平行多射 +1（滿級：黑金破甲彈）':'每次多射 1 發（直向平行）'},
     {id:'pierce',n:'穿甲彈',max:4,c:'#b9a6ff',d:l=>'子彈再穿透 1 名敵人'},
     {id:'ricochet',n:'跳彈',max:3,c:'#9fffd0',d:l=>'子彈命中後彈向下一名敵人，+1 次'}];
   const UPB=Object.fromEntries(UP.map(u=>[u.id,u]));
   const EVO=[
-    {id:'fire',n:'火網',c:'#ff7a3a',need:{burn:2,explode:2},d:'爆炸會留下燃燒的地面'},
-    {id:'zero',n:'絕對零度',c:'#8fe8ff',need:{chill:2,crit:2},d:'暴擊會把敵人凍結 1 秒，被冰緩的敵人受到的暴擊 +50%'},
-    {id:'storm',n:'雷暴',c:'#ffe680',need:{chain:2,atk:2},d:'閃電連鎖 +3，敵人死亡時也會放出閃電'},
-    {id:'undying',n:'不死之身',c:'#6dff9a',need:{leech:2,hp:2,shield:1},d:'致命傷害時復活一次，回復一半生命'}];
+    {id:'fire',n:'火網',g:'紅',c:'#ff4a4a',need:{burn:2,explode:2},d:'爆炸會留下燃燒的地面'},
+    {id:'zero',n:'絕對零度',g:'藍',c:'#4aa8ff',need:{chill:2,crit:2},d:'暴擊會把敵人凍結 1 秒，被冰緩的敵人受到的暴擊 +50%'},
+    {id:'storm',n:'雷暴',g:'黃',c:'#ffe14a',need:{chain:2,atk:2},d:'閃電連鎖 +3，敵人死亡時也會放出閃電'},
+    {id:'undying',n:'不死之身',g:'紫',c:'#b57aff',need:{leech:2,hp:2,shield:1},d:'致命傷害時復活一次，回復一半生命'},
+    {id:'sun',n:'貫日',g:'橘',c:'#ff9a2a',need:{multi:2,pierce:2},d:'子彈額外穿透 1 名敵人，每穿透一名敵人傷害 +20%'},
+    {id:'venom',n:'毒荊棘',g:'綠',c:'#4ade6a',need:{thorns:2,regen:2},d:'被碰到時釋放毒霧：範圍傷害並使敵人中毒；再生效果 +50%'}];
   const ET={
     zom:{n:'行屍',hp:16,sp:52,r:11,dm:8,xp:1,c:'#8aa87a',sc:10},
     run:{n:'疾行者',hp:8,sp:128,r:8,dm:5,xp:1,c:'#d6e06a',sc:12,from:.4},
@@ -51,13 +53,13 @@ function mountArcher(stage,done){
   const startB=h('button',{class:'btn',type:'button'},'開始戰鬥');startB.onclick=()=>begin('gun');
   const ov=h('div',{class:'ty-ov'},h('div',{class:'ty-t',style:'color:#c9a6ff'},'無限寶石：生存戰'),
     h('p',{},'敵人無窮無盡，每一分鐘皆有 Boss，存活越久越多分數！'),startB);
-  stage.append(hud,h('div',{class:'ty-wrap'},cv,ov,pickBox),chips,h('div',{class:'hint'},'WASD／方向鍵／拖曳 移動　・　空白鍵 衝刺（無敵）　・　自動瞄準射擊　・　升級時按 1–3 或點選強化'));
+  stage.append(hud,h('div',{class:'ty-wrap'},cv,ov,pickBox),chips,h('div',{class:'hint'},'WASD／方向鍵／拖曳 移動　・　空白鍵 衝刺（無敵・儲存槽最多 3 次）　・　自動瞄準射擊　・　升級時按 1–3 或點選強化'));
   const ctx=cv.getContext('2d');ctx.setTransform(cv.width/W,0,0,cv.height/H,0,0);
   let A=null,raf=0,last=0;const keys={},joy={on:false,ox:0,oy:0,x:0,y:0};
   const lv=id=>A.up[id]||0;
   function stt(){return{
-    atk:15*(1+.2*lv('atk')),rate:3.2*(1+.15*lv('rate')),crit:.05+.1*lv('crit'),maxhp:500+60*lv('hp'),regen:1.6*lv('regen'),sp:185*(1+.08*lv('speed')),
-    mag:90,xpm:1+.2*lv('magnet'),dcd:3*Math.pow(.8,lv('dash')),ddist:130*(1+.15*lv('dash')),leech:.03*lv('leech')}}
+    atk:15*(1+.2*lv('atk')),rate:3.2*(1+.15*lv('rate')),crit:.05+.1*lv('crit'),maxhp:500+60*lv('hp'),regen:1.6*lv('regen')*(A.evo.venom?1.5:1),sp:185*(1+.08*lv('speed')),
+    mag:90,xpm:1+.2*lv('magnet'),dcd:3.6*Math.pow(.8,lv('dash')),ddist:130*(1+.15*lv('dash')),leech:.03*lv('leech')}}
   function begin(wp){
     A={wp:'gun',t:0,p:{mv:0,wk:0,fl:0,x:0,y:0,hp:500,max:500,inv:0,dash:0,dx:0,dy:-1,dcd:0,face:-PI/2,atk:.3,shT:0,sh:false,conf:0,slow:0,rg:0},up:{},evo:{},lvl:1,xp:0,need:8,score:0,kills:0,en:[],pb:[],eb:[],orbs:[],pa:[],dn:[],zn:[],fx:[],bl:{a:0},sp:0,bossN:0,bk:0,bosses:[],boss:null,pull:null,over:false,pick:null,shk:0,flash:0,bn:null,revived:false,hbT:0,mus:''};
     ov.hidden=true;pickBox.hidden=true;chips.textContent='';GA.ctx();GA.music('archer',()=>stage.isConnected&&A&&!A.over);
@@ -92,13 +94,13 @@ function mountArcher(stage,done){
   /* —— 敵人 —— */
   const mins=()=>A.t/60;
   /* 難度曲線：前 3 分鐘維持原樣，之後小兵血量與傷害階段性大幅上升 */
-  const hpMul=m=>1+.24*m+.012*m*m+(m>3?1.1*(m-3)+.07*(m-3)*(m-3):0);
+  const hpMul=m=>(1+.24*m+.012*m*m+(m>3?1.1*(m-3)+.07*(m-3)*(m-3):0))*(1+.05*Math.floor(m)),bossF=m=>m<3?.95:m<4?1:1.5;
   const dmMul=m=>1+.04*m+(m>3?.25*(m-3)+.008*(m-3)*(m-3):0);
   const BOSS_EVERY=60;
   function spawnEn(t,x,y,boss){
     const d=ET[t],m=mins(),hm=hpMul(m)*.92;
     const e={t,x,y,hp:d.hp*hm,max:d.hp*hm,sp:d.sp*(1+.02*Math.min(m,10)),r:d.r,dm:d.dm*dmMul(m)*.92,c:d.c,cd:1+rnd()*3,fl:0,kx:0,ky:0,stop:0,ph:rnd()*6,chill:0,frz:0,burn:null,big:false,ang:0,gem:KEYS.includes(t)};
-    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3000*(1+.3*(A.bossN-1))*(1+.2*m)*(1+(m>3?.3*(m-3)+.02*(m-3)*(m-3):0));e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=19*dmMul(m);e.cd=2;e.stop=0}
+    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3000*(1+.3*(A.bossN-1))*(1+.2*m)*(1+(m>3?.3*(m-3)+.02*(m-3)*(m-3):0))*bossF(m)*(1+.05*Math.floor(m));e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=19*dmMul(m);e.cd=2;e.stop=0}
     A.en.push(e);return e;
   }
   function spawnWave(dt){
@@ -206,7 +208,7 @@ function mountArcher(stage,done){
     else if(e.stop>0){e.stop-=dt}
     else{let mv=1;if((e.t==='spc'||e.t==='min'||e.t==='sou'||e.t==='spt')&&dd<(e.big?260:190))mv=dd<(e.big?200:140)?-.5:0;if(e.vol>0)mv=0;
       let s=e.sp*mv*(e.chill>0?1-(e.chillK||.3):1);if(e.t==='run'){const z=Math.sin(A.t*5+e.ph)*.5;e.x+=-dy/dd*s*z*dt;e.y+=dx/dd*s*z*dt}e.x+=dx/dd*s*dt;e.y+=dy/dd*s*dt}
-    if(e.dm>0&&dd<e.r+12){const cdm=e.dashT>0?e.dm*1.8:e.dm;if(hurtP(cdm)||p.inv>0){}if(lv('thorns')&&!e.thT){e.thT=.5;dealt(e,10*lv('thorns'),false,true);e.kx-=dx/dd*260;e.ky-=dy/dd*260}}
+    if(e.dm>0&&dd<e.r+12){const cdm=e.dashT>0?e.dm*1.8:e.dm;if(hurtP(cdm)||p.inv>0){}if(lv('thorns')&&!e.thT){e.thT=.5;if(A.evo.venom){ringFx(p.x,p.y,110,'#4ade6a',.5);burst(p.x,p.y,'#4ade6a',14,180);for(const o of A.en)if(o.hp>0&&Math.hypot(o.x-p.x,o.y-p.y)<110+o.r){dealt(o,12*lv('thorns'),false,true,true);o.burn={t:4,dps:10+6*lv('thorns')}}}dealt(e,10*lv('thorns'),false,true);e.kx-=dx/dd*260;e.ky-=dy/dd*260}}
     if(e.thT)e.thT=Math.max(0,e.thT-dt)||0;
   }
   function killE(e){
@@ -219,9 +221,9 @@ function mountArcher(stage,done){
     if(e.boss){A.bk++;A.p.hp=Math.min(A.p.max,A.p.hp+A.p.max*.4);A.bn={s:'守衛倒下',t:2};ringFx(e.x,e.y,260,e.c,.7);A.shk=.5}
   }
   /* —— 玩家 —— */
-  function fireGun(S){const p=A.p,t=nearest(p.x,p.y,520);if(!t)return false;const a=Math.atan2(t.y-p.y,t.x-p.x);p.face=a;p.fl=.07;const n=1+lv('multi');
-    for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*.13+(rnd()-.5)*.03,crit=rnd()<S.crit;A.pb.push({x:p.x+Math.cos(a)*40,y:p.y+Math.sin(a)*40,vx:Math.cos(aa)*620,vy:Math.sin(aa)*620,d:S.atk*(crit?2:1),crit,pi:lv('pierce'),rc:lv('ricochet'),l:1,hit:[],c:crit?'#ffd52e':'#ffe8a8',r:4})}
-    GA.tone(240+rnd()*40,.04,'square',.04,.4);return true}
+  function fireGun(S){const p=A.p,t=nearest(p.x,p.y,520);if(!t)return false;const a=Math.atan2(t.y-p.y,t.x-p.x);p.face=a;p.fl=.07;const n=1+lv('multi'),mx=lv('multi')>=3,nx=-Math.sin(a),ny=Math.cos(a);
+    for(let i=0;i<n;i++){const off=(i-(n-1)/2)*(mx?13:11),crit=rnd()<S.crit;A.pb.push({x:p.x+Math.cos(a)*40+nx*off,y:p.y+Math.sin(a)*40+ny*off,vx:Math.cos(a)*(mx?680:620),vy:Math.sin(a)*(mx?680:620),d:S.atk*(crit?2:1)*(mx?1.15:1),crit,mx,pi:lv('pierce')+(mx?1:0)+(A.evo.sun?1:0),rc:lv('ricochet'),l:1,hit:[],c:mx?(crit?'#ffc400':'#b8860b'):crit?'#ffd52e':'#ffe8a8',r:mx?6:4})}
+    if(mx){GA.tone(95+rnd()*15,.11,'sawtooth',.07,.45);GA.tone(190,.05,'square',.04,.5);GA.noise(.06,.07,1100)}else GA.tone(240+rnd()*40,.04,'square',.04,.4);return true}
   function gainXp(v){A.xp+=v;while(!A.pick&&A.xp>=A.need){A.xp-=A.need;A.lvl++;A.need=8+A.lvl*4;showPick()}}
   function choices(){
     const pool=[];for(const u of UP){if(u.w&&u.w!==A.wp)continue;if(lv(u.id)>=u.max)continue;let w=1;
@@ -257,7 +259,9 @@ function mountArcher(stage,done){
     let ix=0,iy=0;if(keys.a||keys.arrowleft)ix--;if(keys.d||keys.arrowright)ix++;if(keys.w||keys.arrowup)iy--;if(keys.s||keys.arrowdown)iy++;if(joy.on){ix=joy.x;iy=joy.y}
     const l=Math.hypot(ix,iy);if(l>1){ix/=l;iy/=l}if(l>.1){p.dx=ix;p.dy=iy}
     if(p.conf>0){p.conf-=dt;ix=-ix;iy=-iy}
-    if(keys[' ']&&p.dcd<=0&&p.dash<=0){const dl=Math.hypot(p.dx,p.dy)||1;p.ddx=p.dx/dl;p.ddy=p.dy/dl;p.dash=.16;p.dcd=S.dcd;GA.noise(.12,.15,4000,0,true);ringFx(p.x,p.y,30,'#c9a6ff',.3)}
+    if(p.dch==null)p.dch=3;if(p.dch<3&&p.dcd<=0){p.dch++;p.dcd=p.dch<3?S.dcd:0}
+    if(keys[' ']&&!p.dh&&p.dch>0&&p.dash<=0){if(p.dch>=3)p.dcd=S.dcd;p.dch--;const dl=Math.hypot(p.dx,p.dy)||1;p.ddx=p.dx/dl;p.ddy=p.dy/dl;p.dash=.16;GA.noise(.12,.15,4000,0,true);ringFx(p.x,p.y,30,'#c9a6ff',.3)}
+    p.dh=!!keys[' '];
     if(p.dash>0){p.dash-=dt;p.x+=p.ddx*S.ddist/.16*dt;p.y+=p.ddy*S.ddist/.16*dt;A.pa.push({x:p.x,y:p.y,vx:0,vy:0,l:.25,m:.25,c:'#c9a6ff'})}
     else{const k=p.slow>0?.45:1;p.x+=ix*S.sp*k*dt;p.y+=iy*S.sp*k*dt}
     if(p.kx){p.x+=p.kx*dt;p.y+=p.ky*dt;p.kx*=Math.pow(.02,dt);p.ky*=Math.pow(.02,dt)}
@@ -276,7 +280,7 @@ function mountArcher(stage,done){
      for(const e of A.en){const cx=Math.floor(e.x/40),cy=Math.floor(e.y/40);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const c=g.get((cx+a)+','+(cy+b));if(!c)continue;for(const o of c){if(o===e)continue;const dx=e.x-o.x,dy=e.y-o.y,d=Math.hypot(dx,dy),m=(e.r+o.r)*.8;if(d<m&&d>.01){const f=(m-d)*.3*(e.boss?.1:1);e.x+=dx/d*f;e.y+=dy/d*f}}}}}
     /* 子彈 */
     A.pb=A.pb.filter(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;b.l-=dt;if(b.l<=0)return false;
-      for(const e of A.en){if(e.hp<=0||b.hit.includes(e))continue;if(Math.hypot(e.x-b.x,e.y-b.y)<e.r+b.r){b.hit.push(e);dealt(e,b.d,b.crit);
+      for(const e of A.en){if(e.hp<=0||b.hit.includes(e))continue;if(Math.hypot(e.x-b.x,e.y-b.y)<e.r+b.r){b.hit.push(e);dealt(e,b.d,b.crit);if(A.evo.sun)b.d*=1.2;
         if(b.rc>0){b.rc--;const n=nearest(e.x,e.y,260,o=>!b.hit.includes(o));if(n){const a=Math.atan2(n.y-e.y,n.x-e.x),sp=Math.hypot(b.vx,b.vy);b.vx=Math.cos(a)*sp;b.vy=Math.sin(a)*sp;b.l=Math.max(b.l,.5);b.x=e.x;b.y=e.y;return true}}
         if(--b.pi<0)return false}}return true});
     A.eb=A.eb.filter(b=>{if(b.hold>0){b.hold-=dt;if(b.hold>0)return Math.hypot(b.x-p.x,b.y-p.y)>=b.r+9||(hurtP(b.dm),false);if(b.v2){const a=Math.atan2(p.y-b.y,p.x-b.x);b.vx=Math.cos(a)*b.v2;b.vy=Math.sin(a)*b.v2}}
@@ -519,9 +523,10 @@ function mountArcher(stage,done){
     for(const o of A.orbs){ctx.fillStyle=o.c;ctx.shadowColor=o.c;ctx.shadowBlur=8;ctx.beginPath();if(o.k==='h'){ctx.arc(o.x,o.y,6,0,TAU)}else{ctx.moveTo(o.x,o.y-5);ctx.lineTo(o.x+4,o.y);ctx.lineTo(o.x,o.y+5);ctx.lineTo(o.x-4,o.y)}ctx.fill()}ctx.shadowBlur=0;
     for(const e of A.en)drawEnemy(e,T);
     for(const b of A.eb){ctx.fillStyle=b.c;ctx.shadowColor=b.c;ctx.shadowBlur=10;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x,b.y,b.r*.4,0,TAU);ctx.fill()}ctx.shadowBlur=0;
-    for(const b of A.pb){ctx.shadowColor=b.c;ctx.shadowBlur=8;ctx.strokeStyle=b.c;ctx.lineCap='round';const sp=Math.hypot(b.vx,b.vy)||1;ctx.lineWidth=b.r*1.1;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-b.vx/sp*16,b.y-b.vy/sp*16);ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x,b.y,b.r*.6,0,TAU);ctx.fill()}ctx.shadowBlur=0;
+    for(const b of A.pb){if(b.mx){const an=Math.atan2(b.vy,b.vx);ctx.save();ctx.translate(b.x,b.y);ctx.rotate(an);ctx.shadowColor='#e0a800';ctx.shadowBlur=14;ctx.fillStyle='rgba(224,168,0,.35)';ctx.beginPath();ctx.moveTo(-6,0);ctx.lineTo(-34,-4);ctx.lineTo(-26,0);ctx.lineTo(-34,4);ctx.closePath();ctx.fill();ctx.fillStyle='#0b0905';ctx.strokeStyle=b.crit?'#ffd21a':'#c28a00';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(2,-6);ctx.lineTo(-6,-9);ctx.lineTo(-12,-3);ctx.lineTo(-12,3);ctx.lineTo(-6,9);ctx.lineTo(2,6);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#e0a800';ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-2,-2.5);ctx.lineTo(-2,2.5);ctx.closePath();ctx.fill();ctx.restore();continue}ctx.shadowColor=b.c;ctx.shadowBlur=8;ctx.strokeStyle=b.c;ctx.lineCap='round';const sp=Math.hypot(b.vx,b.vy)||1;ctx.lineWidth=b.r*1.1;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-b.vx/sp*16,b.y-b.vy/sp*16);ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x,b.y,b.r*.6,0,TAU);ctx.fill()}ctx.shadowBlur=0;
     /* 玩家 */
     if(!(p.inv>0&&Math.floor(T*16)%2)){drawPlayer(p,T);
+      {const gs=EVO.filter(ev=>A.evo[ev.id]);gs.forEach((ev,i)=>{const an=T*2+i*TAU/gs.length,gx=p.x+Math.cos(an)*30,gy=p.y-8+Math.sin(an)*11,sz=5+(Math.sin(an)>0?1.5:0);ctx.save();ctx.translate(gx,gy);ctx.shadowColor=ev.c;ctx.shadowBlur=12;ctx.fillStyle=ev.c;ctx.beginPath();ctx.moveTo(0,-sz-2);ctx.lineTo(sz,0);ctx.lineTo(0,sz+2);ctx.lineTo(-sz,0);ctx.closePath();ctx.fill();ctx.fillStyle='rgba(255,255,255,.75)';ctx.beginPath();ctx.moveTo(0,-sz-2);ctx.lineTo(sz*.5,-1);ctx.lineTo(0,1);ctx.lineTo(-sz*.5,-1);ctx.closePath();ctx.fill();ctx.restore()})}
       if(p.sh){ctx.strokeStyle='rgba(191,244,255,.8)';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(p.x,p.y,24,0,TAU);ctx.stroke()}
       if(p.slow>0){ctx.strokeStyle='rgba(47,224,122,.8)';ctx.setLineDash([3,4]);ctx.beginPath();ctx.arc(p.x,p.y,30,0,TAU);ctx.stroke();ctx.setLineDash([])}
       if(p.conf>0){ctx.fillStyle='#ffd52e';ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillText('? ?',p.x,p.y-32)}}
@@ -537,7 +542,7 @@ function mountArcher(stage,done){
     if(A.flash>0){ctx.fillStyle='rgba(255,40,70,'+Math.min(.3,A.flash)+')';ctx.fillRect(0,0,W,H)}
     ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,0,W,7);ctx.fillStyle='#8fd3ff';ctx.fillRect(0,0,W*Math.min(1,A.xp/A.need),7);
     ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(14,H-30,200,14);const pc=Math.max(0,p.hp/p.max);ctx.fillStyle=pc>.5?'#2fe07a':pc>.25?'#ffb020':'#ff3b3b';ctx.fillRect(14,H-30,200*pc,14);ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';ctx.textAlign='left';ctx.fillText(Math.ceil(p.hp)+' / '+p.max,18,H-19);
-    const dk=1-p.dcd/stt().dcd;ctx.strokeStyle='#c9a6ff';ctx.lineWidth=3;ctx.globalAlpha=p.dcd>0?.4:1;ctx.beginPath();ctx.arc(W-30,H-30,12,-PI/2,-PI/2+TAU*clamp(dk,0,1));ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle='#c9a6ff';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('空白',W-30,H-8);
+    {const dk=1-clamp(p.dcd/stt().dcd,0,1),ch=p.dch==null?3:p.dch;ctx.font='10px sans-serif';ctx.textAlign='center';for(let k=0;k<3;k++){const cx=W-84+k*28,cy=H-38;ctx.lineWidth=3;ctx.strokeStyle='rgba(201,166,255,.25)';ctx.beginPath();ctx.arc(cx,cy,10,0,TAU);ctx.stroke();ctx.strokeStyle='#c9a6ff';if(k<ch){ctx.fillStyle='#c9a6ff';ctx.beginPath();ctx.arc(cx,cy,6,0,TAU);ctx.fill();ctx.beginPath();ctx.arc(cx,cy,10,0,TAU);ctx.stroke()}else if(k===ch){ctx.beginPath();ctx.arc(cx,cy,10,-PI/2,-PI/2+TAU*dk);ctx.stroke()}}ctx.fillStyle='#c9a6ff';ctx.fillText('空白 衝刺 '+ch+'/3',W-56,H-14)}
     A.bosses.forEach((b,i)=>{const y=18+i*34,nm=BN[KEYS.indexOf(b.t)];ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(W/2-300,y,600,12);ctx.fillStyle=b.enr?'#ff4a4a':b.c;ctx.fillRect(W/2-300,y,600*Math.max(0,b.hp/b.max),12);ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText(nm+(b.enr?'・狂暴':'')+'　'+Math.ceil(Math.max(0,b.hp)),W/2,y+25)});
     if(A.bn){ctx.globalAlpha=Math.min(1,A.bn.t*1.5);ctx.fillStyle='#fff';ctx.shadowColor='#c9a6ff';ctx.shadowBlur=18;ctx.font='bold 30px sans-serif';ctx.textAlign='center';ctx.fillText(A.bn.s,W/2,H*.3);ctx.shadowBlur=0;ctx.globalAlpha=1}
     tS.textContent='存活 '+fmt(A.t);hpS.textContent='生命 '+Math.max(0,Math.ceil(p.hp))+' / '+p.max;lvS.textContent='Lv '+A.lvl+'　擊倒 '+A.kills;scS.textContent='得分 '+(A.score+Math.floor(A.t)*5+A.lvl*50);
