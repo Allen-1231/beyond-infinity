@@ -445,6 +445,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       let k0,k1;if(d>.9995){k0=1-f;k1=f}else{const th=Math.acos(d),sn=Math.sin(th);k0=Math.sin((1-f)*th)/sn;k1=Math.sin(f*th)/sn}
       const x=k0*ax+k1*bx,y=k0*ay+k1*by,z=k0*az+k1*bz,w=k0*aw+k1*bw,l=Math.hypot(x,y,z,w)||1;o[0]=x/l;o[1]=y/l;o[2]=z/l;o[3]=w/l};
     const mul=(o,a,b)=>{for(let c=0;c<4;c++)for(let r=0;r<4;r++)o[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3]};
+    const qmul=(a,b)=>[a[0]*b[3]+a[3]*b[0]+a[1]*b[2]-a[2]*b[1],a[1]*b[3]+a[3]*b[1]+a[2]*b[0]-a[0]*b[2],a[2]*b[3]+a[3]*b[2]+a[0]*b[1]-a[1]*b[0],a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2]];
     const compose=(m,t,q,s)=>{const x=q[0],y=q[1],z=q[2],w=q[3];m[0]=(1-2*(y*y+z*z))*s[0];m[1]=2*(x*y+z*w)*s[0];m[2]=2*(x*z-y*w)*s[0];m[3]=0;m[4]=2*(x*y-z*w)*s[1];m[5]=(1-2*(x*x+z*z))*s[1];m[6]=2*(y*z+x*w)*s[1];m[7]=0;m[8]=2*(x*z+y*w)*s[2];m[9]=2*(y*z-x*w)*s[2];m[10]=(1-2*(x*x+y*y))*s[2];m[11]=0;m[12]=t[0];m[13]=t[1];m[14]=t[2];m[15]=1};
     const LG=[];nd.forEach((n,i)=>{if((n.name||'').indexOf('leg_')===0)LG.push(i)});
     function inst(){
@@ -460,7 +461,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
         sample(cl,cl.t0+t);
         if(st.fade<1){st.fade=Math.min(1,st.fade+dt/.22);for(let i=0;i<N;i++){qs(Q[i],SQ[i],0,Q[i],0,st.fade);for(let a=0;a<3;a++)T[i][a]=ST[i][a]+(T[i][a]-ST[i][a])*st.fade}}
         if(st.ll)for(const i of LG){for(let a=0;a<4;a++)Q[i][a]=RQ[i][a];for(let a=0;a<3;a++)T[i][a]=RT[i][a]}   /* 飛行時腳部固定不動 */
-        for(const i of order){const n=nd[i];if(n.matrix&&!hasAnim[i])for(let a=0;a<16;a++)L[a]=n.matrix[a];else compose(L,T[i],Q[i],RS[i]);if(par[i]>=0)mul(W[i],W[par[i]],L);else for(let a=0;a<16;a++)W[i][a]=L[a]}
+        for(const i of order){const n=nd[i];if(n.matrix&&!hasAnim[i])for(let a=0;a<16;a++)L[a]=n.matrix[a];else compose(L,T[i],st.ov&&st.ov[i]?qmul(Q[i],st.ov[i]):Q[i],RS[i]);if(par[i]>=0)mul(W[i],W[par[i]],L);else for(let a=0;a<16;a++)W[i][a]=L[a]}
         const jm=jmat;for(let k=0;k<JN.length;k++){for(let a=0;a<16;a++)J[a]=IBM[k*16+a];mul(jm[k],W[JN[k]],J)}
         for(let v=0;v<NV;v++){const x=P0[v*3],y=P0[v*3+1],z=P0[v*3+2];let ox=0,oy=0,oz=0;
           for(let c=0;c<4;c++){const w=WT[v*4+c];if(w>0){const m=jm[JI[v*4+c]];ox+=w*(m[0]*x+m[4]*y+m[8]*z+m[12]);oy+=w*(m[1]*x+m[5]*y+m[9]*z+m[13]);oz+=w*(m[2]*x+m[6]*y+m[10]*z+m[14])}}
@@ -517,14 +518,18 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     for(const sx of[1,-1]){const ey=new THREE.Mesh(new THREE.SphereGeometry(.0125,10,8),eyeM);ey.position.set(sx*.046,.312,.298);ey.scale.set(.7,.8,1.5);ey.rotation.y=-sx*.5;eyeG.add(ey)}
     const eyeInv=new THREE.Matrix4().fromArray(I.W[eyeB]).invert(),tmM=new THREE.Matrix4();eyeG.matrixAutoUpdate=false;sc.add(eyeG);
     const headUpdate=()=>{eyeG.matrix.multiplyMatrices(tmM.fromArray(I.W[eyeB]),eyeInv)};headUpdate();
+    const ROAR=[['jaw_lower',[0,0,-1],70],['neck3',[0,0,-1],-30],['neck2',[0,0,-1],-20]];
     let lastT=null,lx=null,lz=null,ai=0;
     return{g,all,sk:mat,hh:B.h*s,nf:true,head(){const m=I.W[B.nid('jaw_upper')];return[sc.position.x+m[12]*s*wid,sc.position.y+m[13]*s,sc.position.z+m[14]*s]},anim(e,T){
       const dt=lastT==null?0:Math.min(.1,Math.max(0,T-lastT));lastT=T;
       const sp=lx==null||dt<=0?0:Math.hypot(e.x-lx,e.z-lz)/dt;lx=e.x;lz=e.z;
       if(o.lock)I.st.ll=!(e.alt<4.4);const st=I.st,inAtk=st.cl&&/^Attack/.test(st.nm)&&st.ct<st.cl.d-.05,k=e.skn,sk=e.skt||0;
       if(k==='charge'&&sk>.9){st.spd=2.4;I.play('Walk',true)}
-      else{st.spd=1;if(e.atk>0){e.atk-=dt;if(!inAtk){I.play(ai++%2?'Attack.001':'Attack',false)}}
+      else{st.spd=1;if(e.atk>0){e.atk=0;if(!inAtk&&!(e.roar>.05)){I.play(ai++%2?'Attack.001':'Attack',false)}}
         else if(!inAtk)I.play(sp>.6?'Walk':'Idle',true)}
+      /* 咆哮：e.roar(0..1) 讓下顎張開、頸部後仰（以骨骼局部旋轉疊加在動畫上） */
+      {const rt=e.roar||0;e.rv=(e.rv||0)+(rt-(e.rv||0))*Math.min(1,dt*7);const rv=e.rv;
+        if(rv>.01){const R=window.__ROAR||ROAR,ov={};for(const [nm,ax,dg] of R){const n=B.nid(nm),h=dg*rv*PI/360,sn=Math.sin(h);ov[n]=[ax[0]*sn,ax[1]*sn,ax[2]*sn,Math.cos(h)]}I.st.ov=ov}else I.st.ov=null}
       I.step(dt);pa.needsUpdate=true;
       /* 翅膀姿勢：依招式切換（舉起／猛拍／後掠） */
       let tg;if(k==='gust'&&sk>.55)tg=[.35,.95,11,0];else if(k==='charge')tg=[-.05,.12,8,.85];else if(k==='slam')tg=[1.05,.45,7,0];else if(k==='leap')tg=sk<2.1?[.35,.95,10,0]:[-.05,.12,8,.85];else if(k)tg=[.95,.2,6,.05];else if(sp>.6)tg=[.45,.55,4.6,.2];else tg=[.5,.42,3.2,.1];
@@ -740,7 +745,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   }
 
   /* —— 寶石吞噬者的招式：火焰吐息、震地衝擊波、烈焰連彈、隕石雨、龍翼颶風、狂龍衝撞 —— */
-  const BSK={breath:'火焰吐息',slam:'震地衝擊波',fan:'烈焰連彈',meteor:'隕石雨',gust:'龍翼颶風',charge:'狂龍衝撞',melee:'利爪連擊',leap:'騰空撲殺'},BWU={breath:1,slam:.9,fan:.7,meteor:.9,gust:.7,charge:.95,melee:.55,leap:.3};
+  const BSK={breath:'火焰吐息',slam:'震地衝擊波',fan:'烈焰連彈',meteor:'隕石雨',gust:'龍翼颶風',charge:'狂龍衝撞',melee:'利爪連擊',leap:'騰空撲殺',inferno:'煉獄噴火'},BWU={inferno:1.3,breath:1,slam:.9,fan:.7,meteor:.9,gust:.7,charge:.95,melee:.55,leap:.3};
   function bfAdd(m,upd,o){const f=Object.assign({m,upd},o||{});S.bf.push(f);return f}
   function coneMesh(half,col){const n=16,pos=[];for(let i=0;i<n;i++){const a0=-half+2*half*i/n,a1=-half+2*half*(i+1)/n;pos.push(0,0,0,Math.sin(a0),0,Math.cos(a0),Math.sin(a1),0,Math.cos(a1))}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pos),3));
@@ -752,12 +757,14 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     const p=S.p;
     if(!e.skn){
       e.nx=(e.nx==null?4:e.nx)-dt;if(e.nx>0)return;
-      const pool=e.force?[e.force]:ph===1?['breath','fan','slam','meteor','melee','leap','charge']:ph===2?['breath','fan','slam','meteor','charge','gust','melee','leap']:['breath','fan','slam','meteor','charge','gust','melee','leap','melee','leap','charge'];
+      const pool=e.force?[e.force]:ph===1?['breath','fan','slam','meteor','melee','leap','charge','inferno']:ph===2?['breath','fan','slam','meteor','charge','gust','melee','leap','inferno','inferno']:['breath','fan','slam','meteor','charge','gust','melee','leap','melee','leap','charge','inferno','inferno'];
       e.force=null;let k;do{k=pool[(rnd()*pool.length)|0]}while(k===e.lsk&&pool.length>1);
       e.skn=k;e.lsk=k;e.skt=0;e.sst=0;e.sh=0;e.ang=Math.atan2(p.x-e.x,p.z-e.z);e.atk=1.5;
       S.bn={s:BSK[k],t:1.1};GA.tone(80,.6,'sawtooth',.2,.3);GA.noise(.4,.25,300);
       if(k==='breath'){const m=coneMesh(.36,0xff5a1a);m.scale.setScalar(24);m.position.set(e.x,.13,e.z);scene.add(m);
         bfAdd(m,(f,d)=>{if(e.skn!=='breath'||e.hp<=0)return false;f.m.position.set(e.x,.13,e.z);f.m.rotation.y=e.ang;f.m.material.opacity=(e.skt<BWU.breath?.14:.38)+.1*Math.sin(T*30);return true})}
+      if(k==='inferno'){const m=coneMesh(.5,0xff5a1a);m.scale.setScalar(26);m.position.set(e.x,.13,e.z);scene.add(m);e.roar=1;e.i0=0;e.sd=rnd()<.5?-1:1;roarSfx(0);
+        bfAdd(m,(f,d)=>{if(e.skn!=='inferno'||e.hp<=0){e.roar=0;return false}f.m.position.set(e.x,.13,e.z);f.m.rotation.y=e.ang;f.m.material.opacity=(e.skt<BWU.inferno?.12:.3)+.08*Math.sin(T*30);return true})}
       if(k==='charge'){const g=new THREE.PlaneGeometry(1,1);g.translate(0,.5,0);const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0xff3a2a,transparent:true,opacity:.2,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));
         m.rotation.order='YXZ';m.scale.set(5,44,1);scene.add(m);
         bfAdd(m,(f,d)=>{if(e.skn!=='charge'||e.hp<=0||e.skt>BWU.charge+1)return false;f.m.position.set(e.x,.13,e.z);f.m.rotation.set(-PI/2,e.ang+PI,0);f.m.material.opacity=.15+.15*Math.sin(T*26);return true})}
@@ -770,10 +777,22 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       if(k==='meteor'){ring(e.x,e.z,14,0xff6a1a,.8);S.shake=Math.max(S.shake,.4)}
       return}
     e.skt+=dt;const k=e.skn,t=e.skt,wu=BWU[k],cd=ph===1?5:ph===2?3.8:2.8;
-    const end=()=>{e.skn=null;e.dv=0;e.lp=0;e.nx=e.force?.6:cd};
-    if((k==='breath'||k==='charge')&&t<wu-.35)e.ang=Math.atan2(p.x-e.x,p.z-e.z);
-    if(k==='breath'||k==='charge')e.face=e.ang;
+    const end=()=>{e.skn=null;e.dv=0;e.lp=0;e.roar=0;e.nx=e.force?.6:cd};
+    if((k==='breath'||k==='charge'||k==='inferno')&&t<wu-.35)e.ang=Math.atan2(p.x-e.x,p.z-e.z);
+    if(k==='breath'||k==='charge'||k==='inferno')e.face=e.ang;
     if((k==='melee'||(k==='leap'&&!e.dv&&!e.lp))&&e.skt<3)e.face=Math.atan2(p.x-e.x,p.z-e.z);
+    if(k==='inferno'){
+      const t2=t-wu,DUR=2.8;e.roar=t2<0?1:.55;if(t2<0)return;if(t2>DUR){end();return}
+      if(!e.i0){e.i0=1;e.a0=e.ang}
+      e.ang=e.a0-e.sd*.75+e.sd*1.5*(t2/DUR);e.face=e.ang;
+      const H=e.mdl&&e.mdl.head?e.g.localToWorld(new THREE.Vector3(...e.mdl.head())):new THREE.Vector3(e.x,(e.alt||2)+1.5,e.z),sx=Math.sin(e.ang),cz=Math.cos(e.ang);
+      for(let i=0;i<18&&S.pa.length<900;i++){const sp=13+rnd()*13,a=e.ang+(rnd()-.5)*.3,c=rnd();
+        S.pa.push({x:H.x+sx*1.2,y:H.y-.2,z:H.z+cz*1.2,vx:Math.sin(a)*sp,vy:(rnd()-.4)*3,vz:Math.cos(a)*sp,l:.7+rnd()*.5,m:.95,c:c<.3?'#fff0a0':c<.65?'#ffb02e':c<.9?'#ff6a1a':'#d82a10',s:.28+rnd()*.4})}
+      const dx=p.x-e.x,dz=p.z-e.z,d=Math.hypot(dx,dz);
+      if(d<28&&d>2){const df=Math.atan2(Math.sin(Math.atan2(dx,dz)-e.ang),Math.cos(Math.atan2(dx,dz)-e.ang));if(Math.abs(df)<.3&&p.y<1.4){e.bt2=(e.bt2||0)-dt;if(e.bt2<=0){e.bt2=.3;hurtP(ph>=3?14:11)}}}
+      e.gt2=(e.gt2||0)-dt;if(e.gt2<=0){e.gt2=.22;const r=9+rnd()*14,a=e.ang+(rnd()-.5)*.3;zone(e.x+Math.sin(a)*r,e.z+Math.cos(a)*r,2.4,.5,ph>=3?14:10,'#ff6a1a')}
+      S.shake=Math.max(S.shake,.14);if(Math.floor(t2*9)!==Math.floor((t2-dt)*9)){GA.noise(.2,.17,600+rnd()*700);GA.tone(90,.2,'sawtooth',.08,.6)}
+      return}
     if(k==='breath'){
       const t2=t-wu;if(t2<0)return;if(t2>1.8){end();return}
       if(ph>=3){e.sd=e.sd||(rnd()<.5?-1:1);e.ang+=e.sd*.45*dt}
@@ -1094,10 +1113,27 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   /* —— 魔王降臨過場：紅色閃電劃破高空，寶石吞噬者從天而降、落地震盪，之後才開始戰鬥 —— */
   const INTRO_DUR=11.8,INTRO_LAND=6.9,INTRO_T0=.9,CUTS=[2,3.6,5,6.4,8],TITLE0=8.5;   /* 總長／落地(懸停)時間／開始現身／鏡頭切換點／標題出現（秒） */
   /* —— 過場專屬音效／音樂（全用 WebAudio 合成） —— */
-  function lightningSfx(){
-    GA.noise(.07,.5,5000,0,true);GA.tone(3200,.22,'sawtooth',.14,.03);GA.tone(1500,.3,'square',.06,.05,.02);
-    for(let i=0;i<5;i++)GA.noise(.03,.18,4000+rnd()*3000,.06+i*.045+rnd()*.03,true);
-    GA.noise(1.7,.3,260,.2);GA.tone(48,1.5,'sine',.3,.4,.16)}
+  /* 雷聲：依你提供的 Thunder Crack.mp3 的頻譜／包絡線量測結果合成（約 0.1 秒靜音→40ms 爆裂→約 1 秒持續轟隆並夾雜隨機爆裂→指數衰減到 3.5 秒；能量集中在 100~3000Hz、高頻隨時間滑降） */
+  let THB=null,thN=0;
+  function mkThunder(c){const sr=c.sampleRate,n=(sr*3.5)|0,b=c.createBuffer(2,n,sr),P2=Math.PI*2;let pk=0;
+    for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);let l1=0,l2=0,hp=0,sm=0,lr=0;
+      const bu=[];for(let i=0;i<24;i++)bu.push([.12+Math.random()*1.5,.012+Math.random()*.03,.5+Math.random()*1.5]);
+      const ah=1-Math.exp(-P2*90/sr),as=1-Math.exp(-P2*7/sr),ar=1-Math.exp(-P2*150/sr);
+      for(let i=0;i<n;i++){const t=i/sr,w=Math.random()*2-1,cut=650+2300*Math.exp(-t*1.1),a=1-Math.exp(-P2*cut/sr);
+        l1+=(w-l1)*a;l2+=(l1-l2)*a;hp+=(l2-hp)*ah;const x=l2-hp;
+        sm+=(Math.random()*2-1-sm)*as;let m=Math.max(.35,.85+sm*26);
+        for(let k=0;k<bu.length;k++){const q=bu[k];if(t>q[0]&&t<q[0]+q[1]*5)m+=q[2]*.55*Math.exp(-(t-q[0])/q[1])}
+        const env=(t<.08?0:Math.min(1,(t-.08)/.04))*(t>1.6?Math.exp(-1.9*(t-1.6)):1);
+        lr+=(w-lr)*ar;
+        let v=(x*m*3.2+lr*9*(.7+.3*Math.sin(t*9)))*env;
+        if(t>.08&&t<.22)v+=w*Math.exp(-(t-.08)/.025)*1.6;     /* 爆裂 */
+        d[i]=v;const av=Math.abs(v);if(av>pk)pk=av}}
+    const g=.9/pk;for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);for(let i=0;i<n;i++)d[i]*=g}return b}
+  function thunderSfx(vol,rate,len){const c=GA.ctx();if(!c||GA.muted)return;if(!THB||THB.sampleRate!==c.sampleRate)THB=mkThunder(c);
+    const s=c.createBufferSource(),g=c.createGain(),t=c.currentTime;s.buffer=THB;s.playbackRate.value=rate||1;g.gain.setValueAtTime(vol,t);
+    if(len){g.gain.setValueAtTime(vol,t+len*.45);g.gain.exponentialRampToValueAtTime(.001,t+len)}
+    s.connect(g);g.connect(c.destination);s.start(t);if(len)s.stop(t+len+.05)}
+  function lightningSfx(){const first=thN++===0;thunderSfx(first?.7:.4+Math.random()*.3,first?1:.85+Math.random()*.3,first?0:1.8+Math.random()*1.2)}
   function roarSfx(big){GA.tone(110,1.3,'sawtooth',big?.26:.2,.35);GA.tone(165,1.1,'square',.08,.4,.05);GA.noise(1.2,big?.34:.26,900);GA.tone(58,1.5,'sine',.28,.5)}
   let introMus=null;
   function stopIntroMusic(){if(introMus){clearInterval(introMus.iv);introMus=null}}
@@ -1114,7 +1150,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     };
     m.iv=setInterval(()=>{if(!alive()){stopIntroMusic();return}const c2=GA.ctx();if(!c2)return;
       for(;;){const tt=m.t0+m.step*ST-c2.currentTime;if(tt>.3)break;play(m.step,Math.max(0,tt));m.step++}},60)}
-  function startIntro(){
+  function startIntro(){thN=0;
     const p=S.p,[fx,fz]=fwd();let x=p.x+fx*22,z=p.z+fz*22;const dd=Math.hypot(x,z);if(dd>AR-6){x*=(AR-6)/dd;z*=(AR-6)/dd}
     const e=spawnEn('fbs',x,z);e.face=Math.atan2(p.x-x,p.z-z);e.g.visible=false;e.alt=75;e.y0=e.alt-e.h/2;
     S.intro={t:0,e,bolts:[],nb:0,land:false,roar:false,fl:0,C:{x,z},P:{x:p.x,z:p.z},F:[fx,fz],lk:null,ph:0,shot:0};S.bn=null;S.shake=0;
@@ -1131,7 +1167,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     S.pa=S.pa.filter(q=>{q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vy-=14*dt;if(q.y<.05){q.y=.05;q.vy*=-.3;q.vx*=.6;q.vz*=.6}q.l-=dt;return q.l>0});
     S.shake=Math.max(0,S.shake-dt);I.fl=Math.max(0,I.fl-dt);
     /* 閃電：越接近落地越密集 */
-    I.nb-=dt;if(I.nb<=0&&t<INTRO_LAND+.6){I.nb=Math.max(.12,.5-t*.1)+rnd()*.25;I.bolts.push(mkBolt());if(I.bolts.length>5)I.bolts.shift();I.fl=.14;S.shake=Math.max(S.shake,.12+Math.min(.25,t*.07));lightningSfx()}
+    I.nb-=dt;if(I.nb<=0&&t<INTRO_LAND+.6){I.nb=Math.max(.12,.5-t*.1)+rnd()*.25;I.bolts.push(mkBolt());if(I.bolts.length>5)I.bolts.shift();I.fl=.14;S.shake=Math.max(S.shake,.12+Math.min(.25,t*.07));if((I.tn=(I.tn||0)-1)<=0){I.tn=2+((rnd()*2)|0);lightningSfx()}}
     for(const b of I.bolts)b.t-=dt;I.bolts=I.bolts.filter(b=>b.t>0);
     /* 魔王：從高空雲層正上方「直線」降下（不盤旋），一路拍動巨翼，最後在空中煞住、懸停 */
     if(t>=INTRO_T0&&t<INTRO_LAND){if(!e.g.visible){e.g.visible=true;I.fl=.4;roarSfx(0)}
@@ -1153,22 +1189,22 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
         const side=u*1.2-.6;cx=bp.x+vx_(e)*(6+u*5)+vz_(e)*side*6;cz=bp.z+vz_(e)*(6+u*5)-vx_(e)*side*6;cy=Math.max(1.1,bp.y*.18);tx=bp.x;tz=bp.z;ty=bp.y+1;fv=76-u*8;rate=18}
       else if(sh===4){   /* ⑤ 煞停：機頭上揚展翼減速，低機位推向龍頭 */
         const H=hw(),a=fa+.25*(1-u),d=24-u*10;cx=H.x+Math.sin(a)*d;cz=H.z+Math.cos(a)*d;cy=1.8+u*2;tx=H.x;tz=H.z;ty=H.y-.3;fv=54-u*12;rate=30}
-      else{   /* ⑥ 仰天大吼：龍人立仰頭、雙翼張開，鏡頭在地面低角度仰拍並緩慢環繞 */
-        const H=hw(),a=fa+.65-u*.7,d=20-u*4;cx=H.x+Math.sin(a)*d;cz=H.z+Math.cos(a)*d;cy=1.2+u*.8;tx=H.x;tz=H.z;ty=H.y-1.5+u*.8;fv=52-u*4;rate=14}
+      else{   /* ⑥ 仰天大吼：龍在正面前方仰頭咆哮、雙翼張開；鏡頭在牠前方偏側的低角度仰拍並緩慢環繞 */
+        const H=hw(),f0=e.face,d=17-u*4,sd=7*(1-u*1.4);cx=H.x+Math.sin(f0)*d+Math.cos(f0)*sd;cz=H.z+Math.cos(f0)*d-Math.sin(f0)*sd;cy=1.3+u*.7;tx=H.x;tz=H.z;ty=H.y-.6;fv=50-u*5;rate=12}
       if(sh!==I.shot){I.shot=sh;I.lk=null}
       const tg=new THREE.Vector3(tx,ty,tz);if(!I.lk)I.lk=tg.clone();else I.lk.lerp(tg,1-Math.exp(-dt*rate));
       I.cp=[cx,cy,cz];I.ct=I.lk;I.fv=fv}
-    if(t>=INTRO_LAND&&!I.land){I.land=true;e.g.visible=true;e.x=I.C.x;e.z=I.C.z;e.face=Math.atan2(I.P.x-e.x,I.P.z-e.z);e.alt=5.4;e.y0=e.alt-e.h/2;I.fl=.5;I.big=1;S.shake=1;ring(e.x,e.z,22,0xff2a3a,.9);ring(e.x,e.z,14,0xffffff,.6);ring(e.x,e.z,30,0xb36bff,1.2);burst(e.x,.4,e.z,'#ff4a4a',40,10,.2);burst(e.x,.4,e.z,'#ffd08a',24,8,.15);GA.noise(1.4,.5,150);GA.tone(50,1.2,'sawtooth',.3,.3);roarSfx(1)}
+    if(t>=INTRO_LAND&&!I.land){I.land=true;e.g.visible=true;e.x=I.C.x;e.z=I.C.z;e.face=Math.atan2(I.P.x-e.x,I.P.z-e.z);e.alt=5.4;e.y0=e.alt-e.h/2;I.fl=.5;I.big=1;S.shake=1;ring(e.x,e.z,22,0xff2a3a,.9);ring(e.x,e.z,14,0xffffff,.6);ring(e.x,e.z,30,0xb36bff,1.2);burst(e.x,.4,e.z,'#ff4a4a',40,10,.2);burst(e.x,.4,e.z,'#ffd08a',24,8,.15);GA.noise(1.4,.5,150);GA.tone(50,1.2,'sawtooth',.3,.3);thunderSfx(.85,.8);roarSfx(1)}
     if(I.land)S.shake=Math.max(S.shake,Math.max(0,.9-(t-INTRO_LAND)*.7));
-    if(I.land&&!I.r2&&t>INTRO_LAND+1.2){I.r2=1;e.atk=1.4;GA.noise(1.2,.35,120);GA.tone(70,1.1,'sawtooth',.22,.3)}
+    if(I.land&&!I.r2&&t>INTRO_LAND+1.2){I.r2=1;GA.noise(1.2,.35,120);GA.tone(70,1.1,'sawtooth',.22,.3)}
     if(I.skip&&t<INTRO_DUR-.8){I.skip=0;I.t=INTRO_DUR-.8}
     /* 每個鏡頭龍都有不同的姿勢／動作：俯衝 → 張口咆哮 → 舉翼 → 煞停 → 仰天大吼 */
-    {const PS=[[0,0,'gust'],[.6,0,'charge'],[0,.05,'gust'],[-.1,.35,'slam'],[-.55,0,'gust'],[-.95,0,'roar']][I.shot]||[0,0,'gust'];
+    {const PS=[[0,0,'gust'],[.6,0,'charge'],[0,.05,'gust'],[-.1,.35,'slam'],[-.4,0,'gust'],[-.32,0,'gust']][I.shot]||[0,0,'gust'];
       e.g.rotation.order='YXZ';I.rx=(I.rx||0)+(PS[0]-(I.rx||0))*Math.min(1,dt*7);I.rz=(I.rz||0)+(PS[1]-(I.rz||0))*Math.min(1,dt*7);
-      e.g.rotation.x=I.rx;e.g.rotation.z=I.rz;e.skn=PS[2];e.skt=I.shot===1?0:1;
-      if(I.shot!==I.ps){I.ps=I.shot;if(I.shot===2){e.atk=1.4;roarSfx(0)}if(I.shot===5){e.atk=1.4;roarSfx(1);S.shake=Math.max(S.shake,.5);I.rt=1.2}}
-      if(I.shot===5){I.rt-=dt;if(I.rt<=0){I.rt=1.3;e.atk=1.4;roarSfx(1);S.shake=Math.max(S.shake,.35)}}}
-    if(t>=INTRO_DUR){S.intro=null;e.g.rotation.x=0;e.g.rotation.z=0;stopIntroMusic();GA.music('boss',()=>stage.isConnected&&S&&!S.over);S.fiT=performance.now();e.skn=null;e.bt=2.5;S.bn={s:'寶石吞噬者・戰鬥開始',t:2};GA.tone(392,.25,'triangle',.14);GA.tone(523,.25,'triangle',.14,0,.1)}}
+      e.g.rotation.x=I.rx;e.g.rotation.z=I.rz;e.skn=PS[2];e.skt=I.shot===1?0:1;e.roar=(I.shot===2||I.shot===5)?.82+.18*Math.sin(t*8):0;
+      if(I.shot!==I.ps){I.ps=I.shot;if(I.shot===2)roarSfx(0);if(I.shot===5){roarSfx(1);S.shake=Math.max(S.shake,.5);I.rt=1.2}}
+      if(I.shot===5){I.rt-=dt;if(I.rt<=0){I.rt=1.3;roarSfx(1);S.shake=Math.max(S.shake,.35)}}}
+    if(t>=INTRO_DUR){S.intro=null;e.roar=0;e.rv=0;e.g.rotation.x=0;e.g.rotation.z=0;stopIntroMusic();GA.music('boss',()=>stage.isConnected&&S&&!S.over);S.fiT=performance.now();e.skn=null;e.bt=2.5;S.bn={s:'寶石吞噬者・戰鬥開始',t:2};GA.tone(392,.25,'triangle',.14);GA.tone(523,.25,'triangle',.14,0,.1)}}
   function drawIntro(){
     const I=S.intro,t=I.t,e=I.e;hx.clearRect(0,0,W,H);
     /* 暗紅天色＋暈影 */
