@@ -15,7 +15,7 @@ function mountArcher(stage,done){
     {id:'shield',n:'護盾',max:3,c:'#bff4ff',d:l=>'每 '+[14,10,7][l]+' 秒自動擋下一次傷害'},
     {id:'leech',n:'吸血',max:4,c:'#ff6a7a',d:l=>'造成傷害的 3% 轉為生命'},
     {id:'burn',n:'灼燒',max:4,c:'#ff9a3d',d:l=>'命中使敵人燃燒，每秒受傷提升'},
-    {id:'break',n:'破甲',max:4,c:'#ffcf6a',d:l=>'魔王防禦力 -'+(l*5)+'%（每級 -5%，滿級 -20%）'},
+    {id:'break',n:'破甲',max:4,c:'#ffcf6a',d:l=>'降低魔王防禦 '+((l+1)*5)+'%'},
     {id:'chain',n:'連鎖閃電',max:4,c:'#ffe680',d:l=>'命中有機率放出閃電，連鎖數 +1'},
     {id:'explode',n:'爆裂',max:4,c:'#ff7a5a',d:l=>'命中有機率爆炸，範圍與傷害提高'},
     {id:'thorns',n:'荊棘',max:3,c:'#a0ff9a',d:l=>'被敵人碰到時反傷並擊退'},
@@ -101,7 +101,7 @@ function mountArcher(stage,done){
   function spawnEn(t,x,y,boss){
     const d=ET[t],m=mins(),hm=hpMul(m)*.92*(m>=7?1.5:1);
     const e={t,x,y,hp:d.hp*hm,max:d.hp*hm,sp:d.sp*(1+.02*Math.min(m,10)),r:d.r,dm:d.dm*dmMul(m)*.92*(m>=7?1.3:1),c:d.c,cd:1+rnd()*3,fl:0,kx:0,ky:0,stop:0,ph:rnd()*6,chill:0,frz:0,burn:null,big:false,ang:0,gem:KEYS.includes(t)};
-    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3000*(1+.3*(A.bossN-1))*(1+.2*m)*(1+(m>3?.3*(m-3)+.02*(m-3)*(m-3):0))*bossF(m)*(1+.05*Math.floor(m));e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=19*dmMul(m)*(m>=3?1.8:1)*(m>=5?1.4:1);e.cd=2;e.stop=0}
+    if(boss){e.big=true;e.boss=true;e.r=44;e.hp=e.max=3000*(1+.3*(A.bossN-1))*(1+.2*m)*(1+(m>3?.3*(m-3)+.02*(m-3)*(m-3):0))*bossF(m)*(1+.05*Math.floor(m));e.sp=({pow:52,spc:60,rea:68,sou:56,tim:56,min:52})[t]||52;e.dm=19*dmMul(m)*(m<2?.65:m>=3?1.8:1)*(m>=5?1.4:1);e.cd=2;e.stop=0}
     A.en.push(e);return e;
   }
   function spawnWave(dt){
@@ -119,7 +119,7 @@ function mountArcher(stage,done){
   const SKE={pow:['meteor'],spc:[],rea:[],sou:['rift'],tim:[],min:[]};
   const BM=.85,adf=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
   function bossAI(e,dt,dd){
-    const p=A.p,k=e.t,aim=Math.atan2(p.y-e.y,p.x-e.x),col=e.c,rage=e.hp<e.max*.5,hd=A.t>=240,en=rage||hd,BF=(A.t>=180?1.9:1)*(A.t>=300?1.45:1),SF=(hd?1.18:1)*(rage?1.08:1),CF=hd?.7:1;
+    const p=A.p,k=e.t,aim=Math.atan2(p.y-e.y,p.x-e.x),col=e.c,rage=e.hp<e.max*.5,hd=A.t>=240,en=rage||hd,BF=(A.t<120?.65:A.t>=180?1.9:1)*(A.t>=300?1.45:1),SF=(hd?1.18:1)*(rage?1.08:1),CF=hd?.7:1;
     if(rage&&!e.enr){e.enr=1;ringFx(e.x,e.y,320,col,.7);A.shk=Math.max(A.shk,.4);A.bn={s:BN[KEYS.indexOf(k)]+'・狂暴',t:2};GA.noise(.5,.3,150)}
     const sh=(a,sp,dm,o)=>eshot(e.x,e.y,a,sp*SF,Math.round(dm*BM*BF),col,o);
     e.cd-=dt;e.pc=(e.pc==null?2.5:e.pc)-dt;e.ht=(e.ht==null?0:e.ht)-dt;
