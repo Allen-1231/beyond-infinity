@@ -96,7 +96,7 @@ function mountSoulArena(stage,done){
      const fm=new THREE.Mesh(new THREE.ConeGeometry(.8,2,6),BM(0x6fe0ff,{transparent:true,opacity:.9}));fm.position.y=hh+1.4;tw.add(fm);flames.push(fm);
      tw.position.set(Math.cos(a)*(AR+1.2),0,Math.sin(a)*(AR+1.2));tw.rotation.y=Math.atan2(-Math.cos(a),-Math.sin(a));scene.add(tw)}}
    /* 場上物件（有碰撞）：墓碑、方尖碑、水晶、斷柱、火盆、枯樹、殘破拱門 */
-   {const kinds=[0,0,0,1,2,2,3,3,3,4,4,5,5,6],dkM=M(0x1c2634),fresh=(x,z,r,gp)=>{scene.add(gp);props.push({x,z,r,g:gp})};let nBr=0;
+   {const kinds=[0,0,0,1,2,2,2,2,2,2,2,3,3,3,4,4,5,5,6],dkM=M(0x1c2634),fresh=(x,z,r,gp)=>{scene.add(gp);props.push({x,z,r,g:gp})};let nBr=0;
     for(let i=0;i<36;i++){let x,z,tr=0;do{const a=rnd()*PI*2,d=10+Math.sqrt(rnd())*(AR-17);x=Math.cos(a)*d;z=Math.sin(a)*d;tr++}while(props.some(q=>Math.hypot(q.x-x,q.z-z)<6.5)&&tr<40);if(tr>=40)continue;
      const k=kinds[(rnd()*kinds.length)|0],gp=new THREE.Group(),rot=rnd()*6;let r=.9;gp.position.set(x,0,z);gp.rotation.y=rot;
      if(k===0){const sb=(rnd()*3)|0,ti=new THREE.Group();ti.rotation.z=(rnd()-.5)*.25;gp.add(ti);const sm=M(0x56667c);
@@ -215,9 +215,14 @@ function mountSoulArena(stage,done){
     /* 蜿蜒石板路（圓角卵石）與路邊燈柱 */
     for(let k=0;k<17;k++){const px=Math.sin(k*.55)*2.4*(1-k/24),pz=9+k*1.9;for(let j=0;j<3;j++){const cb=new THREE.Mesh(new THREE.CylinderGeometry(1,1.08,.16,10),pathM);cb.scale.set(.9+rnd()*.5,1,.8+rnd()*.4);cb.position.set(px+(j-1)*1.35,.08,pz+(rnd()-.5)*.5);cb.rotation.y=rnd()*3;cg.add(cb)}}
     for(let k=0;k<4;k++)for(const sx of[-1,1]){const lg=new THREE.Group();lg.position.set(sx*(5.6+Math.sin(k)*.5),0,14+k*6);cg.add(lg);const po=new THREE.Mesh(new THREE.CylinderGeometry(.08,.14,2.6,8),cs2);po.position.y=1.3;lg.add(po);const fm=new THREE.Mesh(new THREE.SphereGeometry(.26,10,8),amb[(k+(sx>0?1:0))%4].m);fm.position.y=2.8;lg.add(fm)}
-    for(let x=-16;x<=16;x+=2.4)props.push({x:x,z:CZ+1,r:3.6,g:new THREE.Group()});
-    for(const [x,z] of[[-18.5,2],[18.5,2],[-8.4,6.2],[8.4,6.2]])props.push({x:x,z:CZ+z,r:3.2,g:new THREE.Group()});
     ENV.push(t=>{flick.forEach((f,i)=>{f.m.color.copy(f.c).multiplyScalar(.8+.2*Math.sin(t*(3+i*1.7)+i*2)+.08*Math.sin(t*17+i))})})}
+   /* 散落的水晶叢（裝飾，大量增加；避開城堡與出生點） */
+   {const cm=M(0x4ab8ff,{emissive:0x4ab8ff,emissiveIntensity:.8}),cm2=M(0x9ae8ff,{emissive:0x7fd8ff,emissiveIntensity:.9}),og=new THREE.OctahedronGeometry(1);let n=0,tr=0;
+    while(n<70&&tr++<600){const a=rnd()*PI*2,d=6+Math.sqrt(rnd())*(AR-9),x=Math.cos(a)*d,z=Math.sin(a)*d;
+     if(Math.abs(x)<34&&z<-18)continue;if(Math.hypot(x,z-12)<7)continue;if(props.some(q=>Math.hypot(q.x-x,q.z-z)<q.r+1.6))continue;
+     const gp=new THREE.Group(),k=2+((rnd()*3)|0),S0=.45+rnd()*.9;gp.position.set(x,0,z);gp.rotation.y=rnd()*6;
+     for(let j=0;j<k;j++){const c=new THREE.Mesh(og,j%2?cm2:cm),sc=j?S0*(.4+rnd()*.35):S0;c.scale.set(sc*.6,sc*(1.5+rnd()*.8),sc*.6);c.position.set(j?(rnd()-.5)*S0*1.6:0,c.scale.y*.8,j?(rnd()-.5)*S0*1.6:0);c.rotation.set((rnd()-.5)*.4,rnd()*3,(rnd()-.5)*.4);gp.add(c)}
+     scene.add(gp);if(S0>.8)props.push({x,z,r:S0*.7,g:gp});n++}}
    /* 散落的碎石（純裝飾，很小，不擋路） */
    {const rb=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),M(0x34445a),240),o=new THREE.Object3D();rb.frustumCulled=false;
     for(let i=0;i<240;i++){const a=rnd()*PI*2,d=Math.sqrt(rnd())*(AR-2),sc=.12+rnd()*.3;o.position.set(Math.cos(a)*d,sc*.4,Math.sin(a)*d);o.rotation.set(rnd()*6,rnd()*6,rnd()*6);o.scale.set(sc*(1+rnd()),sc,sc*(1+rnd()));o.updateMatrix();rb.setMatrixAt(i,o.matrix)}
@@ -571,7 +576,13 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   const dmgMul=()=>1+.18*S.bl.dmg,rateMul=()=>(1+.14*S.bl.rate)*(S.slow&&S.slow.t>0?1.3:1),spdMul=()=>1+.08*S.bl.spd;
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
   const lvl=i=>S.gl[i];
-  function resolve(o,r){for(const q of props){const dx=o.x-q.x,dz=o.z-q.z,d=Math.hypot(dx,dz),m=q.r+r;if(d<m&&d>.001){o.x=q.x+dx/d*m;o.z=q.z+dz/d*m}}
+  /* 城堡實心：長方形碰撞（主堡＋兩側塔＋門樓，含敞開的門洞），玩家、怪物都無法穿過 */
+  const CASR=[[-22.8,22.8,-47,-35.4],[-11,11,-35.4,-31.7]];
+  function inCastle(x,z,m){for(const q of CASR)if(x>q[0]-m&&x<q[1]+m&&z>q[2]-m&&z<q[3]+m)return true;return false}
+  function pushCastle(o,r){for(const q of CASR){const cx=clamp(o.x,q[0],q[1]),cz=clamp(o.z,q[2],q[3]);let dx=o.x-cx,dz=o.z-cz,d=Math.hypot(dx,dz);
+    if(d<1e-4){const l=o.x-q[0],rr=q[1]-o.x,t=o.z-q[2],b=q[3]-o.z,m=Math.min(l,rr,t,b);if(m===b)o.z=q[3]+r;else if(m===t)o.z=q[2]-r;else if(m===l)o.x=q[0]-r;else o.x=q[1]+r}
+    else if(d<r){o.x=cx+dx/d*r;o.z=cz+dz/d*r;if(Math.abs(dz)>Math.abs(dx)*2)o.x+=(o.x>=0?1:-1)*.05}}}
+  function resolve(o,r){pushCastle(o,r);for(const q of props){const dx=o.x-q.x,dz=o.z-q.z,d=Math.hypot(dx,dz),m=q.r+r;if(d<m&&d>.001){o.x=q.x+dx/d*m;o.z=q.z+dz/d*m}}
     const d=Math.hypot(o.x,o.z);if(d>AR-1.5){o.x*=(AR-1.5)/d;o.z*=(AR-1.5)/d}}
   /* —— 特效 —— */
   const RG=new THREE.RingGeometry(.9,1,48);
@@ -594,7 +605,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     const e={t,d,x,z,hp:d.hp*m,max:d.hp*m,sp:d.sp*(d.boss?1:1+.02*w),r:d.r,h:useG||(t==='drg'&&DRG)||(t==='wyr'&&BDR)?Math.max(.8,Math.min(d.h,mdl.hh*1.15)):d.h,y0:t==='wsp'?.6:al?al-d.h/2:0,alt:al,at:rnd()*d.at,kx:0,kz:0,stun:0,fl:0,ph:rnd()*6,mdl,g,og,boss:!!d.boss,bt:2.5,b2:5,b3:9,face:0,wk:0};
     S.en.push(e);if(d.boss)S.boss=e;return e;
   }
-  function edgeSpawn(t){let x=0,z=0;for(let k=0;k<8;k++){const a=rnd()*PI*2,r=26+rnd()*14;x=S.p.x+Math.cos(a)*r;z=S.p.z+Math.sin(a)*r;const dd=Math.hypot(x,z);if(dd>AR-3){x*=(AR-3)/dd;z*=(AR-3)/dd}if(Math.hypot(x-S.p.x,z-S.p.z)>18)break}return spawnEn(t,x,z)}
+  function edgeSpawn(t){let x=0,z=0;for(let k=0;k<8;k++){const a=rnd()*PI*2,r=26+rnd()*14;x=S.p.x+Math.cos(a)*r;z=S.p.z+Math.sin(a)*r;const dd=Math.hypot(x,z);if(dd>AR-3){x*=(AR-3)/dd;z*=(AR-3)/dd}if(inCastle(x,z,4)||(Math.abs(x)<26&&z<-30)){x=(rnd()-.5)*3.2;z=-29.6+rnd()*1.5}if(Math.hypot(x-S.p.x,z-S.p.z)>18)break}const e=spawnEn(t,x,z);if(z>-31&&z<-28&&Math.abs(x)<2.5){e.z=Math.max(e.z,-30.2);ring(e.x,e.z,2.6,0xffb347,.6,.1);burst(e.x,1,e.z,'#ffb347',10,4)}return e}
   function hurtE(e,d,c,quiet){
     if(e.hp<=0)return;e.hp-=d;e.fl=.1;if(!quiet&&!e.boss)esfx(e,'hurt');if(!quiet){dnum(e.x,e.y0+e.h+.3,e.z,Math.round(d),c||'#fff');burst(e.x,e.y0+e.h*.6,e.z,e.t==='wsp'?'#ff9a1f':'#8a1020',3,3)}
     return d;
@@ -716,7 +727,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       if(e.at>at0+.1&&e.t!=='fbs')esfx(e,'atk');
     }
     for(const o of S.en){if(o===e||o.hp<=0)continue;const dx=e.x-o.x,dz=e.z-o.z,dd=Math.hypot(dx,dz),m=(e.r+o.r)*.85;if(dd<m&&dd>.001){const f=(m-dd)*.5;e.x+=dx/dd*f*(e.boss?.2:1);e.z+=dz/dd*f*(e.boss?.2:1)}}
-    if(!d.fly&&!(e.t==='fbs'&&e.alt!=null))resolve(e,e.r*.6);
+    if(!d.fly&&!(e.t==='fbs'&&e.alt!=null))resolve(e,e.r*.6);else if(!e.boss||e.alt==null||e.alt<14)if(e.alt==null||e.alt<14)pushCastle(e,e.r*.6);
     if(e.alt!=null&&e.t!=='wsp')e.y0=e.alt-e.h/2;
   }
   function fboss(e,dt,dd){
@@ -1003,13 +1014,13 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       const tg=nearestE(c.x,c.z,26);if(tg){c.g.rotation.y=Math.atan2(tg.x-c.x,tg.z-c.z);c.fcd-=dt;if(c.fcd<=0){c.fcd=.25;const dx=tg.x-c.x,dz=tg.z-c.z,l=Math.hypot(dx,dz)||1;S.pb.push({x:c.x,y:1.3,z:c.z,vx:dx/l*80,vy:(tg.y0+tg.h*.5-1.3)/l*80,vz:dz/l*80,l:.6,d:9*dmgMul()*c.dm,c:'#ff8a8a'})}}else c.g.rotation.y=yaw+PI;
       if(c.t<=0){if(c.boom){ring(c.x,c.z,6,0xff3b3b,.5);for(const e of S.en)if(Math.hypot(e.x-c.x,e.z-c.z)<6+e.r)hurtE(e,60,'#ff8a8a')}burst(c.x,1,c.z,'#ff4040',14,5);dyn.remove(c.g);disp(c.g);return false}return true});
     /* 玩家子彈 */
-    S.pb=S.pb.filter(b=>{const ox=b.x,oz=b.z;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;b.l-=dt;if(b.l<=0||b.y<0||b.y>14||Math.hypot(b.x,b.z)>AR+2)return false;
+    S.pb=S.pb.filter(b=>{const ox=b.x,oz=b.z;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;b.l-=dt;if(b.l<=0||b.y<0||b.y>14||(b.y<13&&inCastle(b.x,b.z,0))||Math.hypot(b.x,b.z)>AR+2)return false;
       const sx=b.x-ox,sz=b.z-oz,l2=sx*sx+sz*sz||1e-6;
       for(const e of S.en){if(e.hp<=0)continue;const t=clamp(((e.x-ox)*sx+(e.z-oz)*sz)/l2,0,1),q=Math.hypot(e.x-(ox+sx*t),e.z-(oz+sz*t));
         if(q<e.r+.15&&b.y>e.y0-.2&&b.y<e.y0+e.h+.2){hurtE(e,b.d,'#fff');S.hm=.15;if(lvl(5)>=5&&rnd()<.15)chain(e,3,15,0);GA.tone(120+rnd()*40,.03,'square',.03);return false}}
       return true});
     /* 飛刀 */
-    S.dg=S.dg.filter(b=>{const ox=b.x,oz=b.z;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;b.l-=dt;let end=b.l<=0||b.y<0||b.y>14||Math.hypot(b.x,b.z)>AR+2;
+    S.dg=S.dg.filter(b=>{const ox=b.x,oz=b.z;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;b.l-=dt;let end=b.l<=0||b.y<0||b.y>14||(b.y<13&&inCastle(b.x,b.z,0))||Math.hypot(b.x,b.z)>AR+2;
       if(!end){const sx=b.x-ox,sz=b.z-oz,l2=sx*sx+sz*sz||1e-6;
         for(const e of S.en){if(e.hp<=0)continue;const t=clamp(((e.x-ox)*sx+(e.z-oz)*sz)/l2,0,1),q=Math.hypot(e.x-(ox+sx*t),e.z-(oz+sz*t));
           if(q<e.r+.15&&b.y>e.y0-.2&&b.y<e.y0+e.h+.2){hurtE(e,b.d,'#fff');S.hm=.15;if(lvl(5)>=5&&rnd()<.15)chain(e,3,15,0);GA.tone(120+rnd()*40,.03,'square',.03);end=true;break}}}
@@ -1017,7 +1028,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       if(end){dyn.remove(b.m);return false}return true});
     /* 敵彈、危險區 */
     const bt=(S.slow&&lvl(4)>=4)?.25:1;
-    S.eb=S.eb.filter(b=>{b.x+=b.vx*dt*bt;b.z+=b.vz*dt*bt;if(b.vy)b.y+=b.vy*dt*bt;b.l-=dt;if(b.l<=0||b.y<.05||Math.hypot(b.x,b.z)>AR+3)return false;if(Math.hypot(b.x-p.x,b.z-p.z)<b.r+.5&&b.y<p.y+2.6&&b.y>p.y+.45){hurtP(b.d);return false}return true});
+    S.eb=S.eb.filter(b=>{b.x+=b.vx*dt*bt;b.z+=b.vz*dt*bt;if(b.vy)b.y+=b.vy*dt*bt;b.l-=dt;if(b.l<=0||b.y<.05||Math.hypot(b.x,b.z)>AR+3||(b.y<13&&inCastle(b.x,b.z,0)))return false;if(Math.hypot(b.x-p.x,b.z-p.z)<b.r+.5&&b.y<p.y+2.6&&b.y>p.y+.45){hurtP(b.d);return false}return true});
     S.zn=S.zn.filter(z=>{z.t+=dt;z.m.material.opacity=.15+.4*Math.min(1,z.t/z.dur)*(.7+.3*Math.sin(T*24));if(z.t<z.dur)return true;
       ring(z.x,z.z,z.r,new THREE.Color(z.c),.4);S.shake=Math.max(S.shake,.25);burst(z.x,.3,z.z,z.c,18,6);GA.noise(.3,.3,300);if(Math.hypot(p.x-z.x,p.z-z.z)<z.r&&p.y<.8)hurtP(z.dmg);scene.remove(z.m);z.m.geometry.dispose();z.m.material.dispose();return false});
     /* 晶體 */
