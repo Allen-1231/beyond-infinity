@@ -35,7 +35,7 @@ function mountTyping(stage,done){
     return pool[Math.floor(rnd()*pool.length)];
   }
   const easy=w=>w>=7&&w<=9;
-  const baseLen=()=>{const d=S.wave<=4?1:S.wave===5?-1:easy(S.wave)?-1:S.wave===10?-1:0;return[clamp(2+Math.ceil(S.wave*.5)+(d>0?0:d),3,11),clamp(4+Math.floor(S.wave*.8)+d,4,14)]};
+  const baseLen=()=>{const d=S.wave<=4?1:S.wave===5?-1:easy(S.wave)?0:S.wave===10?-1:0;return[clamp(2+Math.ceil(S.wave*.5)+(d>0?0:d),3,11),clamp(4+Math.floor(S.wave*.8)+d,4,14)]};
   function mk(k,x,y,w,extra){const K=KINDS[k]||{};return Object.assign({k,x,y,w,i:0,r:K.r||14,t:0,dead:0,bl:2+rnd()*2,fire:2+rnd()*2,x0:x,ph:rnd()*6},extra||{})}
   function spawn(k){
     const [lo,hi]=baseLen();let w;
@@ -62,16 +62,16 @@ function mountTyping(stage,done){
   }
   function nextWave(){
     S.wave++;S.ph='banner';S.pt=2.2;[523,659,784].forEach((f,i)=>GA.tone(f,.2,'triangle',.14,0,i*.08));S.boss=false;
-    const w=S.wave,n=Math.min(60,4+w*2+(w<=4?1:w===5?-2:easy(w)?-4:0)+(w===6?1:w===7?2:w===10?-3:0)),boss=w%5===0;S.q=[];
+    const w=S.wave,n=Math.min(60,4+w*2+(w<=4?1:w===5?-2:easy(w)?-2:0)+(w===6?2:w===7?3:w===10?-3:0)),boss=w%5===0;S.q=[];
     const un=ORDER.filter(k=>KINDS[k].u<=w);
     un.filter(k=>KINDS[k].u===w).forEach(k=>S.q.push(k));
     const pool=w===7?un.filter(k=>k!=='time'):un;   /* 第 7 波：隨機補位不再抽到時間艦 */
-    while(S.q.length<(boss?Math.ceil(n/2):n))S.q.push(pool[Math.floor(rnd()*pool.length)]);
+    while(S.q.length<(boss?Math.ceil(n/2):n)){let k=pool[Math.floor(rnd()*pool.length)];if(k==='time'&&rnd()<.65&&pool.length>1)continue;S.q.push(k)}
     const toTime=c=>{let m=0;for(const i of S.q.map((k,i)=>i).sort(()=>rnd()-.5)){if(m>=c)break;if(S.q[i]!=='time'){S.q[i]='time';m++}}};
-    if(w===6)toTime(4);   /* 第 6 波：4 架換成綠色時間艦 */
-    if(w===7)toTime(1);   /* 第 7 波：開場那 1 架 + 這 1 架 = 共 2 架時間艦 */
+    if(w===6)toTime(2);   /* 第 6 波：2 架換成綠色時間艦 */
+    
     S.q.sort(()=>rnd()-.5);if(boss)S.q.unshift('BOSS');
-    S.sp=0;S.interval=Math.max(.42,2.4-w*.09)*(w<=4?.9:w===5?1.25:w===7?1.1:easy(w)?1.2:w===6?.96:w===10?1.12:1);
+    S.sp=0;S.interval=Math.max(.42,2.4-w*.09)*(w<=4?.9:w===5?1.25:w===7?1.02:easy(w)?1.1:w===6?.9:w===10?1.12:1);
     S.banner='第 '+w+' 波'+(boss?(Math.round(w/5)%2===0?'　深淵無畏艦':'　薩諾斯降臨'):'');
   }
   function hudUp(){
@@ -306,7 +306,13 @@ function mountTyping(stage,done){
   }
   inp.addEventListener('input',e=>{const v=inp.value;inp.value='';for(const ch of v)press(ch)});
   inp.addEventListener('keydown',e=>{if(e.key==='Escape'&&S&&S.lock){S.lock=null;e.preventDefault()}});
-  cv.addEventListener('pointerdown',()=>inp.focus());
+  const refocus=e=>{if(e&&e.cancelable&&e.target===cv)e.preventDefault();if(S&&!S.over)inp.focus({preventScroll:true})};
+  cv.addEventListener('pointerdown',refocus);cv.addEventListener('mousedown',refocus);cv.addEventListener('click',refocus);cv.addEventListener('touchstart',refocus,{passive:false});
+  ov.addEventListener('click',()=>setTimeout(()=>{if(S&&!S.over)inp.focus({preventScroll:true})},0));
+  /* 保險：即使焦點跑掉（點到畫面外），只要頁面上打字就直接送進遊戲並重新取得焦點 */
+  addEventListener('keydown',e=>{if(!stage.isConnected||!S||S.over||document.activeElement===inp)return;if(e.ctrlKey||e.metaKey||e.altKey)return;const t=e.target&&e.target.tagName;if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT')return;
+    if(e.key==='Escape'){if(S.lock){S.lock=null;e.preventDefault()}return}
+    if(e.key.length===1&&/[a-z]/i.test(e.key)){press(e.key);inp.focus({preventScroll:true});e.preventDefault()}});
   start.onclick=begin;
   window.__ty=()=>S;window.__typress=press;window.__tyx={nextWave,spawnBoss};
 }
