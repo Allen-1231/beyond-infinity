@@ -222,15 +222,17 @@ function mountVault(stage,done){
   /* ===== 第 5 層：時間・時光分身（上一輪的你會變成分身重演動作，替你壓按壓板開門） ===== */
   function L4(body,A,r){
     A.title('時光分身');
-    A.story('時間寶石把時間折成了迴圈。每一輪你只有固定的步數；結束後，這一輪的你會變成「分身」，在下一輪重演一模一樣的動作。利用分身壓住按壓板替你開門，最後一輪走到出口。藍色／橘色的按壓板只有在「有人踩著」時，同色的門才會開。');
+    A.story('時間寶石把時間折成了迴圈。每一輪你只有固定的步數；結束後，這一輪的你會變成「分身」，在下一輪重演一模一樣的動作。利用分身壓住按壓板替你開門，最後一輪走到出口。同色的按壓板「全部」都有人（或分身）踩著時，那色的門才會開；人一離開，門就關上。');
     const COLS={a:'#ff9a1f',b:'#2f7bff'};
     const LV=[
-      {R:2,T:10,map:['#########','#S...A.E#','#.#######','#a#######','#########'],
-       hint:['第一輪：往下走到橘色按壓板，然後原地等到時間用完。','第二輪：分身會替你壓著按壓板，你直接往右走到出口。']},
-      {R:3,T:12,map:['############','#S..A.b.B.E#','#.a.########','############'],
-       hint:['第一輪：先走到橘色按壓板（右、下）並停在上面，讓分身替第二輪開橘門。','第二輪：穿過橘門走到藍色按壓板並停在上面；第三輪就有兩個分身替你開兩扇門了。']},
-      {R:3,T:11,map:['###########','#S.A...B.E#','#.###.#####','#a###b#####','###########'],
-       hint:['藍色按壓板在橘門後面的小凹槽裡。第一輪先去橘色按壓板。','第二輪要穿過橘門去壓藍色按壓板——分身 1 開門前你要先在門前等一步。第三輪你也要在藍門前等到分身 2 踩上去。']}];
+      {nm:'教學',R:2,T:10,map:['#########','#S...A.E#','#.#######','#a#######','#########'],
+       hint:['這是教學關。第一輪：往下走到橘色按壓板，原地等到時間用完。','第二輪：分身會替你壓著按壓板，你直接往右走到出口。']},
+      {nm:'雙板之門',R:3,T:13,map:['#############','#S..A......E#','#.#.#########','#a#a#########','#############'],
+       hint:['橘色的門有「兩塊」橘色按壓板，兩塊都有人踩著，門才會開。','第一輪去左邊的橘板；第二輪（左邊分身已就位）去右邊的橘板；第三輪兩個分身都在板上，你在門前先等到右邊分身踩上板，再衝向出口。']},
+      {nm:'接力等待',R:3,T:11,map:['###########','#S.A...B.E#','#.###.#####','#a###b#####','###########'],
+       hint:['藍色按壓板在橘門後面的小凹槽裡。第一輪先去橘色按壓板。','第二輪要穿過橘門去壓藍色按壓板——分身 1 開門前你要先在門前等一步。第三輪你也要在藍門前等到分身 2 踩上去。']},
+      {nm:'三重封印',R:4,T:15,map:['###############','#S..A.b.B....E#','#.#.###########','#a#a###########','###############'],
+       hint:['橘門要兩塊橘板同時有人踩；藍門只要一塊藍板。','第一、二輪：兩個分身分別去左、右橘板。第三輪：在橘門前等到兩塊橘板都被踩住，再穿過去踩藍板。第四輪：你穿過橘門後，在藍門前等第三個分身踩上藍板，再走向出口。']}];
     LV.forEach(L=>{L.H=L.map.length;L.W=L.map[0].length;L.cells=L.map.map(rw=>rw.split(''));L.cells.forEach((rw,y)=>rw.forEach((c,x)=>{if(c==='S')L.s=[x,y];if(c==='E')L.e=[x,y]}))});
     let li=0,L,ri,k,clones,pos,path,locked=0,done=0;
     const CS=42,DIR={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0],wait:[0,0]};
@@ -241,7 +243,7 @@ function mountVault(stage,done){
     pad.append(h('span'),bt('↑','up'),h('span'),bt('←','left'),bt('等','wait'),bt('→','right'),h('span'),bt('↓','down'),h('span'));
     const cellAt=(x,y)=>(L.cells[y]||[])[x]||'#';
     const occ=(c)=>{const p=[...clones.map(q=>q[k]),pos];return p.some(q=>cellAt(q[0],q[1])===c)};
-    const doorOpen=ch=>occ(ch.toLowerCase());
+    const doorOpen=ch=>{const l=ch.toLowerCase(),ps=[];L.cells.forEach((rw,y)=>rw.forEach((c,x)=>{if(c===l)ps.push([x,y])}));const all=[...clones.map(q=>q[k]),pos];return ps.every(p=>all.some(q=>q[0]===p[0]&&q[1]===p[1]))};
     function build(){L=LV[li];stageDiv.textContent='';actDiv.textContent='';stageDiv.style.width=L.W*CS+'px';stageDiv.style.height=L.H*CS+'px';stageDiv.style.maxWidth='100%';
       for(let y=0;y<L.H;y++)for(let x=0;x<L.W;x++){const c=L.cells[y][x],d=h('div',{style:`position:absolute;left:${x*CS}px;top:${y*CS}px;width:${CS}px;height:${CS}px;box-sizing:border-box`});
         if(c==='#')d.style.background='#0d1f16';else{d.style.background='#0f2a1b';d.style.border='1px solid #143524'}
@@ -257,7 +259,7 @@ function mountVault(stage,done){
     function beginRound(){k=0;pos=L.s.slice();path=[pos.slice()];actDiv.textContent='';actors=clones.map((q,i)=>mkActor(['#9ee8ff','#ffb3f0'][i%2],0));actors.push(mkActor('#fff',1));paint()}
     function paint(){clones.forEach((q,i)=>{const p=q[k];actors[i].style.left=p[0]*CS+7+'px';actors[i].style.top=p[1]*CS+7+'px'});const a=actors[actors.length-1];a.style.left=pos[0]*CS+7+'px';a.style.top=pos[1]*CS+7+'px';
       stageDiv.querySelectorAll('[data-door]').forEach(d=>{d.firstChild.style.opacity=doorOpen(d.dataset.door)?.12:1});
-      info.textContent=`第 ${li+1} / ${LV.length} 關　・　第 ${ri+1} / ${L.R} 輪${ri===L.R-1?'（最後一輪：走到出口）':''}　・　步數 ${k} / ${L.T}　・　分身 ${clones.length} 個`}
+      info.textContent=`第 ${li+1} / ${LV.length} 關（${L.nm}）　・　第 ${ri+1} / ${L.R} 輪${ri===L.R-1?'（最後一輪：走到出口）':''}　・　步數 ${k} / ${L.T}　・　分身 ${clones.length} 個`}
     function step(d){if(locked||done)return;const [dx,dy]=DIR[d],nx=pos[0]+dx,ny=pos[1]+dy,c=cellAt(nx,ny);
       let ok=c!=='#'&&!(/[AB]/.test(c)&&!doorOpen(c));if(d==='wait')ok=false;
       /* 門的開關以「這一步開始時」的站位為準 */
