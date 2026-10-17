@@ -107,29 +107,46 @@ function mountVault(stage,done){
     A.hint(()=>{const s=sol(g);if(!s.length)return;const i=s[Math.floor(Math.random()*s.length)];cells[i].classList.add('hl');A.say('提示：這一格在某個可行解裡，按下去是安全的。','#ffd52e');later(()=>cells[i].classList.remove('hl'),2500)});
     window.__vtg=()=>({g,sol:()=>sol(g),cells});
   }
-  /* ===== 第 2 層：空間・環形傳送（轉動一環，內側那一環會反向跟著轉；讓四環的缺口對齊頂端） ===== */
+  /* ===== 第 2 層：空間・環形傳送（每條連動的方向／格數隨機、有步數上限、第 2 或 3 環會週期性鎖住） ===== */
   function L1(body,A,r){
-    const R=4,S=12,pat=[],rot=[0,0,0,0];
+    const R=4,S=12,PH=5,LKN=3,pat=[];
     for(let i=0;i<R;i++){const p=Array(S).fill(false);p[0]=true;shuf([...Array(S-1).keys()],r).slice(0,2).forEach(k=>p[k+1]=true);pat.push(p)}
-    const top=i=>pat[i][((-rot[i])%S+S)%S];
-    const won=()=>[0,1,2,3].every(top);
-    function bfs(){const key=o=>o.map(v=>((v%S)+S)%S).join(),goal=o=>[0,1,2,3].every(i=>pat[i][((-o[i])%S+S)%S]);const s=rot.map(v=>((v%S)+S)%S),seen=new Map([[key(s),null]]);let q=[[s,null]],dep=0;
-      while(q.length){const nq=[];for(const [o,f] of q){if(goal(o))return{m:f,n:dep};for(let i=0;i<R;i++)for(const d of[-1,1]){const n=o.slice();n[i]=(n[i]+d+S)%S;if(i+1<R)n[i+1]=(n[i+1]-d+S)%S;const k=key(n);if(!seen.has(k)){seen.set(k,1);nq.push([n,f||[i,d]])}}}q=nq;dep++}return null}
-    function mv(i,d){rot[i]+=d;if(i+1<R)rot[i+1]-=d}
-    for(let tr=0;tr<300;tr++){for(let i=0;i<R;i++)rot[i]=0;for(let k=0;k<50;k++)mv(Math.floor(r()*R),r()<.5?1:-1);if(!won()&&bfs().n>=7)break}
+    const LK=1+Math.floor(r()*2);                       /* 會被鎖住的環（第 2 或第 3 環） */
+    const lk=[];for(let i=0;i<R-1;i++)lk.push({d:r()<.5?-1:1,k:r()<.6?1:2});   /* 每條連動：方向與格數，每局不同 */
+    if(lk.every(l=>l.d===-1&&l.k===1))lk[0]={d:1,k:2};
+    const md=v=>((v%S)+S)%S,top=(o,i)=>pat[i][md(-o[i])],goalO=o=>[0,1,2,3].every(i=>top(o,i));
+    const link=(o,i,d)=>{o[i]+=d;if(i+1<R)o[i+1]+=d*lk[i].d*lk[i].k};
+    const enc=(o,ph)=>(((md(o[0])*S+md(o[1]))*S+md(o[2]))*S+md(o[3]))*PH+ph;
+    const locked=m=>(m%PH)>=LKN;                         /* 每 5 步中，第 4、5 步時指定的環被鎖住，不能直接轉 */
+    function bfs(o0,ph0){const N=S*S*S*S*PH,seen=new Uint8Array(N),fm=new Int8Array(N),q=new Int32Array(N);const dec=k=>{const ph=k%PH;let x=(k-ph)/PH;const c=x%S;x=(x-c)/S;const b=x%S;x=(x-b)/S;const a=x%S;x=(x-a)/S;return[[x,a,b,c],ph]};
+      const s0=enc(o0,ph0);let h0=0,t0=0;q[t0++]=s0;seen[s0]=1;fm[s0]=-1;const dist=new Uint8Array(N);
+      while(h0<t0){const k=q[h0++],[o,ph]=dec(k),dp=dist[k];if(goalO(o))return{n:dp,m:fm[k]<0?null:[fm[k]>>1,(fm[k]&1)?1:-1]};
+        for(let i=0;i<R;i++){if(i===LK&&locked(ph))continue;for(const d of[-1,1]){const n=o.slice();link(n,i,d);const nk=enc(n,(ph+1)%PH);if(!seen[nk]){seen[nk]=1;fm[nk]=fm[k]<0?(i*2+(d>0?1:0)):fm[k];dist[nk]=Math.min(255,dp+1);q[t0++]=nk}}}}
+      return null}
+    let init=[0,0,0,0],best=null;
+    for(let tr=0;tr<150;tr++){const o=[0,0,0,0];for(let k=0;k<60;k++)link(o,Math.floor(r()*R),r()<.5?1:-1);if(goalO(o))continue;const b=bfs(o,0);if(b&&b.n>=10&&b.n<=15){init=o;best=b;break}if(b&&b.n<=15&&(!best||b.n>best.n)){init=o;best=b}}
+    const rot=init.slice();let mvN=0;const BUD=(best?best.n:12)+4;
     const svg=sv('svg',{viewBox:'-150 -150 300 300',style:'width:min(100%,320px);display:block;margin:0 auto'}),gs=[],beam=sv('line',{x1:0,y1:-6,x2:0,y2:-146,stroke:'#9fd0ff','stroke-width':6,opacity:0,'stroke-linecap':'round'});
     const rad=[134,106,78,50],pts=(rr,a)=>`${Math.sin(a)*rr} ${-Math.cos(a)*rr}`;
     for(let i=0;i<R;i++){const g=sv('g',{});g.style.transition='transform .35s ease';
-      for(let j=0;j<S;j++){if(pat[i][j])continue;const a0=(j-.5+.06)*Math.PI*2/S,a1=(j+.5-.06)*Math.PI*2/S;g.append(sv('path',{d:`M${pts(rad[i],a0)}A${rad[i]} ${rad[i]} 0 0 1 ${pts(rad[i],a1)}`,fill:'none',stroke:'#2f7bff','stroke-width':20,'stroke-linecap':'butt'}),sv('path',{d:`M${pts(rad[i]+6,(j-.5)*Math.PI*2/S)}L${pts(rad[i]+6,(j+.5)*Math.PI*2/S)}`,stroke:'none'}))}
+      for(let j=0;j<S;j++){if(pat[i][j])continue;const a0=(j-.5+.06)*Math.PI*2/S,a1=(j+.5-.06)*Math.PI*2/S;g.append(sv('path',{d:`M${pts(rad[i],a0)}A${rad[i]} ${rad[i]} 0 0 1 ${pts(rad[i],a1)}`,fill:'none',stroke:i===LK?'#7a8cff':'#2f7bff','stroke-width':20,'stroke-linecap':'butt'}))}
       gs.push(g);svg.append(g)}
     svg.append(sv('path',{d:'M-8-146L8-146 0-134Z',fill:'#9fd0ff'}),beam,sv('circle',{r:12,fill:'#2f7bff'}));
-    const ctl=h('div',{class:'vt-rc'});
-    for(let i=0;i<R;i++){const a=h('button',{class:'btn',type:'button'},'↺'),b=h('button',{class:'btn',type:'button'},'↻');a.onclick=()=>{mv(i,-1);GA.tone(260,.1,'triangle',.12);paint()};b.onclick=()=>{mv(i,1);GA.tone(330,.1,'triangle',.12);paint()};ctl.append(h('div',{},h('span',{},'第 '+(i+1)+' 環'),a,b))}
-    const info=h('div',{class:'vt-info'});
-    function paint(){gs.forEach((g,i)=>g.style.transform=`rotate(${rot[i]*30}deg)`);const w=won();beam.setAttribute('opacity',w?1:0);info.textContent=w?'缺口全部對齊了！':'轉動外側的環時，下一圈內側環會反方向跟著轉。讓四環的「缺口」都轉到頂端的箭頭下方。';if(w){later(()=>A.win(FIN.cl[1].t),700)}}
-    paint();body.append(svg,ctl,info);
-    A.hint(()=>{const o=bfs();const m=o&&o.m;if(!m)return;A.say(`提示：試著把第 ${m[0]+1} 環${m[1]>0?'順':'逆'}時針轉一格。`,'#ffd52e')});
-    window.__vtr=()=>({bfs,mv:(i,d)=>{mv(i,d);paint()},won});
+    const ctl=h('div',{class:'vt-rc'}),bs=[],labs=[];
+    const lkTxt=i=>i+1<R?`帶動第 ${i+2} 環：${lk[i].d<0?'反向':'同向'}${lk[i].k}格`:'（最內環）';
+    for(let i=0;i<R;i++){const a=h('button',{class:'btn',type:'button'},'↺'),b=h('button',{class:'btn',type:'button'},'↻'),lb=h('span',{style:'font-size:12px'},'');a.onclick=()=>go(i,-1);b.onclick=()=>go(i,1);bs.push(a,b);labs.push(lb);ctl.append(h('div',{style:'flex-direction:column;gap:2px;align-items:center'},h('span',{},'第 '+(i+1)+' 環'),h('div',{style:'display:flex;gap:6px'},a,b),lb))}
+    const info=h('div',{class:'vt-info'}),bR=h('button',{class:'btn',type:'button'},'↻ 重置本局');
+    function go(i,d){if(goalO(rot)||(i===LK&&locked(mvN)))return;link(rot,i,d);mvN++;GA.tone(260+i*40,.1,'triangle',.12);paint();
+      if(goalO(rot)){later(()=>A.win(FIN.cl[1].t),700);return}
+      if(mvN>=BUD){A.say('步數用完了！環已經回到最初的樣子，再想想順序。','#ff8a8a');A.miss();later(()=>{for(let k=0;k<R;k++)rot[k]=init[k];mvN=0;paint()},900)}}
+    bR.onclick=()=>{bR.blur();if(goalO(rot))return;for(let k=0;k<R;k++)rot[k]=init[k];mvN=0;A.say('');paint()};
+    function paint(){gs.forEach((g,i)=>g.style.transform=`rotate(${rot[i]*30}deg)`);const w=goalO(rot),lc=locked(mvN);beam.setAttribute('opacity',w?1:0);
+      labs.forEach((lb,i)=>{lb.textContent=i===LK?(lc?`🔒 鎖定中（再 ${PH-(mvN%PH)} 步解鎖）`:`${lkTxt(i)}　（再 ${LKN-(mvN%PH)} 步後鎖定）`):lkTxt(i);lb.style.color=i===LK&&lc?'#ff8a8a':''});
+      bs[LK*2].disabled=bs[LK*2+1].disabled=lc||w;
+      info.textContent=w?'缺口全部對齊了！':`步數 ${mvN} / ${BUD}　・　每條連動的方向與格數都不一樣，第 ${LK+1} 環每走 5 步會被鎖住 2 步（鎖住時只能靠前一環帶動它）。讓四環的缺口都轉到頂端箭頭下方，超過步數會回到最初狀態。`}
+    paint();body.append(svg,ctl,h('div',{style:'text-align:center;margin-top:8px'},bR),info);
+    A.hint(()=>{const o=bfs(rot.map(md),mvN%PH);if(!o){A.say('提示：目前的狀態已經走不到終點了，請按「重置本局」。','#ffd52e');return}if(o.n>BUD-mvN){A.say(`提示：以目前狀態至少還要 ${o.n} 步，但只剩 ${BUD-mvN} 步，請按「重置本局」。`,'#ffd52e');return}const m=o.m;if(!m)return;A.say(`提示：試著把第 ${m[0]+1} 環${m[1]>0?'順':'逆'}時針轉一格（最少還需要 ${o.n} 步）。`,'#ffd52e')});
+    window.__vtr=()=>({bfs,go,won:()=>goalO(rot),rot,lk,LK,BUD,get mv(){return mvN},init});
   }
   /* ===== 第 3 層：現實・真假判斷（每次隨機換劇情、人數與說詞，保證只有唯一解） ===== */
   function L2(body,A,r){
@@ -202,31 +219,61 @@ function mountVault(stage,done){
       A.say(`提示：左盤放 ${a.map(i=>i+1).join('、')}，右盤放 ${b.map(i=>i+1).join('、')}。（把可能的光球平分成三份來稱）`,'#ffd52e')});
     window.__vtw=()=>({n,W,odd,go,get cand(){return cand},get pos(){return pos},get used(){return used}});
   }
-  /* ===== 第 5 層：時間・時光拼圖（滑動碎片，把被時間打散的圖案還原） ===== */
+  /* ===== 第 5 層：時間・時光分身（上一輪的你會變成分身重演動作，替你壓按壓板開門） ===== */
   function L4(body,A,r){
-    const GR=[1,2,3,4,5,6,7,8,0],kind=Math.floor(r()*3),ha=Math.floor(r()*12),ma=Math.floor(r()*12);
-    A.title('時光拼圖');A.story('時間寶石把一幅圖案打散成九塊碎片，只留下一格空位。點擊與空位相鄰的碎片來滑動它們，把圖案還原。走錯了可以用「時間回溯」一步一步退回去。');
-    const art=()=>{const g=sv('g',{}),C='#2fe07a';g.append(sv('rect',{width:300,height:300,fill:'#07140d'}),sv('circle',{cx:150,cy:150,r:140,fill:'none',stroke:'#14301f','stroke-width':14}));
-      if(kind===0){g.append(sv('circle',{cx:150,cy:150,r:128,fill:'#0c2216',stroke:C,'stroke-width':5}));for(let i=0;i<12;i++){const a=i*Math.PI/6;g.append(sv('line',{x1:150+Math.sin(a)*108,y1:150-Math.cos(a)*108,x2:150+Math.sin(a)*(i%3===0?84:96),y2:150-Math.cos(a)*(i%3===0?84:96),stroke:i%3===0?'#ffd52e':C,'stroke-width':i%3===0?7:4,'stroke-linecap':'round'}))}
-        const hA=(ha+ma/12)*Math.PI/6,mA=ma*Math.PI/6*5/5*1;g.append(sv('line',{x1:150,y1:150,x2:150+Math.sin(hA)*62,y2:150-Math.cos(hA)*62,stroke:'#fff','stroke-width':9,'stroke-linecap':'round'}),sv('line',{x1:150,y1:150,x2:150+Math.sin(ma*Math.PI/6)*100,y2:150-Math.cos(ma*Math.PI/6)*100,stroke:C,'stroke-width':6,'stroke-linecap':'round'}),sv('circle',{cx:150,cy:150,r:12,fill:'#ffd52e'}))}
-      else if(kind===1){g.append(sv('path',{d:'M70 40H230L150 150 230 260H70L150 150Z',fill:'#0c2216',stroke:C,'stroke-width':6,'stroke-linejoin':'round'}),sv('path',{d:'M96 52H204L150 128Z',fill:'#ffd52e',opacity:.85}),sv('path',{d:'M120 258H180L150 214Z',fill:'#ffd52e',opacity:.85}),sv('line',{x1:150,y1:128,x2:150,y2:214,stroke:'#ffd52e','stroke-width':3,'stroke-dasharray':'4 6'}),sv('rect',{x:56,y:28,width:188,height:14,rx:5,fill:C}),sv('rect',{x:56,y:258,width:188,height:14,rx:5,fill:C}));for(let i=0;i<10;i++)g.append(sv('circle',{cx:20+i*29,cy:i%2?18:284,r:3,fill:C}))}
-      else{for(const rr of[132,104,76])g.append(sv('circle',{cx:150,cy:150,r:rr,fill:'none',stroke:C,'stroke-width':rr===104?3:5,'stroke-dasharray':rr===104?'3 7':'none'}));for(let i=0;i<24;i++){const a=i*Math.PI/12;g.append(sv('line',{x1:150+Math.sin(a)*136,y1:150-Math.cos(a)*136,x2:150+Math.sin(a)*(i%2?126:118),y2:150-Math.cos(a)*(i%2?126:118),stroke:'#ffd52e','stroke-width':3}))}
-        g.append(sv('path',{d:'M80 150Q150 88 220 150Q150 212 80 150Z',fill:'#0c2216',stroke:C,'stroke-width':5}),sv('circle',{cx:150,cy:150,r:24,fill:C}),sv('circle',{cx:150,cy:150,r:10,fill:'#07140d'}),sv('circle',{cx:158,cy:142,r:4,fill:'#fff'}))}
-      return g};
-    let t=GR.slice(),e=8,prev=-1,mv=0;const hist=[];
-    const nb=i=>{const x=i%3,y=i/3|0,o=[];if(x>0)o.push(i-1);if(x<2)o.push(i+1);if(y>0)o.push(i-3);if(y<2)o.push(i+3);return o};
-    for(let k=0;k<90||t.every((v,i)=>v===GR[i]);k++){const o=nb(e).filter(x=>x!==prev),m=o[Math.floor(r()*o.length)];t[e]=t[m];t[m]=0;prev=e;e=m}
-    const grid=h('div',{class:'vt-sp'}),info=h('div',{class:'vt-info'}),bUn=h('button',{class:'btn',type:'button'},'↶ 時間回溯');let solved=0;
-    const tile=(v,show)=>{const c=(v-1)%3,rw=(v-1)/3|0,d=h('div',{class:'vt-tl'});d.append(sv('svg',{viewBox:`${c*100} ${rw*100} 100 100`,preserveAspectRatio:'none',style:'width:100%;height:100%;display:block'},art()),h('span',{class:'vt-tn'},String(v)));return d};
-    function paint(){grid.textContent='';for(let i=0;i<9;i++){const v=t[i];let cell;if(v===0){cell=solved?tile(9):h('div',{class:'vt-tl vt-em'})}else cell=tile(v);cell.onclick=()=>click(i);grid.append(cell)}info.textContent=`移動 ${mv} 次`}
-    function click(i){if(solved)return;const z=t.indexOf(0);if(!nb(z).includes(i))return;hist.push(t.slice());t[z]=t[i];t[i]=0;mv++;GA.tone(300+(mv%6)*30,.07,'triangle',.1);
-      if(t.every((v,k)=>v===GR[k])){solved=1;paint();later(()=>A.win(FIN.cl[4].t),900);return}paint()}
-    bUn.onclick=()=>{bUn.blur();if(solved||!hist.length)return;t=hist.pop();mv++;GA.tone(220,.15,'sine',.1,.6);paint()};
-    paint();body.append(grid,h('div',{style:'text-align:center;margin-top:10px'},bUn),info);
-    let D=null;const key=a=>a.reduce((s,v)=>s*9+v,0);
-    function dist(){if(D)return D;D=new Map();D.set(key(GR),0);let f=[GR.slice()];while(f.length){const nf=[];for(const q of f){const z=q.indexOf(0),d=D.get(key(q));for(const m of nb(z)){const w=q.slice();w[z]=w[m];w[m]=0;const k=key(w);if(!D.has(k)){D.set(k,d+1);nf.push(w)}}}f=nf}return D}
-    A.hint(()=>{if(solved)return;const Dm=dist(),z=t.indexOf(0),d=Dm.get(key(t));for(const m of nb(z)){const w=t.slice();w[z]=w[m];w[m]=0;if(Dm.get(key(w))===d-1){A.say(`提示：移動編號 ${t[m]} 的碎片（還差大約 ${d} 步）。`,'#ffd52e');return}}});
-    window.__vtp=()=>({get t(){return t},nb,dist,key,click,GR});
+    A.title('時光分身');
+    A.story('時間寶石把時間折成了迴圈。每一輪你只有固定的步數；結束後，這一輪的你會變成「分身」，在下一輪重演一模一樣的動作。利用分身壓住按壓板替你開門，最後一輪走到出口。藍色／橘色的按壓板只有在「有人踩著」時，同色的門才會開。');
+    const COLS={a:'#ff9a1f',b:'#2f7bff'};
+    const LV=[
+      {R:2,T:10,map:['#########','#S...A.E#','#.#######','#a#######','#########'],
+       hint:['第一輪：往下走到橘色按壓板，然後原地等到時間用完。','第二輪：分身會替你壓著按壓板，你直接往右走到出口。']},
+      {R:3,T:12,map:['############','#S..A.b.B.E#','#.a.########','############'],
+       hint:['第一輪：先走到橘色按壓板（右、下）並停在上面，讓分身替第二輪開橘門。','第二輪：穿過橘門走到藍色按壓板並停在上面；第三輪就有兩個分身替你開兩扇門了。']},
+      {R:3,T:11,map:['###########','#S.A...B.E#','#.###.#####','#a###b#####','###########'],
+       hint:['藍色按壓板在橘門後面的小凹槽裡。第一輪先去橘色按壓板。','第二輪要穿過橘門去壓藍色按壓板——分身 1 開門前你要先在門前等一步。第三輪你也要在藍門前等到分身 2 踩上去。']}];
+    LV.forEach(L=>{L.H=L.map.length;L.W=L.map[0].length;L.cells=L.map.map(rw=>rw.split(''));L.cells.forEach((rw,y)=>rw.forEach((c,x)=>{if(c==='S')L.s=[x,y];if(c==='E')L.e=[x,y]}))});
+    let li=0,L,ri,k,clones,pos,path,locked=0,done=0;
+    const CS=42,DIR={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0],wait:[0,0]};
+    const stageDiv=h('div',{style:'position:relative;margin:0 auto;border-radius:10px;overflow:hidden;background:#08130d;border:1px solid #1f3a2a'}),actDiv=h('div',{style:'position:absolute;inset:0;pointer-events:none'});
+    const info=h('div',{class:'vt-info'}),pad=h('div',{style:'display:grid;grid-template-columns:repeat(3,56px);gap:6px;justify-content:center;margin-top:10px'});
+    const bRound=h('button',{class:'btn',type:'button'},'↶ 重來本輪'),bLevel=h('button',{class:'btn',type:'button'},'⟲ 重新開始本關');
+    const bt=(txt,d)=>{const b=h('button',{class:'btn',type:'button',style:'padding:8px 0'},txt);b.onclick=()=>{b.blur();step(d)};return b};
+    pad.append(h('span'),bt('↑','up'),h('span'),bt('←','left'),bt('等','wait'),bt('→','right'),h('span'),bt('↓','down'),h('span'));
+    const cellAt=(x,y)=>(L.cells[y]||[])[x]||'#';
+    const occ=(c)=>{const p=[...clones.map(q=>q[k]),pos];return p.some(q=>cellAt(q[0],q[1])===c)};
+    const doorOpen=ch=>occ(ch.toLowerCase());
+    function build(){L=LV[li];stageDiv.textContent='';actDiv.textContent='';stageDiv.style.width=L.W*CS+'px';stageDiv.style.height=L.H*CS+'px';stageDiv.style.maxWidth='100%';
+      for(let y=0;y<L.H;y++)for(let x=0;x<L.W;x++){const c=L.cells[y][x],d=h('div',{style:`position:absolute;left:${x*CS}px;top:${y*CS}px;width:${CS}px;height:${CS}px;box-sizing:border-box`});
+        if(c==='#')d.style.background='#0d1f16';else{d.style.background='#0f2a1b';d.style.border='1px solid #143524'}
+        if(c==='S'){d.style.border='2px dashed #2fe07a66'}
+        if(c==='E'){d.style.background='radial-gradient(circle,#ffd52e 0 30%,#0f2a1b 32%)';d.style.border='2px solid #ffd52e'}
+        if(/[ab]/.test(c)){d.append(h('div',{style:`position:absolute;inset:8px;border-radius:50%;border:3px solid ${COLS[c]};background:${COLS[c]}33`}))}
+        if(/[AB]/.test(c)){d.dataset.door=c;d.append(h('div',{class:'dr',style:`position:absolute;inset:3px 12px;border-radius:4px;background:${COLS[c.toLowerCase()]};transition:opacity .25s`}))}
+        stageDiv.append(d)}
+      stageDiv.append(actDiv);start()}
+    let actors=[];
+    function mkActor(col,own){const d=h('div',{style:`position:absolute;width:${CS-14}px;height:${CS-14}px;border-radius:50%;background:${own?'#fff':col};border:2px solid ${own?'#2fe07a':'#ffffff88'};opacity:${own?1:.7};box-sizing:border-box;transition:left .18s,top .18s;z-index:${own?3:2}`});actDiv.append(d);return d}
+    function start(){ri=0;clones=[];beginRound()}
+    function beginRound(){k=0;pos=L.s.slice();path=[pos.slice()];actDiv.textContent='';actors=clones.map((q,i)=>mkActor(['#9ee8ff','#ffb3f0'][i%2],0));actors.push(mkActor('#fff',1));paint()}
+    function paint(){clones.forEach((q,i)=>{const p=q[k];actors[i].style.left=p[0]*CS+7+'px';actors[i].style.top=p[1]*CS+7+'px'});const a=actors[actors.length-1];a.style.left=pos[0]*CS+7+'px';a.style.top=pos[1]*CS+7+'px';
+      stageDiv.querySelectorAll('[data-door]').forEach(d=>{d.firstChild.style.opacity=doorOpen(d.dataset.door)?.12:1});
+      info.textContent=`第 ${li+1} / ${LV.length} 關　・　第 ${ri+1} / ${L.R} 輪${ri===L.R-1?'（最後一輪：走到出口）':''}　・　步數 ${k} / ${L.T}　・　分身 ${clones.length} 個`}
+    function step(d){if(locked||done)return;const [dx,dy]=DIR[d],nx=pos[0]+dx,ny=pos[1]+dy,c=cellAt(nx,ny);
+      let ok=c!=='#'&&!(/[AB]/.test(c)&&!doorOpen(c));if(d==='wait')ok=false;
+      /* 門的開關以「這一步開始時」的站位為準 */
+      const np=ok?[nx,ny]:pos.slice();pos=np;k++;path.push(np.slice());GA.tone(d==='wait'?220:330+(k%5)*25,.06,'triangle',.08);paint();
+      if(ri===L.R-1&&pos[0]===L.e[0]&&pos[1]===L.e[1]){locked=1;GA.tone(880,.2,'sine',.15);A.say('抵達出口！','#2fe07a');later(()=>{locked=0;li++;if(li>=LV.length){done=1;A.win(FIN.cl[4].t)}else{A.say('這一關完成，進入下一關。','#2fe07a');build()}},900);return}
+      if(k>=L.T){locked=1;
+        if(ri<L.R-1){const rec=[];for(let i=0;i<=L.T;i++)rec.push(path[i]);A.say(`第 ${ri+1} 輪結束，你變成了分身。`,'#9ee8ff');later(()=>{clones.push(rec);ri++;locked=0;beginRound()},700)}
+        else{A.say('時間用完了，最後一輪重來。','#ff8a8a');A.miss();later(()=>{locked=0;beginRound()},800)}}}
+    bRound.onclick=()=>{bRound.blur();if(locked||done)return;A.say('');beginRound()};
+    bLevel.onclick=()=>{bLevel.blur();if(locked||done)return;A.say('');start()};
+    const kd=e=>{if(!body.isConnected){removeEventListener('keydown',kd);return}const m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right',W:'up',S:'down',A:'left',D:'right',' ':'wait',x:'wait'}[e.key];if(!m||e.ctrlKey||e.metaKey||e.altKey)return;const t=e.target&&e.target.tagName;if(t==='INPUT'||t==='TEXTAREA')return;e.preventDefault();step(m)};
+    addEventListener('keydown',kd);
+    body.append(stageDiv,pad,h('div',{style:'display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap'},bRound,bLevel),info);
+    build();
+    A.hint(()=>{const t=L.hint[Math.min(ri,L.hint.length-1)];A.say('提示：'+t,'#ffd52e')});
+    window.__vtt=()=>({step,get L(){return L},get li(){return li},get ri(){return ri},get k(){return k},get clones(){return clones},get done(){return done}});
   }
   /* ===== 第 6 層：心靈・最終密碼（利用前五層的線索，找出四顆寶石的排列） ===== */
   function L5(body,A,r){
@@ -248,10 +295,10 @@ function mountVault(stage,done){
   }
   const LY=[
     {t:'能量矩陣',s:'力量寶石的外殼由一片 5×5 的能量矩陣封住。點擊一格，會翻轉那一格與它上下左右的格子。讓全部 25 格都亮起，封印才會鬆動。',f:L0},
-    {t:'環形傳送',s:'空間寶石的封印是四道會旋轉的環，每一環都有缺口。轉動一環時，它內側那一環會朝反方向跟著轉。讓四道缺口同時對齊頂端，光束才穿得過去。',f:L1},
+    {t:'環形傳送',s:'空間寶石的封印是四道會旋轉的環，每一環都有缺口。轉動一環時，內側那一環會依照各自不同的規則跟著轉（方向與格數每局都不同），其中一環還會週期性被鎖住，而且步數有限。讓四道缺口同時對齊頂端，光束才穿得過去。',f:L1},
     {t:'真假判斷',s:'',f:L2},
     {t:'靈魂天平',s:'',f:L3},
-    {t:'時光拼圖',s:'',f:L4},
+    {t:'時光分身',s:'',f:L4},
     {t:'最終密碼',s:'心靈寶石藏在核心。密碼是四顆不重複的寶石排列（從左到右），你手上有前五層留下的線索，每次送出後會得到「●位置對／○顏色對」的回饋。',f:L5}];
   function open(){
     clearT();tok++;msg=null;hintFn=null;card.textContent='';
@@ -265,4 +312,3 @@ function mountVault(stage,done){
   paintRing();paintNotes();paintHud();open();
   window.__vt=()=>({st,FIN,open,paintRing});
 }
-
