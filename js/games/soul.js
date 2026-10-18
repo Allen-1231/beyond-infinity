@@ -683,12 +683,6 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
        {const e=box(.0028,.058,.0028,sx*.066,sY-.034,sZ+.06,bl);e.rotation.z=-sx*.5;K(e)}   /* 翼緣藍光 */
        {const e=box(.0028,.04,.0028,sx*.072,sY-.082,sZ+.055,bl);e.rotation.z=-sx*1.0;K(e)}
        for(let i=0;i<10;i++){const t=i/9,z=box(.024,.0055,.005,sx*(.049-.026*t),sY-.04-.088*t,sZ+.064,org);z.rotation.z=(i%2?1:-1)*.6-sx*.3;K(z)}}   /* 橘色鋸齒光帶，往中央收斂 */
-     /* 機匣上蓋（僅開鏡時顯示）：佔滿畫面下方的寬大黑色機體，含斜切翼板、橘光邊與藍光邊 */
-     {const KA=o=>{o.userData.keep=1;o.userData.ads=1;return o},bk=mat(0x08080c,.8,.3);
-      KA(box(.46,.03,.34,0,sY-.07,sZ-.17,bk));KA(box(.3,.05,.3,0,sY-.12,sZ-.14,sm));KA(box(.2,.2,.3,0,sY-.26,sZ-.12,bk));
-      for(const sx of[-1,1]){const w=box(.14,.025,.34,sx*.27,sY-.1,sZ-.17,sm2);w.rotation.z=-sx*.45;KA(w);const w2=box(.12,.025,.3,sx*.34,sY-.17,sZ-.15,bk);w2.rotation.z=-sx*.8;KA(w2);
-        KA(box(.006,.006,.34,sx*.2,sY-.056,sZ-.17,org));KA(box(.006,.006,.3,sx*.33,sY-.1,sZ-.17,bl));
-        for(let i=0;i<7;i++){const t=box(.05,.008,.018,sx*.1,sY-.054,sZ-.04-i*.045,sp_);KA(t)}}}
      K(box(.052,.064,.01,0,sY-.106,sZ+.055,sm));
      for(let i=0;i<7;i++){K(box(.046-.0016*i,.0032,.009,0,sY-.078-.0083*i,sZ+.0615,i%2?sm2:sp_))}   /* 中央散熱肋 */
      K(box(.054,.0022,.004,0,sY-.0715,sZ+.062,bl))
@@ -722,8 +716,8 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   const DVM={s:.8,hs:.74,fA:.27,fB:.74,rh:.0128,pt:.007,psiL:-1.1,psiR:2.0,dur:.64,hit:.27,cd:.58,
     curl:[1.3,1.4,1.05],tcurl:[.9,.8],anchA:[.18,-.6,.2],anchB:[.55,-.58,.15],
     idle:[0,.3,-.2,-.42,-1.05,PI-.4,.9],
-    V:[[0,.3,-.2,-.42,-1.05,PI-.4,.9],[.2,.27,.1,-.24,-2.05,PI-.22,.5],[.34,.22,-.02,-.4,-1.1,PI-.15,.4],[.44,.15,-.1,-.5,.7,PI-.1,.5],[.58,.14,-.12,-.5,.9,PI-.1,.5],[.8,.24,-.2,-.46,-.2,PI-.3,.8],[1,.3,-.2,-.42,-1.05,PI-.4,.9]],
-    H:[[0,.3,-.2,-.42,-1.05,PI-.4,.9],[.2,.46,-.04,-.3,-.3,PI-1.3,1.15],[.36,.18,-.1,-.54,-.28,PI-.35,1.15],[.5,-.2,-.12,-.46,-.3,PI+.9,1.15],[.62,-.36,-.14,-.4,-.36,PI+1.4,1.15],[.82,-.08,-.18,-.42,-.7,PI+.4,1.0],[1,.3,-.2,-.42,-1.05,PI-.4,.9]]};
+    V:[[0,.3,-.2,-.42,-1.05,PI-.4,.9],[.2,.27,.2,-.26,-2.3,PI-.22,.5],[.34,.22,.06,-.4,-1.3,PI-.15,.4],[.44,.15,-.16,-.55,.8,PI-.1,.5],[.58,.14,-.3,-.55,1.2,PI-.1,.5],[.8,.24,-.26,-.5,.1,PI-.3,.8],[1,.3,-.2,-.42,-1.05,PI-.4,.9]],
+    H:[[0,.3,-.2,-.42,-1.05,PI-.4,.9],[.2,.55,-.03,-.3,-.3,PI-1.5,1.15],[.36,.26,-.1,-.6,-.28,PI-.45,1.15],[.5,-.24,-.12,-.5,-.3,PI+1.05,1.15],[.62,-.45,-.14,-.42,-.36,PI+1.65,1.15],[.82,-.15,-.18,-.44,-.7,PI+.6,1.0],[1,.3,-.2,-.42,-1.05,PI-.4,.9]]};
   const dagPose=(ty,q)=>{const K=DVM[ty===1?'V':'H'];if(q<=0)return DVM.idle.slice(1);if(q>=1)return DVM.idle.slice(1);
     let i=1;while(i<K.length-1&&q>K[i][0])i++;const a=K[i-1],b=K[i],h=b[0]-a[0],u=(q-a[0])/h,u2=u*u,u3=u2*u,pa=K[i-2]||a,nb=K[i+1]||b;
     const h00=2*u3-3*u2+1,h10=u3-2*u2+u,h01=-2*u3+3*u2,h11=u3-u2;
@@ -1305,7 +1299,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   const SW_R=2.8,SW_HALF=1.15,SW_DUR=.2;
   function toggleWeapon(){S.wm=S.wm?0:1;S.swT=0;S.kick=0;S.rl=0;S.vsw=1;S.p.fcd=Math.max(S.p.fcd,.32);S.wt={s:S.wm?'副武器：匕首（近戰）':'主武器：戰術步槍',t:1.3};GA.tone(700,.06,'triangle',.05,.5);GA.noise(.08,.08,2500)}
   /* 近戰揮砍：面前扇形範圍內全部敵人受傷 */
-  function slashHit(ty){const SW_HALF=ty===2?1.7:1.15,SW_R=ty===2?3.4:3;
+  function slashHit(ty){const SW_HALF=ty===2?2.1:1.5,SW_R=ty===2?4:3.6;
     const p=S.p,[fx,fz]=fwd(),dm0=30*dmgMul();let hit=0;
     for(const e of S.en){if(e.hp<=0)continue;const dx=e.x-p.x,dz=e.z-p.z,d=Math.hypot(dx,dz);if(d>SW_R+e.r)continue;if(Math.abs(e.y0+e.h*.5-(p.y+1))>1.6+e.h*.5)continue;   /* 太高或太低（例如高空敵人）揮不到 */
       const ang=Math.acos(clamp((dx*fx+dz*fz)/(d||1),-1,1));if(d>e.r+.7&&ang-Math.asin(Math.min(1,e.r/(d||1)))>SW_HALF)continue;
@@ -1353,15 +1347,15 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     /* 步槍 */
     rfG.visible=S.vmW===0;
     if(rfG.visible){
-      const gm=1.0+1.15*S.ads,sy=RF.userData.sight.y*RFS*gm,sz=RF.userData.sight.z*RFS*gm;   /* gm：整把槍（含雙手）的放大倍率，開鏡時靠近鏡頭、槍體佔滿畫面下方 */
+      const gm=1.25+.12*S.ads,sy=RF.userData.sight.y*RFS*gm,sz=RF.userData.sight.z*RFS*gm;   /* gm：整把槍（含雙手）的放大倍率，開鏡時靠近鏡頭、槍體佔滿畫面下方 */
       if(!RF.userData.hid){RF.userData.hid=[];rfG.position.set(0,0,0);rfG.rotation.set(0,0,0);vmRoot.updateMatrixWorld(true);const L=RF.userData.sight;RF.userData.adsM=[];RF.traverse(m=>{if(m.userData.ads)RF.userData.adsM.push(m)});RF.traverse(m=>{if(!m.isMesh||m.userData.keep)return;const b=new THREE.Box3().setFromObject(m),c=RF.worldToLocal(b.getCenter(new THREE.Vector3()));const z0=Math.min(RF.worldToLocal(b.min.clone()).z,RF.worldToLocal(b.max.clone()).z);if(c.z>L.z+.03||z0>L.z+.1)RF.userData.hid.push(m)})}
       for(const m of RF.userData.hid)m.visible=ad<.3;for(const m of RF.userData.adsM)m.visible=ad>=.3;
-      let px=0+(0-0)*ad,py=-.2+(-sy+.2)*ad,pz=-.42+(-.31-sz+.42)*ad,rx=0,rz=0,ry=0;
+      let px=.13*(1-ad),py=-.22+(-sy+.22)*ad,pz=-.4+(-.36-sz+.4)*ad,rx=-.02*(1-ad),rz=.1*(1-ad),ry=.36*(1-ad);
       px+=bx*(1-ad);py+=(by+idl)*(1-ad)-drop;pz+=S.rk*.05*(1-ad*.55);rx+=S.rk*.055*(1-ad*.4);
       /* 手：預設右手握把、左手托護木；換彈時左手取下彈匣→從腰間取新彈匣→插入→拉槍機 */
       const ST_=(x,e0,e1)=>{x=Math.max(0,Math.min(1,(x-e0)/(e1-e0)));return x*x*(3-2*x)},mix=(a,b,k)=>a+(b-a)*k;
       const LH0=[-.014,.031,-.105],RH0=[.03,-.004,.135],GRIP=[0,-.06,.05],POUCH=[-.17,-.24,.16];
-      {const swk=ST_(mv,.55,.95)*(1-ad);px+=.12*swk;py-=.03*swk;pz+=.04*swk;ry+=-.55*swk;rz+=-.2*swk;rx+=.05*swk;   /* 跑動時槍口甩向右邊（像影片中的衝刺持槍） */
+      {py-=by*.5*(1-ad)+mv*.012*(1-ad);rx-=by*1.6*(1-ad);   /* 走路：往下自然擺動（上下起伏），不再歪斜 */
        ry+=(S.rkx||0)*S.rk*.05*(1-ad*.6);rz+=(S.rkz||0)*S.rk*.06*(1-ad*.6)}
       let tilt=0,lh=LH0.slice(),mo=[0,0,0],m2o=[0,0,0],mgV=true,m2V=false,rcl=0;
       if(S.rl>0){const pr=1-S.rl/RLD;S.rls=S.rls||0;
