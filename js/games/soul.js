@@ -1,7 +1,7 @@
 /* ===== 遊戲：靈魂戰場（靈魂寶石）：3D 第三人稱射擊——WASD 移動、滑鼠瞄準，殺殭屍與怪物，升級選擇機體或六顆寶石的能力，擊敗最終魔王或倒下為止 ===== */
 function mountSoulArena(stage,done){
   if(!window.THREE){stage.append(h('p',{class:'mut'},'3D 引擎載入失敗，請重新整理頁面。'));return}
-  const W=900,H=600,dpr=Math.min(devicePixelRatio||1,1.5),PI=Math.PI,rnd=Math.random,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),AR=56;
+  let W=900;const H=600,dpr=Math.min(devicePixelRatio||1,1.5),PI=Math.PI,rnd=Math.random,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),AR=56;
   const OR='#ff9a1f',LT='#ffd08a';
   /* 版面：遊戲畫面撐滿視窗，畫面以外的標題／說明／導覽列全部縮小 */
   const GEM=[
@@ -683,6 +683,12 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
        {const e=box(.0028,.058,.0028,sx*.066,sY-.034,sZ+.06,bl);e.rotation.z=-sx*.5;K(e)}   /* 翼緣藍光 */
        {const e=box(.0028,.04,.0028,sx*.072,sY-.082,sZ+.055,bl);e.rotation.z=-sx*1.0;K(e)}
        for(let i=0;i<10;i++){const t=i/9,z=box(.024,.0055,.005,sx*(.049-.026*t),sY-.04-.088*t,sZ+.064,org);z.rotation.z=(i%2?1:-1)*.6-sx*.3;K(z)}}   /* 橘色鋸齒光帶，往中央收斂 */
+     /* 機匣上蓋（僅開鏡時顯示）：佔滿畫面下方的寬大黑色機體，含斜切翼板、橘光邊與藍光邊 */
+     {const KA=o=>{o.userData.keep=1;o.userData.ads=1;return o},bk=mat(0x08080c,.8,.3);
+      KA(box(.46,.03,.34,0,sY-.07,sZ-.17,bk));KA(box(.3,.05,.3,0,sY-.12,sZ-.14,sm));KA(box(.2,.2,.3,0,sY-.26,sZ-.12,bk));
+      for(const sx of[-1,1]){const w=box(.14,.025,.34,sx*.27,sY-.1,sZ-.17,sm2);w.rotation.z=-sx*.45;KA(w);const w2=box(.12,.025,.3,sx*.34,sY-.17,sZ-.15,bk);w2.rotation.z=-sx*.8;KA(w2);
+        KA(box(.006,.006,.34,sx*.2,sY-.056,sZ-.17,org));KA(box(.006,.006,.3,sx*.33,sY-.1,sZ-.17,bl));
+        for(let i=0;i<7;i++){const t=box(.05,.008,.018,sx*.1,sY-.054,sZ-.04-i*.045,sp_);KA(t)}}}
      K(box(.052,.064,.01,0,sY-.106,sZ+.055,sm));
      for(let i=0;i<7;i++){K(box(.046-.0016*i,.0032,.009,0,sY-.078-.0083*i,sZ+.0615,i%2?sm2:sp_))}   /* 中央散熱肋 */
      K(box(.054,.0022,.004,0,sY-.0715,sZ+.062,bl))
@@ -713,12 +719,15 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   /* 匕首第一人稱設定（換新 dagger.glb 時主要調這裡）：
      s＝大小；zA/zB＝後手/前手在握柄上的位置（模型座標，刀尖為 +Z）；rh＝握柄半徑；psiL/psiR＝兩手繞握柄的轉角；hs＝手的大小
      idle/V/H 的每列＝[時間, x,y,z, 繞X, 繞Y, 繞Z]；anchA/anchB＝兩隻手臂的肩膀位置（視角空間） */
-  const DVM={s:.8,hs:.74,zA:-.08,zB:-.005,rh:.0128,pt:.007,psiL:-1.1,psiR:2.0,dur:.5,hit:.17,cd:.46,
+  const DVM={s:.8,hs:.74,fA:.27,fB:.74,rh:.0128,pt:.007,psiL:-1.1,psiR:2.0,dur:.64,hit:.27,cd:.58,
     curl:[1.3,1.4,1.05],tcurl:[.9,.8],anchA:[.18,-.6,.2],anchB:[.55,-.58,.15],
     idle:[0,.3,-.2,-.42,-1.05,PI-.4,.9],
-    V:[[0,.3,-.2,-.42,-1.05,PI-.4,.9],[.26,.3,-.02,-.3,-1.65,PI-.25,.55],[.44,.18,-.2,-.5,.7,PI-.1,.8],[.56,.17,-.22,-.52,.95,PI-.1,.8],[1,.3,-.2,-.42,-1.05,PI-.4,.9]],
-    H:[[0,.3,-.2,-.42,-1.05,PI-.4,.9],[.24,.32,-.08,-.42,-.45,PI-.75,1.05],[.44,-.05,-.12,-.5,-.45,PI+1.0,1.05],[.56,-.12,-.13,-.5,-.4,PI+1.1,1.05],[1,.3,-.2,-.42,-1.05,PI-.4,.9]]};
-  const dagPose=(ty,q)=>{const K=DVM[ty===1?'V':'H'];if(q<=0)return DVM.idle.slice(1);for(let i=1;i<K.length;i++){if(q<=K[i][0]){const a=K[i-1],b=K[i],u=(q-a[0])/(b[0]-a[0]),e=u*u*(3-2*u);return[1,2,3,4,5,6].map(j=>a[j]+(b[j]-a[j])*e)}}return DVM.idle.slice(1)};
+    V:[[0,.3,-.2,-.42,-1.05,PI-.4,.9],[.2,.27,.1,-.24,-2.05,PI-.22,.5],[.34,.22,-.02,-.4,-1.1,PI-.15,.4],[.44,.15,-.1,-.5,.7,PI-.1,.5],[.58,.14,-.12,-.5,.9,PI-.1,.5],[.8,.24,-.2,-.46,-.2,PI-.3,.8],[1,.3,-.2,-.42,-1.05,PI-.4,.9]],
+    H:[[0,.3,-.2,-.42,-1.05,PI-.4,.9],[.2,.46,-.04,-.3,-.3,PI-1.3,1.15],[.36,.18,-.1,-.54,-.28,PI-.35,1.15],[.5,-.2,-.12,-.46,-.3,PI+.9,1.15],[.62,-.36,-.14,-.4,-.36,PI+1.4,1.15],[.82,-.08,-.18,-.42,-.7,PI+.4,1.0],[1,.3,-.2,-.42,-1.05,PI-.4,.9]]};
+  const dagPose=(ty,q)=>{const K=DVM[ty===1?'V':'H'];if(q<=0)return DVM.idle.slice(1);if(q>=1)return DVM.idle.slice(1);
+    let i=1;while(i<K.length-1&&q>K[i][0])i++;const a=K[i-1],b=K[i],h=b[0]-a[0],u=(q-a[0])/h,u2=u*u,u3=u2*u,pa=K[i-2]||a,nb=K[i+1]||b;
+    const h00=2*u3-3*u2+1,h10=u3-2*u2+u,h01=-2*u3+3*u2,h11=u3-u2;
+    return[1,2,3,4,5,6].map(j=>{const m0=(i-2>=0?(b[j]-pa[j])/(b[0]-pa[0]):0),m1=(i+1<K.length?(nb[j]-a[j])/(nb[0]-a[0]):0);return h00*a[j]+h10*h*m0+h01*b[j]+h11*h*m1})};
   let DAG=null,FBD=null;
   function loadTex(blob,srgb){return new Promise(res=>{const u=URL.createObjectURL(blob),im=new Image();
     im.onload=()=>{const t=new THREE.Texture(im);t.flipY=false;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;
@@ -732,12 +741,41 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       return Promise.all([src(pb.baseColorTexture),src(pb.metallicRoughnessTexture),src(m0.normalTexture)].map((i,k)=>i>=0?loadTex(G.blob(i),k===0):null)).then(([c,mr,nm])=>{
         const mat=new THREE.MeshStandardMaterial({map:c||null,roughnessMap:mr||null,normalMap:nm||null,color:c?0xffffff:0xb8bcc8,roughness:mr?1:.4,metalness:.35,emissive:0x2a1608,side:THREE.DoubleSide});
         if(nm&&mat.normalScale)mat.normalScale.set(.76,.76);
-        root.traverse(o=>{if(o.isMesh)o.material=mat});DAG={root}})})}
+        root.traverse(o=>{if(o.isMesh)o.material=mat});DAG={root,M:autoOrient(root)}})})}
+  /* 自動判斷模型方向與大小：最長軸＝刀身軸、護手＝最寬處、較長的一側＝刀尖，換任何 dagger.glb 都會自動對正（刀尖朝 +Z、刀寬朝 X、握柄尾端在 z=0） */
+  function autoOrient(root){
+    root.updateMatrixWorld(true);const pts=[],v=new THREE.Vector3();
+    root.traverse(o=>{if(!o.isMesh)return;const a=o.geometry.attributes.position,st=Math.max(1,Math.floor(a.count/60000));for(let i=0;i<a.count;i+=st){v.fromBufferAttribute(a,i).applyMatrix4(o.matrixWorld);pts.push(v.x,v.y,v.z)}});
+    const n=pts.length/3,mn=[9e9,9e9,9e9],mx=[-9e9,-9e9,-9e9];for(let i=0;i<n;i++)for(let k=0;k<3;k++){const q=pts[i*3+k];if(q<mn[k])mn[k]=q;if(q>mx[k])mx[k]=q}
+    const ext=[0,1,2].map(k=>mx[k]-mn[k]),la=ext.indexOf(Math.max(...ext)),pa=[0,1,2].filter(k=>k!==la),NB=48,lo=mn[la],bs=ext[la]/NB;
+    const bw=new Array(NB).fill(0).map(()=>[[9e9,-9e9],[9e9,-9e9]]);
+    for(let i=0;i<n;i++){const b=Math.min(NB-1,Math.floor((pts[i*3+la]-lo)/bs));for(let j=0;j<2;j++){const q=pts[i*3+pa[j]];const r=bw[b][j];if(q<r[0])r[0]=q;if(q>r[1])r[1]=q}}
+    const wid=bw.map(b=>Math.max(b[0][1]-b[0][0],b[1][1]-b[1][0]));let gm=Math.max(...wid.map(w=>isFinite(w)?w:0)),gi=[];wid.forEach((w,i)=>{if(w>gm*.85)gi.push(i)});
+    const gC=lo+(gi.reduce((a,b)=>a+b,0)/gi.length+.5)*bs,gHalf=(gi[gi.length-1]-gi[0]+1)*bs/2;
+    const sideA=gC-mn[la],sideB=mx[la]-gC,tipPos=sideB>sideA;   /* 較長的一側是刀身 */
+    /* 刀身區（離護手夠遠）的兩個垂直軸範圍：較寬者＝刀寬軸 */
+    let ra=[[9e9,-9e9],[9e9,-9e9]];for(let i=0;i<n;i++){const d=(pts[i*3+la]-gC)*(tipPos?1:-1);if(d>gHalf+ext[la]*.15)for(let j=0;j<2;j++){const q=pts[i*3+pa[j]];if(q<ra[j][0])ra[j][0]=q;if(q>ra[j][1])ra[j][1]=q}}
+    const wj=(ra[0][1]-ra[0][0])>=(ra[1][1]-ra[1][0])?0:1,wa=pa[wj],ta=pa[1-wj];
+    const e=k=>{const a=[0,0,0];a[k]=1;return new THREE.Vector3(...a)};
+    const Z=e(la).multiplyScalar(tipPos?1:-1),X=e(wa),Y=new THREE.Vector3().crossVectors(Z,X);   /* 右手系 */
+    const R=new THREE.Matrix4().makeBasis(X,Y,Z).invert();   /* 模型座標→新座標 */
+    const sc=DAG_LEN/ext[la],cen=new THREE.Vector3((mn[0]+mx[0])/2,(mn[1]+mx[1])/2,(mn[2]+mx[2])/2);
+    const tipEnd=tipPos?mx[la]:mn[la],hEnd=tipPos?mn[la]:mx[la];
+    const zTip=new THREE.Vector3().setComponent(la,tipEnd).sub(new THREE.Vector3().setComponent(la,hEnd)).dot(Z),
+          zG0=new THREE.Vector3().setComponent(la,gC-gHalf*(tipPos?1:-1)).sub(new THREE.Vector3().setComponent(la,hEnd)).dot(Z);
+    /* 先把握柄尾端平移到 z=0，再依序：旋轉、縮放；垂直軸置中 */
+    const T0=new THREE.Matrix4().makeTranslation(-cen.x,-cen.y,-cen.z);
+    const toEnd=new THREE.Vector3().setComponent(la,(hEnd-cen.getComponent(la)));
+    const M=new THREE.Matrix4().makeScale(sc,sc,sc).multiply(R).multiply(T0);
+    const pe=toEnd.clone().applyMatrix4(new THREE.Matrix4().makeScale(sc,sc,sc).multiply(R)).z;   /* 握柄尾端在新座標的 z */
+    M.premultiply(new THREE.Matrix4().makeTranslation(0,0,-pe));
+    DAG_INFO={hl:zG0*sc,len:DAG_LEN,ta,wa,tipPos};   /* hl＝握柄長度（尾端到護手），已含縮放 */
+    return M}
+  let DAG_INFO={hl:.17};
   /* 建立一把匕首：刀尖朝 +Z。held＝握持用（原點在握柄），否則原點在刀身中央（飛刀用）。userData.roll 可繞刀身軸旋轉 */
   function makeDagger(held){
     const g=new THREE.Group(),roll=new THREE.Group();g.add(roll);g.userData.roll=roll;
-    if(DAG){const sc=new THREE.Group(),ori=new THREE.Group(),off=new THREE.Group(),inner=DAG.root.clone(true);
-      off.position.set(held?-200:0,1,3);off.add(inner);sc.scale.setScalar(DAG_LEN/556);sc.add(off);ori.rotation.y=PI/2;ori.add(sc);roll.add(ori)}   /* 模型刀尖在 -X，轉 90° 後朝 +Z；握柄約在 x=200 */
+    if(DAG){const w=new THREE.Group(),inner=DAG.root.clone(true);w.matrixAutoUpdate=false;w.matrix.copy(new THREE.Matrix4().makeTranslation(0,0,held?-DAG_INFO.hl*.78:-DAG_LEN/2).multiply(DAG.M));w.add(inner);roll.add(w)}
     else{if(!FBD)FBD={bl:new THREE.OctahedronGeometry(1),bx:new THREE.BoxGeometry(1,1,1),m:new THREE.MeshStandardMaterial({color:0xc8ccd8,roughness:.35,metalness:.6,emissive:0x2a1608}),m2:new THREE.MeshStandardMaterial({color:0x4a3020,roughness:.8})};
       const zs=held?0:-.38,add=(geo,m,sx,sy,sz,z)=>{const o=new THREE.Mesh(geo,m);o.scale.set(sx,sy,sz);o.position.z=z+zs;roll.add(o)};
       add(FBD.bl,FBD.m,.022,.06,.46,.46);add(FBD.bx,FBD.m,.05,.2,.04,.04);add(FBD.bx,FBD.m2,.045,.045,.2,-.08)}
@@ -752,15 +790,14 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   const RFS=.55,RF=buildRifle(),rfG=new THREE.Group();RF.scale.setScalar(RFS);rfG.add(RF);vmRoot.add(rfG);
   const dgG=new THREE.Group();vmRoot.add(dgG);let vmDagFor=null;
   /* 雙手＋前臂：有指節、掌肌與前臂肌肉線條的人手（膚色），手指可彎曲 */
-  const SKIN=new THREE.MeshStandardMaterial({color:0x7a4b34,roughness:.62,metalness:0}),SKD=new THREE.MeshStandardMaterial({color:0x5d3626,roughness:.75,metalness:0}),SLV=new THREE.MeshStandardMaterial({color:0x15161d,roughness:.9,metalness:0,side:THREE.DoubleSide});
+  const SKIN=new THREE.MeshStandardMaterial({color:0x15161c,roughness:.75,metalness:.05}),SKD=new THREE.MeshStandardMaterial({color:0x22232e,roughness:.8,metalness:0}),SLV=new THREE.MeshStandardMaterial({color:0x161b28,roughness:.95,metalness:0,side:THREE.DoubleSide}),TRM=new THREE.MeshStandardMaterial({color:0x4a1e08,roughness:.9,metalness:0});
   const SPH=new THREE.SphereGeometry(1,14,10),CAPC={},capG=(r,l)=>{const k=r+'_'+l;return CAPC[k]||(CAPC[k]=new THREE.CapsuleGeometry(r,l,4,10))};
   const FSP=[[.031,.047,[.040,.024,.019],.0098],[.0105,.050,[.044,.027,.020],.0101],[-.0105,.047,[.041,.025,.019],.0096],[-.031,.040,[.032,.019,.017],.0086]];
   function mkHandM(ts){const g=new THREE.Group(),E=(sx,sy,sz,x,y,z,m,par)=>{const o=new THREE.Mesh(SPH,m||SKIN);o.scale.set(sx,sy,sz);o.position.set(x,y,z);(par||g).add(o);return o};
     E(.041,.046,.0165,0,0,0);E(.02,.028,.014,ts*.027,-.026,-.004);E(.017,.031,.012,-ts*.028,-.015,-.002);   /* 掌＋大魚際＋小魚際 */
-    E(.038,.012,.009,0,.036,.008,SKD);   /* 手背筋骨 */
-    for(let i=0;i<3;i++)E(.0036,.022,.004,ts*(.02-i*.02),.008,.0148,SKD);   /* 手背肌腱 */
+    E(.034,.03,.006,0,.03,.0165,SKD);   /* 手背護甲（低調，貼合手背） */
     g.userData.fg=[];
-    for(const [x,y,L,r] of FSP){const f=new THREE.Group();f.position.set(ts*x,y,0);g.add(f);let par=f;const sg=[];
+    for(const [x,y,L,r0] of FSP){const r=r0*1.1,f=new THREE.Group();f.position.set(ts*x,y,0);g.add(f);let par=f;const sg=[];
       E(r*1.12,r*1.12,r*1.05,0,0,0,SKIN,f);   /* 指節 */
       for(let j=0;j<3;j++){const q=new THREE.Group();q.position.y=j?L[j-1]:0;par.add(q);const m=new THREE.Mesh(capG(r*(1-.1*j),L[j]*.86),SKIN);m.position.y=L[j]*.5;q.add(m);if(j){E(r*(1.02-.1*j),r*(1.02-.1*j),r*(1.02-.1*j),0,0,0,SKIN,q)}par=q;sg.push(q)}
       g.userData.fg.push(sg)}
@@ -769,11 +806,10 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     g.userData.th=th;g.userData.wrist=new THREE.Vector3(0,-.056,0);
     return g}
   function setCurl(h,c,tc){const fm=[1,1,1.06,1.12];h.userData.fg.forEach((sg,i)=>{for(let j=0;j<3;j++)sg[j].rotation.x=-c[j]*fm[i]});const th=h.userData.th;th[0].rotation.x=-tc[0]*.4;th[1].rotation.x=-tc[0];th[2].rotation.x=-tc[1]}
-  function mkArmM(){const pr=[[.0262,0],[.0252,.05],[.031,.18],[.040,.36],[.0405,.52],[.046,.75],[.056,1]].map(a=>new THREE.Vector2(a[0],a[1]));
-    const m=new THREE.Mesh(new THREE.LatheGeometry(pr,20),SKIN);
-    const ac=(sx,sy,sz,x,y,z)=>{const o=new THREE.Mesh(SPH,SKIN);o.scale.set(sx,sy,sz);o.position.set(x,y,z);m.add(o)};
-    ac(.0145,.26,.0135,.034,.42,.014);ac(.012,.3,.011,-.014,.46,.038);ac(.01,.2,.01,-.037,.36,-.014);   /* 前臂肌束 */
-    const sl=new THREE.Mesh(new THREE.LatheGeometry([[.0455,.6],[.0495,.606],[.0495,.636],[.0472,.646],[.059,1.02]].map(a=>new THREE.Vector2(a[0],a[1])),20),SLV);m.add(sl);   /* 捲起的袖口 */
+  function mkArmM(){const L=(pr,m)=>new THREE.Mesh(new THREE.LatheGeometry(pr.map(a=>new THREE.Vector2(a[0],a[1])),22),m);
+    const m=L([[.034,0],[.0375,.05],[.041,.14],[.0405,.17]],SKIN);   /* 護腕（戰術手套的筒口） */
+    m.add(L([[.0415,.12],[.0455,.125],[.0455,.15],[.0425,.158]],TRM));   /* 橘色收口環 */
+    m.add(L([[.0425,.155],[.049,.2],[.0535,.36],[.0575,.6],[.0635,.85],[.068,1.02]],SLV));   /* 外套袖子（由手腕往手肘漸粗） */
     return m}
   const _a=new THREE.Vector3(),_b=new THREE.Vector3(),_up=new THREE.Vector3(0,1,0);
   /* 手臂：從手腕拉到固定於視角空間的肩膀點 */
@@ -1269,7 +1305,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   const SW_R=2.8,SW_HALF=1.15,SW_DUR=.2;
   function toggleWeapon(){S.wm=S.wm?0:1;S.swT=0;S.kick=0;S.rl=0;S.vsw=1;S.p.fcd=Math.max(S.p.fcd,.32);S.wt={s:S.wm?'副武器：匕首（近戰）':'主武器：戰術步槍',t:1.3};GA.tone(700,.06,'triangle',.05,.5);GA.noise(.08,.08,2500)}
   /* 近戰揮砍：面前扇形範圍內全部敵人受傷 */
-  function slashHit(){
+  function slashHit(ty){const SW_HALF=ty===2?1.7:1.15,SW_R=ty===2?3.4:3;
     const p=S.p,[fx,fz]=fwd(),dm0=30*dmgMul();let hit=0;
     for(const e of S.en){if(e.hp<=0)continue;const dx=e.x-p.x,dz=e.z-p.z,d=Math.hypot(dx,dz);if(d>SW_R+e.r)continue;if(Math.abs(e.y0+e.h*.5-(p.y+1))>1.6+e.h*.5)continue;   /* 太高或太低（例如高空敵人）揮不到 */
       const ang=Math.acos(clamp((dx*fx+dz*fz)/(d||1),-1,1));if(d>e.r+.7&&ang-Math.asin(Math.min(1,e.r/(d||1)))>SW_HALF)continue;
@@ -1279,8 +1315,8 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   /* 匕首：兩種揮砍輪流（由上往下劈／由右至左平砍），沒有任何視覺特效，只有揮動與命中音效 */
   function slash(){
     const ty=S.swDir>0?1:2;S.dty=ty;S.dqT=DVM.dur;S.swT=SW_DUR;S.swDir=-S.swDir;S.p.fcd=DVM.cd/rateMul();S.p.aimT=.7;
-    later(DVM.hit-.05,()=>{if(!S||!S.run||S.over)return;if(ty===1){GA.noise(.26,.2,1300);GA.tone(180,.2,'sawtooth',.045,.35)}else{GA.noise(.2,.17,2800,0,true);GA.tone(320,.14,'sawtooth',.035,.35)}});
-    later(DVM.hit,()=>{if(S&&S.run&&!S.over&&S.wm)slashHit()});
+    later(DVM.hit-.09,()=>{if(!S||!S.run||S.over)return;if(ty===1){GA.noise(.26,.2,1300);GA.tone(180,.2,'sawtooth',.045,.35)}else{GA.noise(.2,.17,2800,0,true);GA.tone(320,.14,'sawtooth',.035,.35)}});
+    later(DVM.hit,()=>{if(S&&S.run&&!S.over&&S.wm)slashHit(ty)});
   }
   /* —— 主武器：戰術步槍（彈匣 50 發、R 換彈、右鍵開鏡） —— */
   const MAG=50,RLD=1.9;
@@ -1297,7 +1333,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     const n=1+S.bl.multi;for(let k=0;k<n;k++){let ux=dx+(rnd()-.5)*sp*2+(k?(k%2?1:-1)*.02*Math.ceil(k/2):0),uy=dy+(rnd()-.5)*sp*2,uz=dz+(rnd()-.5)*sp*2;const ul=Math.hypot(ux,uy,uz);ux/=ul;uy/=ul;uz/=ul;
       if(S.dg.length<90){const m=makeBullet();m.position.set(mx,my,mz);m.lookAt(mx+ux,my+uy,mz+uz);dyn.add(m);
         S.dg.push({x:mx,y:my,z:mz,vx:ux*260,vy:uy*260,vz:uz*260,l:.5,d:12*dmgMul(),m,ro:0})}}
-    S.ammo--;S.p.fcd=1/(11*rateMul());S.rk=1;S.mf=.045;S.shake=Math.max(S.shake,.035);
+    S.ammo--;S.p.fcd=1/(11*rateMul());S.rk=1;S.rkx=rnd()-.5;S.rkz=rnd()-.5;S.mf=.045;S.shake=Math.max(S.shake,.035);
     GA.noise(.1,.34,4200);GA.tone(120,.09,'sawtooth',.1,.45);GA.tone(2200,.025,'square',.03,.5);
     {const ej=RF.localToWorld(RF.userData.eject.clone()),[rx,rz]=rgt();if(S.pa.length<700)S.pa.push({x:ej.x,y:ej.y,z:ej.z,vx:rx*2.6+(rnd()-.5),vy:2+rnd(),vz:rz*2.6+(rnd()-.5),l:.7,m:.7,c:'#e0a83a',s:.05})}
     if(S.ammo<=0)S.wt={s:'彈匣已空，按 R 換彈',t:1.2};
@@ -1309,7 +1345,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       /* 雙手握柄：左手(後手)在柄尾、右手(前手)靠護手，手臂從畫面右下方伸上來 */
       const U=dgG.userData;U.hA=mkHandM(1);U.hB=mkHandM(-1);U.aA=mkArmM();U.aB=mkArmM();
       const V3=THREE.Vector3,place=(h,left,zc,psi)=>{const c=Math.cos(psi),sn=Math.sin(psi),Y=new V3(c,sn,0),Z=left?new V3(-sn,c,0):new V3(sn,-c,0),X=new V3(0,0,left?1:-1);h.scale.setScalar(DVM.hs);h.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X,Y,Z));h.position.set(0,0,zc*DVM.s).addScaledVector(Z,DVM.rh+DVM.pt);setCurl(h,DVM.curl,DVM.tcurl);dgG.add(h)};
-      place(U.hA,true,DVM.zA,DVM.psiL);place(U.hB,false,DVM.zB,DVM.psiR);dgG.add(U.aA);dgG.add(U.aB);vmDagFor=DAG}
+      const hl=DAG?DAG_INFO.hl:.17;place(U.hA,true,(DVM.fA-.78)*hl,DVM.psiL);place(U.hB,false,(DVM.fB-.78)*hl,DVM.psiR);dgG.add(U.aA);dgG.add(U.aB);vmDagFor=DAG}
     S.ads+=(((ms.ads&&!S.pick&&!S.wm&&S.rl<=0)?1:0)-S.ads)*Math.min(1,dt*10);const ad=S.ads;
     S.rk=Math.max(0,S.rk-dt*9);S.mf=Math.max(0,S.mf-dt);if(S.wt){S.wt.t-=dt;if(S.wt.t<=0)S.wt=null}
     if(S.vsw>0){S.vsw=Math.max(0,S.vsw-dt*4.2);if(S.vsw<.5)S.vmW=S.wm}else S.vmW=S.wm;
@@ -1317,14 +1353,16 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     /* 步槍 */
     rfG.visible=S.vmW===0;
     if(rfG.visible){
-      const sy=RF.userData.sight.y*RFS,sz=RF.userData.sight.z*RFS;
-      if(!RF.userData.hid){RF.userData.hid=[];rfG.position.set(0,0,0);rfG.rotation.set(0,0,0);vmRoot.updateMatrixWorld(true);const L=RF.userData.sight;RF.traverse(m=>{if(!m.isMesh||m.userData.keep)return;const b=new THREE.Box3().setFromObject(m),c=RF.worldToLocal(b.getCenter(new THREE.Vector3()));const z0=Math.min(RF.worldToLocal(b.min.clone()).z,RF.worldToLocal(b.max.clone()).z);if(c.z>L.z+.03||z0>L.z+.1)RF.userData.hid.push(m)})}
-      for(const m of RF.userData.hid)m.visible=ad<.3;
-      let px=.15+(0-.15)*ad,py=-.21+(-sy+.21)*ad,pz=-.34+(-.36-sz+.34)*ad,rx=0,rz=0,ry=-.045*(1-ad);
+      const gm=1.0+1.15*S.ads,sy=RF.userData.sight.y*RFS*gm,sz=RF.userData.sight.z*RFS*gm;   /* gm：整把槍（含雙手）的放大倍率，開鏡時靠近鏡頭、槍體佔滿畫面下方 */
+      if(!RF.userData.hid){RF.userData.hid=[];rfG.position.set(0,0,0);rfG.rotation.set(0,0,0);vmRoot.updateMatrixWorld(true);const L=RF.userData.sight;RF.userData.adsM=[];RF.traverse(m=>{if(m.userData.ads)RF.userData.adsM.push(m)});RF.traverse(m=>{if(!m.isMesh||m.userData.keep)return;const b=new THREE.Box3().setFromObject(m),c=RF.worldToLocal(b.getCenter(new THREE.Vector3()));const z0=Math.min(RF.worldToLocal(b.min.clone()).z,RF.worldToLocal(b.max.clone()).z);if(c.z>L.z+.03||z0>L.z+.1)RF.userData.hid.push(m)})}
+      for(const m of RF.userData.hid)m.visible=ad<.3;for(const m of RF.userData.adsM)m.visible=ad>=.3;
+      let px=0+(0-0)*ad,py=-.2+(-sy+.2)*ad,pz=-.42+(-.31-sz+.42)*ad,rx=0,rz=0,ry=0;
       px+=bx*(1-ad);py+=(by+idl)*(1-ad)-drop;pz+=S.rk*.05*(1-ad*.55);rx+=S.rk*.055*(1-ad*.4);
       /* 手：預設右手握把、左手托護木；換彈時左手取下彈匣→從腰間取新彈匣→插入→拉槍機 */
       const ST_=(x,e0,e1)=>{x=Math.max(0,Math.min(1,(x-e0)/(e1-e0)));return x*x*(3-2*x)},mix=(a,b,k)=>a+(b-a)*k;
       const LH0=[-.014,.031,-.105],RH0=[.03,-.004,.135],GRIP=[0,-.06,.05],POUCH=[-.17,-.24,.16];
+      {const swk=ST_(mv,.55,.95)*(1-ad);px+=.12*swk;py-=.03*swk;pz+=.04*swk;ry+=-.55*swk;rz+=-.2*swk;rx+=.05*swk;   /* 跑動時槍口甩向右邊（像影片中的衝刺持槍） */
+       ry+=(S.rkx||0)*S.rk*.05*(1-ad*.6);rz+=(S.rkz||0)*S.rk*.06*(1-ad*.6)}
       let tilt=0,lh=LH0.slice(),mo=[0,0,0],m2o=[0,0,0],mgV=true,m2V=false,rcl=0;
       if(S.rl>0){const pr=1-S.rl/RLD;S.rls=S.rls||0;
         tilt=ST_(pr,0,.12)*(1-ST_(pr,.78,.95));
@@ -1342,8 +1380,8 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
         if(pr>.64&&S.rls<4){S.rls=4;GA.tone(190,.08,'square',.12,.5);GA.noise(.06,.2,1500);GA.tone(420,.04,'square',.08)}   /* 彈匣插入 */
         if(pr>.74&&S.rls<5){S.rls=5;GA.tone(130,.07,'sawtooth',.1,.5);GA.tone(520,.03,'square',.07);GA.noise(.05,.16,3000)}   /* 上膛 */
         S.rl-=dt;if(S.rl<=0){S.rl=0;S.ammo=MAG}}
-      rz+=-.5*tilt;rx+=.3*tilt;ry+=.2*tilt;py+=.15*tilt;px-=.11*tilt;pz+=rcl*.6;rx+=rcl*.5;
-      rfG.position.set(px,py,pz);rfG.rotation.set(rx,ry,rz);rfG.updateMatrixWorld(true);
+      rz+=-.95*tilt;rx+=.22*tilt;ry+=-.3*tilt;py+=.1*tilt;px+=.05*tilt;pz+=.1*tilt;pz+=rcl*.6;rx+=rcl*.5;
+      rfG.scale.setScalar(gm);rfG.position.set(px,py,pz);rfG.rotation.set(rx,ry,rz);rfG.updateMatrixWorld(true);
       RF.userData.mag.position.set(mo[0]/RFS,mo[1]/RFS,mo[2]/RFS);RF.userData.mag.rotation.set(0,0,S.rl>0&&mo[1]<-.22?-(mo[1]+.22)*3:0);RF.userData.mag.visible=mgV;
       mag2.position.set(m2o[0]/RFS,m2o[1]/RFS,m2o[2]/RFS);mag2.visible=m2V;
       {const kM=S.rl>0?ST_(1-S.rl/RLD,.02,.12)*(1-ST_(1-S.rl/RLD,.7,.88)):0;
@@ -1655,23 +1693,35 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     hx.textAlign='center';hx.font='bold 15px sans-serif';for(const d of S.dn){const q=sp2d(d.x,d.y,d.z);if(!q)continue;hx.globalAlpha=Math.min(1,d.t*2);hx.fillStyle=d.c;hx.strokeStyle='#000';hx.lineWidth=3;hx.strokeText(d.s,q[0],q[1]);hx.fillText(d.s,q[0],q[1])}hx.globalAlpha=1;
     /* 敵人血條（受傷的才顯示） */
     for(const e of S.en){if(e.boss||e.hp>=e.max)continue;const q=sp2d(e.x,e.y0+e.h+.4,e.z);if(!q)continue;hx.fillStyle='rgba(0,0,0,.6)';hx.fillRect(q[0]-15,q[1],30,4);hx.fillStyle='#ff5a5a';hx.fillRect(q[0]-15,q[1],30*Math.max(0,e.hp/e.max),4)}
-    /* 準星 */
-    if(S.run&&!S.pick&&!(S.ads>.5)){const cx=W/2,cy=H/2,k=S.hm>0?1:0;hx.lineCap='butt';
-      hx.beginPath();hx.moveTo(cx-17,cy);hx.lineTo(cx-5,cy);hx.moveTo(cx+5,cy);hx.lineTo(cx+17,cy);hx.moveTo(cx,cy-17);hx.lineTo(cx,cy-5);hx.moveTo(cx,cy+5);hx.lineTo(cx,cy+17);
-      hx.strokeStyle='rgba(0,0,0,.7)';hx.lineWidth=5;hx.stroke();hx.strokeStyle=k?'#ff5a5a':'#fff';hx.lineWidth=2;hx.stroke();hx.fillStyle=k?'#ff5a5a':'#fff';hx.fillRect(cx-1,cy-1,2,2);
-      if(k){hx.beginPath();hx.moveTo(cx-14,cy-14);hx.lineTo(cx-8,cy-8);hx.moveTo(cx+14,cy-14);hx.lineTo(cx+8,cy-8);hx.moveTo(cx-14,cy+14);hx.lineTo(cx-8,cy+8);hx.moveTo(cx+14,cy+14);hx.lineTo(cx+8,cy+8);hx.stroke()}}
+    /* 準星：像決勝時刻——平時只有中心一個小點，命中時出現白色 X 命中標記 */
+    if(S.run&&!S.pick&&!(S.ads>.5)){const cx=W/2,cy=H/2,k=Math.min(1,S.hm/.15);
+      hx.fillStyle='rgba(0,0,0,.55)';hx.beginPath();hx.arc(cx,cy,3,0,7);hx.fill();hx.fillStyle='#fff';hx.beginPath();hx.arc(cx,cy,1.6,0,7);hx.fill();
+      if(k>0){const o=7+(1-k)*7,l=7;hx.globalAlpha=k;hx.lineCap='round';hx.beginPath();for(const [sx,sy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){hx.moveTo(cx+sx*o,cy+sy*o);hx.lineTo(cx+sx*(o+l),cy+sy*(o+l))}
+        hx.strokeStyle='rgba(0,0,0,.6)';hx.lineWidth=5;hx.stroke();hx.strokeStyle='#fff';hx.lineWidth=2.4;hx.stroke();hx.globalAlpha=1}}
     /* 雷達 */
     {const cx=W-72,cy=84,rr=58,[fx,fz]=fwd(),[rx,rz]=rgt();hx.fillStyle='rgba(10,6,14,.55)';hx.strokeStyle='rgba(255,154,31,.6)';hx.lineWidth=1.5;hx.beginPath();hx.arc(cx,cy,rr,0,7);hx.fill();hx.stroke();
       hx.fillStyle='#ffd08a';hx.beginPath();hx.moveTo(cx,cy-6);hx.lineTo(cx-4,cy+4);hx.lineTo(cx+4,cy+4);hx.fill();
       for(const e of S.en){const dx=e.x-p.x,dz=e.z-p.z,a=dx*rx+dz*rz,b=dx*fx+dz*fz,k=rr/40,qx=a*k,qy=-b*k,d=Math.hypot(qx,qy),s=d>rr-3?(rr-3)/d:1;hx.fillStyle=e.boss?'#ff3030':'#ff8a5c';hx.beginPath();hx.arc(cx+qx*s,cy+qy*s,e.boss?4:2.2,0,7);hx.fill()}}
-    /* 血量、經驗 */
-    hx.fillStyle='rgba(0,0,0,.55)';hx.fillRect(20,H-52,240,18);const pc=Math.max(0,p.hp/p.max);hx.fillStyle=pc>.5?'#2fe07a':pc>.25?'#ffb020':'#ff3b3b';hx.fillRect(20,H-52,240*pc,18);
-    hx.fillStyle='#fff';hx.font='bold 13px sans-serif';hx.textAlign='left';hx.fillText(Math.max(0,Math.ceil(p.hp))+' / '+p.max,26,H-38);
+    /* 武器資訊（像決勝時刻：黃框武器欄＋彈藥「50/∞」，下方是細血條） */
+    {const px0=W/2-150,py0=H-84,pw=212,ph=38,ammo=S.ammo,low=S.wm===0&&ammo<=12,emp=S.wm===0&&ammo<=0;
+      hx.fillStyle='rgba(8,8,14,.62)';hx.fillRect(px0,py0,pw,ph);hx.strokeStyle='#e8c020';hx.lineWidth=2;hx.strokeRect(px0,py0,pw,ph);
+      hx.fillStyle='rgba(8,8,14,.5)';hx.fillRect(px0+pw+6,py0,64,ph);hx.strokeStyle='rgba(255,255,255,.35)';hx.lineWidth=1.5;hx.strokeRect(px0+pw+6,py0,64,ph);
+      const ic=(x,y,col,rifle)=>{hx.fillStyle=col;hx.beginPath();if(rifle){hx.moveTo(x,y+14);hx.lineTo(x+40,y+8);hx.lineTo(x+48,y+8);hx.lineTo(x+52,y+4);hx.lineTo(x+70,y+4);hx.lineTo(x+70,y+9);hx.lineTo(x+58,y+11);hx.lineTo(x+54,y+14);hx.lineTo(x+40,y+16);hx.lineTo(x+36,y+26);hx.lineTo(x+30,y+26);hx.lineTo(x+32,y+16);hx.lineTo(x+22,y+16);hx.lineTo(x+18,y+27);hx.lineTo(x+12,y+27);hx.lineTo(x+14,y+17);hx.lineTo(x+4,y+19);hx.closePath()}
+        else{hx.moveTo(x+4,y+24);hx.lineTo(x+26,y+2);hx.lineTo(x+30,y+6);hx.lineTo(x+12,y+26);hx.lineTo(x+18,y+30);hx.lineTo(x+14,y+33);hx.lineTo(x+8,y+28);hx.lineTo(x+3,y+30);hx.closePath()}hx.fill()};
+      ic(px0+6,py0+5,S.wm===0?(emp?'#ff3b3b':low?'#ff9a1f':'#fff'):'rgba(255,255,255,.35)',true);
+      hx.textAlign='left';hx.font='bold 22px sans-serif';hx.fillStyle=S.wm===0?(emp?'#ff3b3b':low?'#ff9a1f':'#fff'):'rgba(255,255,255,.4)';
+      if(S.wm===0){hx.fillText(String(ammo),px0+92,py0+28);hx.font='bold 14px sans-serif';hx.fillStyle='rgba(255,255,255,.7)';hx.fillText('/∞',px0+92+hx.measureText(String(ammo)).width*1.55+2,py0+28)}else{hx.font='bold 13px sans-serif';hx.fillText('—/—',px0+100,py0+25)}
+      ic(px0+pw+14,py0+4,S.wm===1?'#fff':'rgba(255,255,255,.4)',false);hx.font='bold 12px sans-serif';hx.fillStyle=S.wm===1?'#fff':'rgba(255,255,255,.4)';hx.fillText('近戰',px0+pw+44,py0+25);
+      const pc=Math.max(0,p.hp/p.max);hx.fillStyle='rgba(255,255,255,.75)';hx.font='11px sans-serif';hx.fillText('生命值',px0,py0+ph+14);
+      hx.fillStyle='rgba(0,0,0,.55)';hx.fillRect(px0+46,py0+ph+7,pw+24,6);hx.fillStyle=pc>.5?'#f2f2f2':pc>.25?'#ffb020':'#ff3b3b';hx.fillRect(px0+46,py0+ph+7,(pw+24)*pc,6);
+      hx.fillStyle='rgba(255,255,255,.8)';hx.fillText(Math.max(0,Math.ceil(p.hp))+' / '+p.max,px0+pw+78,py0+ph+14);
+      if(S.run&&!S.pick&&S.wm===0&&S.rl<=0){if(emp){hx.font='bold 17px sans-serif';hx.textAlign='center';hx.fillStyle='#46ff9a';hx.strokeStyle='#000';hx.lineWidth=3;hx.strokeText('重新裝彈',W/2,H*.62);hx.fillText('重新裝彈',W/2,H*.62)}
+        else if(low){hx.font='bold 17px sans-serif';hx.textAlign='center';hx.fillStyle='#ffd52e';hx.strokeStyle='#000';hx.lineWidth=3;hx.strokeText('彈藥低',W/2,H*.62);hx.fillText('彈藥低',W/2,H*.62)}}}
     hx.fillStyle='rgba(0,0,0,.55)';hx.fillRect(20,H-26,W-40,8);hx.fillStyle='#ffd52e';hx.fillRect(20,H-26,(W-40)*Math.min(1,S.xp/S.need),8);hx.fillStyle='#ffe9a8';hx.font='12px sans-serif';hx.fillText('Lv '+S.lvl,20,H-30);
     if(S.wt){hx.globalAlpha=Math.min(1,S.wt.t*2);hx.fillStyle='#fff';hx.strokeStyle='#000';hx.lineWidth=3;hx.font='bold 16px sans-serif';hx.textAlign='center';hx.strokeText(S.wt.s,W/2,H*.68);hx.fillText(S.wt.s,W/2,H*.68);hx.globalAlpha=1}
     if(S.ads>.05){const g=hx.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,H*.75);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,'+.5*S.ads+')');hx.fillStyle=g;hx.fillRect(0,0,W,H)}
     /* 技能列 */
-    for(let i=0;i<6;i++){const g=GEM[i],x=W/2-141+i*48,y=H-64,L=S.gl[i],cd=S.cd[i],tot=CDS[i];
+    for(let i=0;i<6;i++){const g=GEM[i],x=W-306+i*48,y=H-64,L=S.gl[i],cd=S.cd[i],tot=CDS[i];
       hx.fillStyle=L?'rgba(10,8,22,.85)':'rgba(10,8,22,.5)';hx.strokeStyle=L?g.c:'#444';hx.lineWidth=2;hx.fillRect(x,y,42,42);hx.strokeRect(x,y,42,42);
       hx.fillStyle=L?g.c:'#555';hx.beginPath();hx.moveTo(x+21,y+7);hx.lineTo(x+34,y+16);hx.lineTo(x+34,y+28);hx.lineTo(x+21,y+37);hx.lineTo(x+8,y+28);hx.lineTo(x+8,y+16);hx.closePath();hx.globalAlpha=L?.9:.35;hx.fill();hx.globalAlpha=1;
       if(L&&cd>0){hx.fillStyle='rgba(0,0,0,.6)';hx.fillRect(x,y+42*(1-Math.min(1,cd/tot)),42,42*Math.min(1,cd/tot));hx.fillStyle='#fff';hx.font='bold 14px sans-serif';hx.textAlign='center';hx.fillText(Math.ceil(cd),x+21,y+26)}
@@ -1689,6 +1739,12 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   }
   const PRmax=()=>{const w=box.clientWidth||W;return clamp(w*(devicePixelRatio||1)/W,1,2)};
   let qf=1,qCap=1,fAvg=16.7,fN=0,qT=0,fpsT=0,fpsC=0,fps=60,prQ=0;
+  /* 全螢幕：版面撐滿整個螢幕（邏輯寬度依螢幕長寬比調整，垂直視角不變，左右視野變寬） */
+  function fitBox(){const fs=stage.classList.contains('fs');
+    if(fs){box.style.setProperty('width','100%','important');box.style.aspectRatio='auto';box.style.height='calc(100vh - 96px)';box.style.minWidth='0'}
+    else{box.style.removeProperty('width');box.style.width='min(100%,calc((100vh - 200px)*1.5))';box.style.aspectRatio='3/2';box.style.height='';box.style.minWidth='min(100%,520px)'}
+    const cw=box.clientWidth,ch=box.clientHeight;if(!cw||!ch)return;const nW=fs?clamp(Math.round(H*cw/ch),600,1500):900;
+    if(nW!==W){W=nW;hc.width=Math.round(W*dpr);hc.height=Math.round(H*dpr);hx.setTransform(hc.width/W,0,0,hc.height/H,0,0);cam.aspect=W/H;cam.updateProjectionMatrix();prQ=0;applyQ()}}
   function applyQ(){const v=PRmax()*qf;if(Math.abs(v-prQ)>.01){prQ=v;R.setPixelRatio(v);R.setSize(W,H,false)}}   /* 渲染解析度跟畫面實際大小一致（原本固定 900×600 再放大會糊） */
   function loop(ts){
     if(!S)return;if(!stage.isConnected){cleanup();return}
@@ -1696,7 +1752,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     /* 動態畫質：幀時間太長就自動降低渲染解析度，穩定後再提高 */
     fAvg+=(Math.min(100,ms_)-fAvg)*.06;fpsC++;fpsT+=ms_;if(fpsT>=500){fps=Math.round(fpsC*1000/fpsT);fpsC=0;fpsT=0}
     if(++fN%45===0){qT+=.75;if(fAvg>21&&qf>.55){qf=Math.max(.55,qf-.15);qCap=Math.min(qCap,qf+.15);qT=0}else if(fAvg<18.5&&qf<qCap&&qT>6){qf=Math.min(qCap,qf+.1);qT=0}}
-    applyQ();
+    fitBox();applyQ();
     const paused=S.run&&!S.pick&&!S.over&&hadLock&&!locked&&!fb;if(paused&&pz.hidden)pz.hidden=false;
     if(S.run&&!S.pick&&!S.over&&!paused){if(S.intro){T+=dt;introUpdate(dt)}else update(dt)}else{T+=dt;if(S&&S.run&&S.pick&&!S.over&&!paused)deathUpdate(dt)}
     sync(dt);camUpdate();draw();R.clear();R.render(scene,cam);if(vmRoot.visible&&!S.intro){R.clearDepth();R.render(vmScene,S.dbg||cam)}
