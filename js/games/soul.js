@@ -1595,7 +1595,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     const cp=cam.position,d=new THREE.Vector3();cam.getWorldDirection(d);
     let best=null,bt=80;for(const e of S.en){if(e.hp<=0)continue;const vx=e.x-cp.x,vy=e.y0+e.h*.55-cp.y,vz=e.z-cp.z,t=vx*d.x+vy*d.y+vz*d.z;if(t<2||t>bt)continue;
       const px=vx-d.x*t,py=vy-d.y*t,pz2=vz-d.z*t;if(Math.hypot(px,py,pz2)<e.r*1.1+.35){best=e;bt=t}}
-    if(best)return{x:best.x,y:best.y0+best.h*.55,z:best.z,e:best};
+    if(best){const tt=bt;return{x:cp.x+d.x*tt,y:cp.y+d.y*tt,z:cp.z+d.z*tt,e:best}}   /* 不再吸附到身體中心：子彈打向準心實際指的位置，才能瞄頭 */
     let t=60;if(d.y<-.02)t=Math.min(t,-cp.y/d.y);return{x:cp.x+d.x*t,y:Math.max(.3,cp.y+d.y*t),z:cp.z+d.z*t};
   }
   const SW_R=2.8,SW_HALF=1.15,SW_DUR=.2;
@@ -1625,10 +1625,10 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     if(S.ammo<=0){startReload();S.p.fcd=.2;GA.tone(220,.04,'square',.05);return}
     const p=S.p,a=aimInfo(),mw=muzzleWorld(),mx=mw.x,my=mw.y,mz=mw.z;
     let dx=a.x-mx,dy=a.y-my,dz=a.z-mz;const l=Math.hypot(dx,dy,dz)||1;dx/=l;dy/=l;dz/=l;
-    const ads=S.ads>.5,sp=(ads?.0025:.014)+Math.min(1,p.mv/6)*(ads?.004:.018)+(p.y>.05?.02:0);
+    const ads=S.ads>.5,sp=(ads?.0025:.032)+Math.min(1,p.mv/6)*(ads?.004:.03)+(p.y>.05?(ads?.02:.03):0);   /* 腰射發散加大（圓錐散布：離越遠，彈著點散得越開） */
     const n=1;for(let k=0;k<n;k++){let ux=dx+(rnd()-.5)*sp*2+(k?(k%2?1:-1)*.02*Math.ceil(k/2):0),uy=dy+(rnd()-.5)*sp*2,uz=dz+(rnd()-.5)*sp*2;const ul=Math.hypot(ux,uy,uz);ux/=ul;uy/=ul;uz/=ul;
       if(S.dg.length<90){const m=makeBullet();m.position.set(mx,my,mz);m.lookAt(mx+ux,my+uy,mz+uz);dyn.add(m);
-        S.dg.push({x:mx,y:my,z:mz,vx:ux*260,vy:uy*260,vz:uz*260,l:.5,d:12*dmgMul(),m,ro:0})}}
+        S.dg.push({sx:mx,sz:mz,x:mx,y:my,z:mz,vx:ux*260,vy:uy*260,vz:uz*260,l:.5,d:12*dmgMul(),m,ro:0})}}
     S.ammo--;S.p.fcd=1/(11*rateMul());S.rk=1;S.rkx=rnd()-.5;S.rkz=rnd()-.5;S.mf=.045;S.shake=Math.max(S.shake,.035);
     GA.noise(.1,.34,4200);GA.tone(120,.09,'sawtooth',.1,.45);GA.tone(2200,.025,'square',.03,.5);
     {const ej=RF.localToWorld(RF.userData.eject.clone()),[rx,rz]=rgt();   /* 退殼：真正的黃銅彈殼，向右上方彈出、翻滾、落地彈跳 */
@@ -1656,7 +1656,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       const gm=1.25+.12*S.ads,sy=RF.userData.sight.y*RFS*gm,sz=RF.userData.sight.z*RFS*gm;   /* gm：整把槍（含雙手）的放大倍率，開鏡時靠近鏡頭、槍體佔滿畫面下方 */
       if(!RF.userData.hid){RF.userData.hid=[];rfG.position.set(0,0,0);rfG.rotation.set(0,0,0);vmRoot.updateMatrixWorld(true);const L=RF.userData.sight;RF.userData.adsM=[];RF.traverse(m=>{if(m.userData.ads)RF.userData.adsM.push(m)});RF.traverse(m=>{if(!m.isMesh||m.userData.keep)return;const b=new THREE.Box3().setFromObject(m),c=RF.worldToLocal(b.getCenter(new THREE.Vector3()));const z0=Math.min(RF.worldToLocal(b.min.clone()).z,RF.worldToLocal(b.max.clone()).z);if(c.z>L.z+.03||z0>L.z+.1)RF.userData.hid.push(m)})}
       for(const m of RF.userData.hid)m.visible=ad<.3;for(const m of RF.userData.adsM)m.visible=ad>=.3;
-      let px=.13*(1-ad),py=-.22+(-sy+.22)*ad,pz=-.4+(-.36-sz+.4)*ad,rx=-.02*(1-ad),rz=-.03*(1-ad),ry=.36*(1-ad);
+      let px=.13*(1-ad),py=-.22+(-sy+.22)*ad,pz=-.4+(-.36-sz+.4)*ad,rx=-.02*(1-ad),rz=-.117*(1-ad),ry=.36*(1-ad);
       px+=bx*(1-ad);py+=(by+idl)*(1-ad)-drop;pz+=S.rk*.05*(1-ad*.55);rx+=S.rk*.055*(1-ad*.4);
       /* 手：預設右手握把、左手托護木；換彈時左手取下彈匣→從腰間取新彈匣→插入→拉槍機 */
       const ST_=(x,e0,e1)=>{x=Math.max(0,Math.min(1,(x-e0)/(e1-e0)));return x*x*(3-2*x)},mix=(a,b,k)=>a+(b-a)*k;
@@ -1758,10 +1758,13 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
         if(q<e.r+.15&&b.y>e.y0-.2&&b.y<e.y0+e.h+.2){hurtE(e,b.d,'#fff');S.hm=.15;if(lvl(5)>=5&&rnd()<.15)chain(e,3,15,0);GA.tone(120+rnd()*40,.03,'square',.03);return false}}
       return true});
     /* 飛刀 */
-    S.dg=S.dg.filter(b=>{const ox=b.x,oz=b.z;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;b.l-=dt;let end=b.l<=0||b.y<0||b.y>14||(b.y<13&&inCastle(b.x,b.z,0))||Math.hypot(b.x,b.z)>AR+2;
+    S.dg=S.dg.filter(b=>{const ox=b.x,oz=b.z,oy=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;b.l-=dt;let end=b.l<=0||b.y<0||b.y>14||(b.y<13&&inCastle(b.x,b.z,0))||Math.hypot(b.x,b.z)>AR+2;
       if(!end){const sx=b.x-ox,sz=b.z-oz,l2=sx*sx+sz*sz||1e-6;
         for(const e of S.en){if(e.hp<=0)continue;const t=clamp(((e.x-ox)*sx+(e.z-oz)*sz)/l2,0,1),q=Math.hypot(e.x-(ox+sx*t),e.z-(oz+sz*t));
-          if(q<e.r+.15&&b.y>e.y0-.2&&b.y<e.y0+e.h+.2){hurtE(e,b.d,'#fff');S.hm=.15;if(lvl(5)>=5&&rnd()<.15)chain(e,3,15,0);GA.tone(120+rnd()*40,.03,'square',.03);end=true;break}}}
+          const yy=oy+(b.y-oy)*t;   /* 判定範圍縮小：半徑縮 18%、上下不再多留空隙；以彈道最靠近敵人處的高度判定 */
+          if(q<e.r*.82&&yy>e.y0&&yy<e.y0+e.h){const hs=yy>e.y0+e.h*.8;   /* 爆頭：最上方 20%，傷害 ×1.3、紅色數字 */
+            const df=Math.hypot(b.x-b.sx,b.z-b.sz),fo=df<=25?1:Math.max(.45,1-(df-25)*.012);   /* 距離衰減：25 公尺內全傷害，之後每公尺 −1.2%，最低 45%（約 70 公尺） */
+            hurtE(e,(hs?b.d*1.3:b.d)*fo,hs?'#ff2a2a':'#fff');S.hm=.15;if(hs)GA.tone(1500,.05,'triangle',.05,.5);if(lvl(5)>=5&&rnd()<.15)chain(e,3,15,0);GA.tone(120+rnd()*40,.03,'square',.03);end=true;break}}}
       if(!end&&S.pa.length<700&&rnd()<.5)S.pa.push({x:b.x,y:b.y,z:b.z,vx:0,vy:0,vz:0,l:.25,m:.25,c:'#ffd9a0',s:.06});
       if(end){dyn.remove(b.m);return false}return true});
     /* 敵彈、危險區 */
