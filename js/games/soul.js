@@ -94,6 +94,20 @@ function mountSoulArena(stage,done){
      for(const wy of[.45,.7]){const wn=new THREE.Mesh(new THREE.BoxGeometry(.5,1.6,.3),glM);wn.position.set(0,hh*wy,2.45);tw.add(wn)}
      const fm=new THREE.Mesh(new THREE.ConeGeometry(.8,2,6),BM(0x6fe0ff,{transparent:true,opacity:.9}));fm.position.y=hh+1.4;tw.add(fm);flames.push(fm);
      tw.position.set(Math.cos(a)*(AR+1.2),0,Math.sin(a)*(AR+1.2));tw.rotation.y=Math.atan2(-Math.cos(a),-Math.sin(a));scene.add(tw)}}
+   /* —— 水晶造型庫：六角柱尖晶、鼓肚晶柱、薄刃片、雙尖菱晶、扭曲尖塔，底部都在 y=0，可傾斜、橫躺、成簇 —— */
+   const CRG=(()=>{const L=(p,sg)=>new THREE.LatheGeometry(p.map(a=>new THREE.Vector2(a[0],a[1])),sg);
+     const g1=L([[0,0],[.5,.05],[.5,.72],[.18,.9],[0,1]],6),g2=L([[0,0],[.34,.16],[.52,.46],[.34,.84],[0,1]],6),g5=L([[0,0],[.46,.03],[.3,.55],[.12,.88],[0,1]],5);
+     const g3=new THREE.ConeGeometry(.5,1,4);g3.translate(0,.5,0);g3.scale(.34,1,1);
+     const g4=new THREE.OctahedronGeometry(1);g4.scale(.26,.5,.26);g4.translate(0,.5,0);
+     const g6=new THREE.ConeGeometry(.5,1,3);g6.translate(0,.5,0);
+     return[g1,g2,g3,g4,g5,g6]})();
+   const CRM=[[M(0x4ab8ff,{emissive:0x4ab8ff,emissiveIntensity:.8}),M(0x9ae8ff,{emissive:0x7fd8ff,emissiveIntensity:.9})],[M(0x7a6aff,{emissive:0x6a4aff,emissiveIntensity:.8}),M(0xc0b0ff,{emissive:0x9a80ff,emissiveIntensity:.9})],[M(0x3ae0c0,{emissive:0x20c0a0,emissiveIntensity:.8}),M(0xa0fff0,{emissive:0x60e8d0,emissiveIntensity:.9})]];
+   function mkCluster(gp,S0,pal,wild){const P=CRM[pal||0],n=2+((rnd()*5)|0),lean=(rnd()-.5)*(rnd()<.35?1.2:.45),la=rnd()*6.28;
+     for(let j=0;j<n;j++){const c=new THREE.Mesh(CRG[(rnd()*CRG.length)|0],P[j%2]),sc=j?S0*(.3+rnd()*.5):S0,w=sc*(.5+rnd()*.5),hh=sc*(1.3+rnd()*1.3);
+       c.scale.set(w,hh,w*(.8+rnd()*.5));const az=j?rnd()*6.28:la,ring=j?S0*(.15+rnd()*.55):0;c.position.set(Math.cos(az)*ring,-.03*hh,Math.sin(az)*ring);
+       c.rotation.order='YXZ';c.rotation.y=rnd()*6.28;
+       let tl=j?.15+rnd()*.75:Math.abs(lean);if(wild&&rnd()<.15)tl=1.05+rnd()*.35;   /* 少數幾根幾乎橫躺、斜插在地上 */
+       c.rotation.x=tl*(rnd()<.5?1:-1);c.rotation.z=(rnd()-.5)*tl*.9;gp.add(c)}}
    /* 場上物件（有碰撞）：墓碑、方尖碑、水晶、斷柱、火盆、枯樹、殘破拱門 */
    {const kinds=[0,0,0,1,2,2,2,2,2,2,2,3,3,3,4,4,5,5,6],dkM=M(0x1c2634),fresh=(x,z,r,gp)=>{scene.add(gp);props.push({x,z,r,g:gp})};let nBr=0;
     for(let i=0;i<36;i++){let x,z,tr=0;do{const a=rnd()*PI*2,d=10+Math.sqrt(rnd())*(AR-17);x=Math.cos(a)*d;z=Math.sin(a)*d;tr++}while(props.some(q=>Math.hypot(q.x-x,q.z-z)<6.5)&&tr<40);if(tr>=40)continue;
@@ -105,7 +119,7 @@ function mountSoulArena(stage,done){
       const mound=new THREE.Mesh(new THREE.BoxGeometry(1.6,.18,2.2),dkM);mound.position.set(0,.09,.9);gp.add(mound);fresh(x,z,r,gp)}
      else if(k===1){const bs=new THREE.Mesh(new THREE.BoxGeometry(2,.5,2),stM2);bs.position.y=.25;gp.add(bs);const c=new THREE.Mesh(new THREE.CylinderGeometry(.8,.95,4,7),M(0x44566c));c.position.y=2.4;gp.add(c);
       const t=new THREE.Mesh(new THREE.OctahedronGeometry(.45),BM(0xbfeaff));t.position.y=5;t.userData.spin=1;gp.add(t);fresh(x,z,1,gp)}
-     else if(k===2){for(let j=0;j<3;j++){const c=new THREE.Mesh(new THREE.OctahedronGeometry(j?.6:1.1),M(0x4ab8ff,{emissive:0x4ab8ff,emissiveIntensity:.8}));c.scale.y=j?1.5:1.7;c.position.set(j?(j===1?-1:.9):0,j?.9:1.5,j?(j===1?.5:-.6):0);c.rotation.z=j?(j-1.5)*.4:0;c.userData.spin=j?0:1;gp.add(c)}fresh(x,z,.95,gp)}
+     else if(k===2){mkCluster(gp,1.0+rnd()*.5,rnd()<.25?1+((rnd()*2)|0):0,1);fresh(x,z,.95,gp)}
      else if(k===3){const hg=2+rnd()*2.5,bs=new THREE.Mesh(new THREE.BoxGeometry(2,.5,2),stM2);bs.position.y=.25;gp.add(bs);const sf=new THREE.Mesh(new THREE.CylinderGeometry(.7,.8,hg,8),stM);sf.position.y=.5+hg/2;gp.add(sf);
       const cap=new THREE.Mesh(new THREE.BoxGeometry(1.3,.4,1.3),stM2);cap.position.y=.5+hg+.1;cap.rotation.z=(rnd()-.5)*.6;if(rnd()<.6)gp.add(cap);
       const rb=new THREE.Mesh(new THREE.BoxGeometry(.9,.5,.7),stM2);rb.position.set(1.4,.25,.4);rb.rotation.y=rnd()*3;gp.add(rb);fresh(x,z,.9,gp)}
@@ -216,21 +230,26 @@ function mountSoulArena(stage,done){
     for(let k=0;k<4;k++)for(const sx of[-1,1]){const lg=new THREE.Group();lg.position.set(sx*(5.6+Math.sin(k)*.5),0,14+k*6);cg.add(lg);const po=new THREE.Mesh(new THREE.CylinderGeometry(.08,.14,2.6,8),cs2);po.position.y=1.3;lg.add(po);const fm=new THREE.Mesh(new THREE.SphereGeometry(.26,10,8),amb[(k+(sx>0?1:0))%4].m);fm.position.y=2.8;lg.add(fm)}
     ENV.push(t=>{flick.forEach((f,i)=>{f.m.color.copy(f.c).multiplyScalar(.8+.2*Math.sin(t*(3+i*1.7)+i*2)+.08*Math.sin(t*17+i))})})}
    /* 散落的水晶叢（裝飾，大量增加；避開城堡與出生點） */
-   {const cm=M(0x4ab8ff,{emissive:0x4ab8ff,emissiveIntensity:.8}),cm2=M(0x9ae8ff,{emissive:0x7fd8ff,emissiveIntensity:.9}),og=new THREE.OctahedronGeometry(1);let n=0,tr=0;
-    while(n<70&&tr++<600){const a=rnd()*PI*2,d=6+Math.sqrt(rnd())*(AR-9),x=Math.cos(a)*d,z=Math.sin(a)*d;
+   {let n=0,tr=0;
+    while(n<120&&tr++<900){const a=rnd()*PI*2,d=6+Math.sqrt(rnd())*(AR-9),x=Math.cos(a)*d,z=Math.sin(a)*d;
      if(Math.abs(x)<34&&z<-18)continue;if(Math.hypot(x,z-12)<7)continue;if(props.some(q=>Math.hypot(q.x-x,q.z-z)<q.r+1.6))continue;
-     const gp=new THREE.Group(),k=2+((rnd()*3)|0),S0=.45+rnd()*.9;gp.position.set(x,0,z);gp.rotation.y=rnd()*6;
-     for(let j=0;j<k;j++){const c=new THREE.Mesh(og,j%2?cm2:cm),sc=j?S0*(.4+rnd()*.35):S0;c.scale.set(sc*.6,sc*(1.5+rnd()*.8),sc*.6);c.position.set(j?(rnd()-.5)*S0*1.6:0,c.scale.y*.8,j?(rnd()-.5)*S0*1.6:0);c.rotation.set((rnd()-.5)*.4,rnd()*3,(rnd()-.5)*.4);gp.add(c)}
+     const gp=new THREE.Group(),big=rnd()<.06,S0=big?1.3+rnd()*.5:.4+rnd()*.85;gp.position.set(x,0,z);gp.rotation.y=rnd()*6;
+     mkCluster(gp,S0,rnd()<.22?1+((rnd()*2)|0):0,true);
      scene.add(gp);if(S0>.8)props.push({x,z,r:S0*.7,g:gp});n++}}
    /* 散落的碎石（純裝飾，很小，不擋路） */
    {const rb=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),M(0x34445a),240),o=new THREE.Object3D();rb.frustumCulled=false;
     for(let i=0;i<240;i++){const a=rnd()*PI*2,d=Math.sqrt(rnd())*(AR-2),sc=.12+rnd()*.3;o.position.set(Math.cos(a)*d,sc*.4,Math.sin(a)*d);o.rotation.set(rnd()*6,rnd()*6,rnd()*6);o.scale.set(sc*(1+rnd()),sc,sc*(1+rnd()));o.updateMatrix();rb.setMatrixAt(i,o.matrix)}
     rb.instanceMatrix.needsUpdate=true;scene.add(rb)}
-   /* 飄升的灰燼火星 */
-   {const NE=240,ep=new Float32Array(NE*3),ev=new Float32Array(NE),eg=new THREE.BufferGeometry(),rs=i=>{const a=rnd()*PI*2,d=Math.sqrt(rnd())*AR;ep[i*3]=Math.cos(a)*d;ep[i*3+2]=Math.sin(a)*d};
-    for(let i=0;i<NE;i++){rs(i);ep[i*3+1]=rnd()*16;ev[i]=.6+rnd()*1.4}eg.setAttribute('position',new THREE.BufferAttribute(ep,3));
-    const pt=new THREE.Points(eg,new THREE.PointsMaterial({color:0x9fe0ff,size:.28,transparent:true,opacity:.85,blending:THREE.AdditiveBlending,depthWrite:false}));pt.frustumCulled=false;scene.add(pt);
-    let lt=0;ENV.push((t,dt)=>{for(let i=0;i<NE;i++){ep[i*3+1]+=ev[i]*dt;ep[i*3]+=Math.sin(t*.7+i)*.4*dt;if(ep[i*3+1]>16){rs(i);ep[i*3+1]=0}}eg.attributes.position.needsUpdate=true})}
+   /* 飄升的灰燼：不規則的柔邊薄片（不是方塊），大小不一、緩緩翻轉搖晃、慢慢往上飄並淡入淡出；少數帶暖色餘燼 */
+   {const NE=480,ep=new Float32Array(NE*3),ev=new Float32Array(NE),es=new Float32Array(NE),ec=new Float32Array(NE*3),eq=new Float32Array(NE),eg=new THREE.BufferGeometry(),rs=i=>{const a=rnd()*PI*2,d=Math.sqrt(rnd())*AR;ep[i*3]=Math.cos(a)*d;ep[i*3+2]=Math.sin(a)*d};
+    for(let i=0;i<NE;i++){rs(i);ep[i*3+1]=rnd()*16;ev[i]=.35+rnd()*.9;const w=rnd()<.16;es[i]=w?.28+rnd()*.26:.22+rnd()*.46;eq[i]=rnd();
+      if(w){ec[i*3]=1;ec[i*3+1]=.55+rnd()*.25;ec[i*3+2]=.2}else{const g=.62+rnd()*.3;ec[i*3]=g;ec[i*3+1]=g*.93;ec[i*3+2]=g*.86}}
+    eg.setAttribute('position',new THREE.BufferAttribute(ep,3));eg.setAttribute('aS',new THREE.BufferAttribute(es,1));eg.setAttribute('aC',new THREE.BufferAttribute(ec,3));eg.setAttribute('aP',new THREE.BufferAttribute(eq,1));
+    const am=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uT:{value:0},uH:{value:600}},
+      vertexShader:'attribute float aS;attribute vec3 aC;attribute float aP;uniform float uT,uH;varying vec3 vC;varying float vA,vR;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=max(1.5,aS*uH*.5/-mv.z);vC=aC;float h=position.y/16.;vA=smoothstep(0.,.12,h)*(1.-smoothstep(.65,1.,h))*(.6+.4*sin(uT*2.3+aP*40.));vR=aP*6.283+uT*(.4+aP*1.6);}',
+      fragmentShader:'varying vec3 vC;varying float vA,vR;void main(){vec2 p=gl_PointCoord-.5;float c=cos(vR),s=sin(vR);p=vec2(c*p.x-s*p.y,s*p.x+c*p.y);p.x*=1.55;float a0=atan(p.y,p.x);float e=.46-.09*sin(a0*3.+vR*1.7)-.05*sin(a0*5.+vR);float a=smoothstep(e,e-.2,length(p));if(a<.02)discard;gl_FragColor=vec4(vC,a*vA*.95);}'});
+    const pt=new THREE.Points(eg,am);pt.frustumCulled=false;scene.add(pt);
+    ENV.push((t,dt)=>{am.uniforms.uT.value=t;am.uniforms.uH.value=R.domElement.height||600;for(let i=0;i<NE;i++){ep[i*3+1]+=ev[i]*dt;ep[i*3]+=(Math.sin(t*.6+i)*.5+Math.sin(t*1.3+i*2.1)*.25)*dt;ep[i*3+2]+=Math.cos(t*.5+i*1.7)*.25*dt;if(ep[i*3+1]>16){rs(i);ep[i*3+1]=0}}eg.attributes.position.needsUpdate=true})}
    /* 天空：星、紅月與光暈、遠山剪影、緩慢飄動的雲層 */
    const st=new Float32Array(500*3);for(let i=0;i<500;i++){const a=rnd()*PI*2,e=.15+rnd()*.9;st[i*3]=Math.cos(a)*180;st[i*3+1]=30+e*120;st[i*3+2]=Math.sin(a)*180}
    const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferAttribute(st,3));scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xdfeaff,size:1.3,fog:false})));
@@ -246,7 +265,17 @@ function mountSoulArena(stage,done){
   const dyn=new THREE.Group();scene.add(dyn);
   const dm=new THREE.Object3D(),CC=new THREE.Color();
   function inst(geo,mat,max){const m=new THREE.InstancedMesh(geo,mat,max);m.frustumCulled=false;m.count=0;m.setColorAt(0,CC.set('#fff'));scene.add(m);return m}
-  const IP=inst(new THREE.BoxGeometry(.09,.09,1),BM(0xffffff),300),IE=inst(new THREE.SphereGeometry(1,10,8),BM(0xffffff),300),IO=inst(new THREE.OctahedronGeometry(1),BM(0xffffff),300),IX=inst(new THREE.BoxGeometry(1,1,1),BM(0xffffff),800),ICS=inst(new THREE.CylinderGeometry(.5,.44,1,10),new THREE.MeshStandardMaterial({color:0xe0a844,metalness:.85,roughness:.3,emissive:0x3a2408,emissiveIntensity:.5}),60);   /* ICS：退出的黃銅彈殼 */
+  /* 歪歪的三十面體（菱形三十面體＋頂點隨機扭曲）：經驗球／回血球 */
+  const TRI=(()=>{const t=(1+Math.sqrt(5))/2,V=[];for(const a of[-1,1])for(const b of[-t,t])V.push([0,a,b],[a,b,0],[b,0,a]);
+    const d=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1],p[2]-q[2]),nm=v=>{const l=Math.hypot(...v);return v.map(x=>x/l)},adj=(i,j)=>Math.abs(d(V[i],V[j])-2)<.01,jit={},J=(v,k)=>{if(!jit[k])jit[k]=[.82+rnd()*.36,.82+rnd()*.36,.82+rnd()*.36];return[v[0]*jit[k][0],v[1]*jit[k][1],v[2]*jit[k][2]]},pos=[];
+    for(let i=0;i<12;i++)for(let j=i+1;j<12;j++){if(!adj(i,j))continue;const ks=[];for(let k=0;k<12;k++)if(k!==i&&k!==j&&adj(i,k)&&adj(j,k))ks.push(k);if(ks.length!==2)continue;
+      const ci=ks.map(k=>nm([V[i][0]+V[j][0]+V[k][0],V[i][1]+V[j][1]+V[k][1],V[i][2]+V[j][2]+V[k][2]]).map(x=>x*.795)),vi=nm(V[i]),vj=nm(V[j]);
+      const tri=(a,b,c,ka,kb,kc)=>{const A=J(a,ka),B=J(b,kb),C=J(c,kc),u=[B[0]-A[0],B[1]-A[1],B[2]-A[2]],w=[C[0]-A[0],C[1]-A[1],C[2]-A[2]],n=[u[1]*w[2]-u[2]*w[1],u[2]*w[0]-u[0]*w[2],u[0]*w[1]-u[1]*w[0]],ce=[A[0]+B[0]+C[0],A[1]+B[1]+C[1],A[2]+B[2]+C[2]];
+        if(n[0]*ce[0]+n[1]*ce[1]+n[2]*ce[2]<0)pos.push(...A,...C,...B);else pos.push(...A,...B,...C)};
+      const kv=v=>v.map(x=>x.toFixed(3)).join(',');
+      tri(vi,ci[0],vj,kv(vi),kv(ci[0]),kv(vj));tri(vi,vj,ci[1],kv(vi),kv(vj),kv(ci[1]))}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.computeVertexNormals();return g})();
+  const IP=inst(new THREE.BoxGeometry(.09,.09,1),BM(0xffffff),300),IE=inst(new THREE.SphereGeometry(1,10,8),BM(0xffffff),300),IO=inst(TRI,new THREE.MeshStandardMaterial({color:0xffffff,emissive:0x40404c,roughness:.3,metalness:.25,flatShading:true}),300),IX=inst(new THREE.BoxGeometry(1,1,1),BM(0xffffff),800),ICS=inst(new THREE.CylinderGeometry(.5,.44,1,10),new THREE.MeshStandardMaterial({color:0xe0a844,metalness:.85,roughness:.3,emissive:0x3a2408,emissiveIntensity:.5}),60);   /* ICS：退出的黃銅彈殼 */
   const sh=new THREE.CircleGeometry(1,16),shM=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.4,depthWrite:false});
   const shadow=(r)=>{const m=new THREE.Mesh(sh,shM);m.rotation.x=-PI/2;m.position.y=.04;m.scale.set(r,r,r);return m};
   /* —— 模型：面向 +Z 的低多邊形人形 —— */
@@ -920,6 +949,35 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
      K(box(.052,.064,.01,0,sY-.106,sZ+.055,sm));
      for(let i=0;i<7;i++){K(box(.046-.0016*i,.0032,.009,0,sY-.078-.0083*i,sZ+.0615,i%2?sm2:sp_))}   /* 中央散熱肋 */
      K(box(.054,.0022,.004,0,sY-.0715,sZ+.062,bl))
+     /* ===== 開鏡時看到的槍尾（參考手遊神話槍）：寬幅階梯裝甲翼、V 形胸甲、兩側圓盤＋橫軸、藍色弧形翼片、青色噴口與放射光芒 ===== */
+     {const KA=o=>{o.userData.keep=1;o.userData.ads=1;return o};   /* 只在開鏡時顯示（腰射時不出現在槍尾） */
+      const cy=new THREE.MeshBasicMaterial({color:0x37e6ff}),cyA=new THREE.MeshBasicMaterial({color:0x7af2ff,transparent:true,opacity:.55,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}),
+        mag=mat(0x7a2a8e,.8,.28,0x240a30),mag2=mat(0xa23fb8,.75,.25,0x2a0c36),drk=mat(0x14101c,.7,.35),gld=mat(0xe0a83a,.9,.25,0x3a2400),steelM=mat(0xb8bfcc,.9,.2);
+      const shp=(pts,dep,m,x0,y0,z0,sx,bev)=>{const sh=new THREE.Shape(pts.map(q=>new THREE.Vector2(q[0]*(sx||1),q[1])));        const g=new THREE.ExtrudeGeometry(sh,{depth:dep,bevelEnabled:bev!==0,bevelThickness:.0012,bevelSize:.0012,bevelSegments:1});const mm2=m.clone();mm2.side=THREE.DoubleSide;const o=new THREE.Mesh(g,mm2);o.position.set(x0,y0,z0);KA(o);G.add(o);return o};
+      for(const sx of[-1,1]){
+        /* 階梯式裝甲翼：三層由內往外越寬、往下漸短，像參考圖兩側的弧形護甲 */
+        shp([[.042,-.032],[.088,-.02],[.108,-.06],[.098,-.112],[.052,-.118],[.044,-.08]],.006,drk,0,sY,sZ+.052,sx);
+        shp([[.046,-.04],[.084,-.03],[.1,-.062],[.091,-.104],[.054,-.11],[.048,-.08]],.006,mag,0,sY,sZ+.0585,sx);
+        shp([[.05,-.05],[.078,-.042],[.09,-.066],[.083,-.098],[.057,-.102],[.052,-.08]],.005,mag2,0,sY,sZ+.0645,sx);
+        /* 金色邊條＋青色發光下緣 */
+        shp([[.046,-.04],[.084,-.03],[.087,-.035],[.05,-.045]],.004,gld,0,sY,sZ+.0655,sx);
+        shp([[.056,-.109],[.091,-.104],[.093,-.108],[.058,-.114]],.003,cy,0,sY,sZ+.0665,sx,0);
+        /* 圓盤（輪輻環）＋青色核心 */
+        {const ring=new THREE.Mesh(new THREE.TorusGeometry(.0135,.0038,8,20),steelM);ring.position.set(sx*.064,sY-.066,sZ+.07);KA(ring);G.add(ring);
+         const disc=new THREE.Mesh(new THREE.CircleGeometry(.011,16),mat(0x1c1226,.8,.3));disc.position.set(sx*.064,sY-.066,sZ+.0695);KA(disc);G.add(disc);
+         const core=new THREE.Mesh(new THREE.CircleGeometry(.0052,14),cy);core.position.set(sx*.064,sY-.066,sZ+.0705);KA(core);G.add(core);
+         }
+        /* 藍色弧形翼片（瞄具兩側，半透明發光） */
+        {const f=new THREE.Shape();f.moveTo(0,0);f.quadraticCurveTo(.03,.02,.022,.085);f.quadraticCurveTo(.012,.05,-.012,.04);f.quadraticCurveTo(.006,.02,0,0);
+         const m=new THREE.Mesh(new THREE.ShapeGeometry(f),new THREE.MeshBasicMaterial({color:0x4a9aff,transparent:true,opacity:.75,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));m.position.set(sx*.036,sY-.052,sZ+.058);m.scale.x=sx;m.rotation.z=-sx*.12;KA(m);G.add(m)}
+        /* 青色噴口與放射光芒（往下、往外擴散） */
+        {const v=box(.022,.006,.006,sx*.05,sY-.104,sZ+.067,cy);v.rotation.z=sx*.35;KA(v)
+         for(let i=0;i<4;i++){const ray=new THREE.Mesh(new THREE.PlaneGeometry(.006+i*.002,.07+i*.02),cyA);ray.position.set(sx*(.058+i*.009),sY-.128-i*.004,sZ+.066);ray.rotation.z=sx*(.28+i*.1);KA(ray);G.add(ray)}}}
+      /* 橫軸（兩圓盤之間）、V 形胸甲、中央立線 */
+      shp([[-.07,-.07],[0,-.108],[.07,-.07],[.07,-.081],[0,-.12],[-.07,-.081]],.007,mag2,0,sY,sZ+.066,1);
+      shp([[-.058,-.077],[0,-.111],[.058,-.077],[.058,-.0815],[0,-.1165],[-.058,-.0815]],.003,cy,0,sY,sZ+.0735,1,0);
+      
+     }
      /* 紫色火焰飄帶（瞄具兩側，會閃動） */
      {const fs=new THREE.Shape();fs.moveTo(0,0);fs.quadraticCurveTo(.013,.017,.003,.052);fs.quadraticCurveTo(.002,.031,-.007,.038);fs.quadraticCurveTo(-.003,.02,-.009,.01);fs.lineTo(0,0);
       const pm=new THREE.MeshBasicMaterial({color:0x8d3cff,transparent:true,opacity:.42,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}),fl=[];
@@ -1830,7 +1888,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     IP.count=n;IP.instanceMatrix.needsUpdate=true;if(IP.instanceColor)IP.instanceColor.needsUpdate=true;
     n=0;for(const b of S.eb){if(n>=300)break;dm.position.set(b.x,b.y,b.z);dm.quaternion.identity();dm.scale.setScalar(b.r);dm.updateMatrix();IE.setMatrixAt(n,dm.matrix);IE.setColorAt(n,CC.set(b.c));n++}
     IE.count=n;IE.instanceMatrix.needsUpdate=true;if(IE.instanceColor)IE.instanceColor.needsUpdate=true;
-    n=0;for(const o of S.orbs){if(n>=300)break;dm.position.set(o.x,.6+Math.sin(T*3+o.ph)*.15,o.z);dm.rotation.set(0,T*2,0);dm.scale.setScalar(o.k==='hp'?.38:.26);dm.updateMatrix();IO.setMatrixAt(n,dm.matrix);IO.setColorAt(n,CC.set(o.c));n++}
+    n=0;for(const o of S.orbs){if(n>=300)break;dm.position.set(o.x,.6+Math.sin(T*3+o.ph)*.15,o.z);dm.rotation.set(.5+Math.sin(o.ph)*.4,T*2+o.ph,.35+Math.cos(o.ph*1.7)*.3);{const q=o.k==='hp'?.38:.28;dm.scale.set(q*(.9+.2*Math.sin(o.ph*3)),q*(.9+.2*Math.cos(o.ph*2)),q);}dm.updateMatrix();IO.setMatrixAt(n,dm.matrix);IO.setColorAt(n,CC.set(o.c));n++}
     IO.count=n;IO.instanceMatrix.needsUpdate=true;if(IO.instanceColor)IO.instanceColor.needsUpdate=true;
     n=0;for(const q of S.pa){if(n>=800)break;dm.position.set(q.x,q.y,q.z);dm.rotation.set(q.l*6,q.l*4,0);dm.scale.setScalar(q.s*Math.max(.2,q.l/q.m));dm.updateMatrix();IX.setMatrixAt(n,dm.matrix);IX.setColorAt(n,CC.set(q.c));n++}
     IX.count=n;IX.instanceMatrix.needsUpdate=true;if(IX.instanceColor)IX.instanceColor.needsUpdate=true;
