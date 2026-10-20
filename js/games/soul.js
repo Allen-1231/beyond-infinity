@@ -849,7 +849,40 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       /* 機匣側面標示牌 */
       {const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.fillStyle='#0b0b10';x.fillRect(0,0,256,64);x.strokeStyle='#e0a83a';x.lineWidth=3;x.strokeRect(3,3,250,58);
        x.fillStyle='#e0a83a';x.font='bold 22px monospace';x.textAlign='center';x.fillText('BEYOND  INFINITY',128,28);x.fillStyle='#8f95a8';x.font='14px monospace';x.fillText('MK-V  SOUL  RIFLE  /  5.56',128,50);
-       const t=new THREE.CanvasTexture(c);for(const sx of[-1,1]){const m=new THREE.Mesh(new THREE.PlaneGeometry(.062,.0155),new THREE.MeshBasicMaterial({map:t,toneMapped:false}));m.position.set(sx*.0378,B(236),-A(1010));m.rotation.y=sx*PI/2;G.add(m)}}
+       const t=new THREE.CanvasTexture(c);for(const sx of[-1,1]){const m=new THREE.Mesh(new THREE.PlaneGeometry(.058,.0145),new THREE.MeshBasicMaterial({map:t,toneMapped:false}));m.position.set(sx*.0437,B(228),-A(946));m.rotation.y=sx*PI/2;G.add(m)}}
+     }
+     /* ===== 機匣側面裝甲（神話槍風格）：疊層斜切裝甲板、金色斜紋、發光散熱縫、刻痕、六角螺絲、向後突出的尖刺 ===== */
+     {const glo2=new THREE.MeshBasicMaterial({color:0xff7a1a}),glp=new THREE.MeshBasicMaterial({color:0xa24bff}),glb=new THREE.MeshBasicMaterial({color:0x4f86ff}),
+        stz=mat(0x8a909e,.85,.26),pl1=mat(0x24264a,.7,.3),pl2=mat(0x121216,.7,.34),pl3=mat(0x363a66,.65,.28),eng=mat(0x050507,.2,.8),spk=mat(0x0b0b10,.85,.28);
+      /* 底層：兩塊大裝甲板（斜切邊） */
+      poly([[893,196],[968,189],[996,200],[1004,238],[978,254],[900,254]],.080,pl1);
+      poly([[1004,196],[1100,186],[1138,200],[1146,236],[1112,252],[1012,252],[1004,238]],.080,pl2);
+      /* 上層：較小的疊板，製造層次 */
+      poly([[905,208],[960,203],[982,214],[986,240],[960,248],[910,248]],.0835,pl3);
+      poly([[1016,206],[1088,199],[1124,212],[1128,236],[1100,244],[1022,244]],.0835,pl1);
+      /* 金色斜紋飾邊 */
+      poly([[900,196],[968,189],[996,200],[993,206],[966,197],[902,203]],.0848,gold);
+      poly([[1008,196],[1100,186],[1138,200],[1134,206],[1098,193],[1010,203]],.0848,gold);
+      for(let i=0;i<3;i++)poly([[914+i*16,244],[926+i*16,226],[932+i*16,226],[920+i*16,244]],.0845,gold);   /* 斜向金紋 */
+      /* 發光散熱縫（橘） */
+      for(let i=0;i<5;i++)poly([[1074+i*12,242],[1081+i*12,242],[1089+i*12,214],[1082+i*12,214]],.0855,glo2,0,null,0);
+      /* 刻痕：沿板緣的細深線與交叉刻線 */
+      poly([[920,244],[972,244],[972,246],[920,246]],.0862,eng,0,null,0);
+      poly([[1030,238],[1112,236],[1112,240],[1030,242]],.0862,eng,0,null,0);
+      poly([[1006,200],[1008,200],[1012,248],[1010,248]],.0862,eng,0,null,0);
+      for(let i=0;i<4;i++)poly([[1032+i*20,226],[1046+i*20,224],[1046+i*20,227],[1032+i*20,229]],.0858,eng,0,null,0);
+      /* 發光線：藍（上緣）、紫（下緣） */
+      poly([[900,254],[978,256],[978,258],[900,256]],.0805,glp,0,null,0);
+      poly([[1012,252],[1112,254],[1112,256],[1012,254]],.0805,glp,0,null,0);
+      poly([[1146,236],[1148,236],[1138,200],[1136,200]],.0865,glb,0,null,0);
+      /* 六角螺絲 */
+      for(const [x,y] of[[912,214],[978,216],[1020,214],[1118,222],[912,242],[1120,244]]){for(const sx of[-1,1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(4.2*S,4.2*S,.004,6),stz);b.rotation.z=PI/2;b.position.set(sx*.0442,B(y),-A(x));G.add(b)}}
+      /* 向後突出的尖刺（左右各三根）＋上緣斜刺 */
+      for(const sx of[-1,1]){
+        [[1140,208,.014,.07,.5],[1146,224,.011,.055,.62],[1138,240,.009,.045,.8]].forEach(([x,y,r,hh,t])=>{const c=new THREE.Mesh(new THREE.ConeGeometry(r,hh,4),spk);c.rotation.set(PI/2,0,sx*t);c.position.set(sx*(.044+hh*.1),B(y),-A(x)+hh*.45);G.add(c)});
+        [[925,193,.011,.06],[1060,188,.011,.06]].forEach(([x,y,r,hh])=>{const c=new THREE.Mesh(new THREE.ConeGeometry(r,hh,4),spk);c.rotation.set(-.35,0,-sx*.5);c.position.set(sx*(.04+.012),B(y)+hh*.4,-A(x));G.add(c)})}
+      /* 機匣上緣凸起的裝甲脊 */
+      poly([[900,150],[1000,134],[1134,126],[1138,134],[1004,142],[902,158]],.0795,pl3);
      }
      /* 彈匣：橫紋＋子彈窗 */
      for(let i=0;i<6;i++)polyTo([[880-i*8,282+i*22],[996-i*7,286+i*22],[996-i*7,290+i*22],[880-i*8,286+i*22]],.0545,mat(0x0b0b10,.3,.7),0,null,0);
