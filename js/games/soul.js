@@ -906,8 +906,8 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
      box(.07,.008,.06,0,sY-.064,sZ-.002,sm2);box(.03,.01,.05,0,sY-.056,sZ,sm);   /* 角的底座 */
      /* 中央發光點（開鏡時才亮）：橘紅光點＋紫色光暈 */
      {const ret=new THREE.Group();ret.position.set(0,sY,sZ);
-      ret.add(new THREE.Mesh(new THREE.CircleGeometry(.0024,14),orB));
-      const hl=new THREE.Mesh(new THREE.CircleGeometry(.0075,18),new THREE.MeshBasicMaterial({color:0xa040ff,transparent:true,opacity:.35,blending:THREE.AdditiveBlending,depthWrite:false}));hl.position.z=-.0003;ret.add(hl);
+      ret.add(new THREE.Mesh(new THREE.CircleGeometry(.0015,14),new THREE.MeshBasicMaterial({color:0xff1a12})));
+      const hl=new THREE.Mesh(new THREE.CircleGeometry(.0042,18),new THREE.MeshBasicMaterial({color:0xa040ff,transparent:true,opacity:.35,blending:THREE.AdditiveBlending,depthWrite:false}));hl.position.z=-.0003;   /* 只留中間紅點，不要紫色光暈 */
       G.add(ret);G.userData.dot=ret}
      /* 機體後方上緣細節：向外張開的黑色尖翼、藍光邊、橘色鋸齒光帶、中央散熱肋 */
      for(const sx of[-1,1]){
@@ -1656,7 +1656,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       const gm=1.25+.12*S.ads,sy=RF.userData.sight.y*RFS*gm,sz=RF.userData.sight.z*RFS*gm;   /* gm：整把槍（含雙手）的放大倍率，開鏡時靠近鏡頭、槍體佔滿畫面下方 */
       if(!RF.userData.hid){RF.userData.hid=[];rfG.position.set(0,0,0);rfG.rotation.set(0,0,0);vmRoot.updateMatrixWorld(true);const L=RF.userData.sight;RF.userData.adsM=[];RF.traverse(m=>{if(m.userData.ads)RF.userData.adsM.push(m)});RF.traverse(m=>{if(!m.isMesh||m.userData.keep)return;const b=new THREE.Box3().setFromObject(m),c=RF.worldToLocal(b.getCenter(new THREE.Vector3()));const z0=Math.min(RF.worldToLocal(b.min.clone()).z,RF.worldToLocal(b.max.clone()).z);if(c.z>L.z+.03||z0>L.z+.1)RF.userData.hid.push(m)})}
       for(const m of RF.userData.hid)m.visible=ad<.3;for(const m of RF.userData.adsM)m.visible=ad>=.3;
-      let px=.13*(1-ad),py=-.22+(-sy+.22)*ad,pz=-.4+(-.36-sz+.4)*ad,rx=-.02*(1-ad),rz=.1*(1-ad),ry=.36*(1-ad);
+      let px=.13*(1-ad),py=-.22+(-sy+.22)*ad,pz=-.4+(-.36-sz+.4)*ad,rx=-.02*(1-ad),rz=-.03*(1-ad),ry=.36*(1-ad);
       px+=bx*(1-ad);py+=(by+idl)*(1-ad)-drop;pz+=S.rk*.05*(1-ad*.55);rx+=S.rk*.055*(1-ad*.4);
       /* 手：預設右手握把、左手托護木；換彈時左手取下彈匣→從腰間取新彈匣→插入→拉槍機 */
       const ST_=(x,e0,e1)=>{x=Math.max(0,Math.min(1,(x-e0)/(e1-e0)));return x*x*(3-2*x)},mix=(a,b,k)=>a+(b-a)*k;
@@ -2004,7 +2004,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     for(const e of S.en){if(e.boss||e.hp>=e.max)continue;const q=sp2d(e.x,e.y0+e.h+.4,e.z);if(!q)continue;hx.fillStyle='rgba(0,0,0,.6)';hx.fillRect(q[0]-15,q[1],30,4);hx.fillStyle='#ff5a5a';hx.fillRect(q[0]-15,q[1],30*Math.max(0,e.hp/e.max),4)}
     /* 準星：像決勝時刻——平時只有中心一個小點，命中時出現白色 X 命中標記 */
     if(S.run&&!S.pick&&!(S.ads>.5)){const cx=W/2,cy=H/2,k=Math.min(1,S.hm/.15);
-      hx.fillStyle='rgba(0,0,0,.55)';hx.beginPath();hx.arc(cx,cy,3,0,7);hx.fill();hx.fillStyle='#fff';hx.beginPath();hx.arc(cx,cy,1.6,0,7);hx.fill();
+      hx.fillStyle='rgba(0,0,0,.5)';hx.beginPath();hx.arc(cx,cy,2.3,0,7);hx.fill();hx.fillStyle='#ff2a2a';hx.beginPath();hx.arc(cx,cy,1.25,0,7);hx.fill();
       if(k>0){const o=7+(1-k)*7,l=7;hx.globalAlpha=k;hx.lineCap='round';hx.beginPath();for(const [sx,sy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){hx.moveTo(cx+sx*o,cy+sy*o);hx.lineTo(cx+sx*(o+l),cy+sy*(o+l))}
         hx.strokeStyle='rgba(0,0,0,.6)';hx.lineWidth=5;hx.stroke();hx.strokeStyle='#fff';hx.lineWidth=2.4;hx.stroke();hx.globalAlpha=1}}
     /* 雷達 */
