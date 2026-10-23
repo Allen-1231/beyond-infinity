@@ -1158,6 +1158,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     return new THREE.CanvasTexture(c)})();
   /* 火星貼圖：柔邊發光圓點（亮白核心→黃→透明），沿飛行方向拉成光痕，像真的飛濺火星而不是方塊像素 */
   const EMT=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(32,32,0,32,32,30);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.12,'rgba(255,250,215,.95)');g.addColorStop(.35,'rgba(255,200,90,.5)');g.addColorStop(1,'rgba(255,120,20,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c)})();
+  const rimL=new THREE.PointLight(0xa8c4ff,0,70,1.4);scene.add(rimL);   /* 登場演出用的背光（平時強度 0） */
   const FLP=[],FLC=[[1,.97,.74],[1,.78,.26],[1,.42,.09],[.5,.12,.05],[.1,.03,.02]],fireL=new THREE.PointLight(0xff8434,0,64,1.5);scene.add(fireL);
   function flame(x,y,z,dx,dy,dz,spd,spread,s0,s1,life,n,o){o=o||{};
     for(let i=0;i<n&&S.fl.length<560;i++){
@@ -1946,7 +1947,8 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     n=0;for(const q of S.cs){dm.position.set(q.x,q.y,q.z);dm.rotation.set(q.a,q.b,q.c);dm.scale.set(.011,.06,.011).multiplyScalar(Math.min(1,q.l*3));dm.updateMatrix();ICS.setMatrixAt(n++,dm.matrix)}ICS.count=n;ICS.instanceMatrix.needsUpdate=true;
   }
   /* —— 魔王降臨過場：紅色閃電劃破高空，龍王從天而降、落地震盪，之後才開始戰鬥 —— */
-  const INTRO_DUR=15.6,INTRO_LAND=6.9,INTRO_T0=.9,CUTS=[2,3.6,5,6.4,8,9.4,13],TITLE0=8.0;   /* 總長／落地(懸停)時間／開始現身／鏡頭切換點／標題出現（秒） */
+  /* 登場演出時間表（約 18.6 秒）：A 環境鋪陳 0–3 ／ B 揭露 3–9.4（剪影滑翔→臉部特寫→仰望壓迫）／ C 降臨衝擊 9.4–11.8 ／ D 王者展示 11.8–16.4（咆哮→仰天噴火）／ E 凝視玩家、交還鏡頭 16.4–18.6 */
+  const INTRO_DUR=18.6,INTRO_LAND=9.4,INTRO_T0=3.0,CUTS=[3.0,5.2,7.0,9.4,11.8,13.0,16.4],TITLE0=11.9,ROAR0=11.8,FIRE0=13.0,FIRE1=16.4;
   /* —— 過場專屬音效／音樂（全用 WebAudio 合成） —— */
   /* 雷聲：依你提供的 Thunder Crack.mp3 的頻譜／包絡線量測結果合成（約 0.1 秒靜音→40ms 爆裂→約 1 秒持續轟隆並夾雜隨機爆裂→指數衰減到 3.5 秒；能量集中在 100~3000Hz、高頻隨時間滑降） */
   let THB=null,thN=0;
@@ -1974,7 +1976,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   function stopIntroMusic(){if(introMus){clearInterval(introMus.iv);introMus=null}}
   function introMusic(alive){
     stopIntroMusic();GA.stopMusic();const c=GA.ctx();if(!c)return;const m={step:0,t0:c.currentTime+.05,iv:0};introMus=m;
-    const ST=.25,roots=[55,55,58.27,51.91],mt=GA.mtof;
+    const ST=.336,roots=[55,55,58.27,51.91],mt=GA.mtof;
     const play=(st,off)=>{const bar=Math.floor(st/16),r=roots[bar%4];
       if(st%16===0){GA.tone(r,4.2,'sawtooth',.07,.97,off);GA.tone(r*1.5,4.2,'triangle',.05,.98,off);GA.tone(r/2,4.4,'sine',.1,.98,off)}
       if(st%8===0&&st>=8)GA.tone(r*4,3.6,'triangle',.035,.99,off+.02),GA.tone(r*4.76,3.6,'triangle',.03,.99,off+.02),GA.tone(r*6,3.6,'triangle',.028,.99,off+.02);   /* 合唱般的小調和弦 */
@@ -1989,6 +1991,9 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     const p=S.p,[fx,fz]=fwd();let x=p.x+fx*22,z=p.z+fz*22;const dd=Math.hypot(x,z);if(dd>AR-6){x*=(AR-6)/dd;z*=(AR-6)/dd}
     const e=spawnEn('fbs',x,z);e.face=Math.atan2(p.x-x,p.z-z);e.g.visible=false;e.alt=75;e.y0=e.alt-e.h/2;
     S.intro={t:0,e,bolts:[],nb:0,land:false,roar:false,fl:0,C:{x,z},P:{x:p.x,z:p.z},F:[fx,fz],lk:null,ph:0,shot:0};S.bn=null;S.shake=0;
+    {const I=S.intro;I.fog0=[scene.fog.near,scene.fog.far];I.mc=(e.mdl.all||[]).filter(m=>m&&m.color).map(m=>({m,c:m.color.clone(),em:m.emissive?m.emissive.clone():null}));   /* 剪影：龍身材質先壓暗，之後隨閃電與靠近逐漸顯露 */
+      const cv=document.createElement('canvas');cv.width=cv.height=64;const cx=cv.getContext('2d'),gr=cx.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.25,'rgba(255,120,60,.8)');gr.addColorStop(1,'rgba(255,40,20,0)');cx.fillStyle=gr;cx.fillRect(0,0,64,64);
+      const tx=new THREE.CanvasTexture(cv);I.fx=[-1,1].map(sx=>{const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,color:0xff4020,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,opacity:0}));sp.position.set(x+sx*2.4,68,z);sp.scale.set(5,3,1);sp.userData.sx=sx;scene.add(sp);return sp});I.tex=tx}
     introMusic(()=>S.intro&&stage.isConnected);GA.noise(1.2,.3,120);GA.tone(55,2.2,'sawtooth',.18,.3)}
   const vx_=e=>Math.sin(e.face),vz_=e=>Math.cos(e.face);
   function mkBolt(){const W_=W,H_=H,x0=W_*(.12+rnd()*.76),pts=[[x0,-10]];let x=x0,y=-10;const tgt=H_*(.55+rnd()*.3);
@@ -1996,12 +2001,21 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     const br=[];for(let i=2;i<pts.length-1;i++)if(rnd()<.4){const b=[pts[i]];let bx=pts[i][0],by=pts[i][1];const dir=rnd()<.5?-1:1;for(let k=0;k<3;k++){bx+=dir*W_*(.02+rnd()*.04);by+=H_*(.03+rnd()*.05);b.push([bx,by])}br.push(b)}
     return{pts,br,t:.3,m:.3}}
   function introUpdate(dt){
-    const I=S.intro,e=I.e;I.t+=dt;const t=I.t;deathUpdate(dt);
+    const I=S.intro,e=I.e;if(I.hs>0){I.hs-=dt;dt*=.18}I.t+=dt;const t=I.t;deathUpdate(dt);
     /* 特效粒子／環繼續推進；其他敵人、子彈、玩家被凍結 */
     S.fx=S.fx.filter(f=>{f.t+=dt;const k=f.t/f.dur;if(f.k==='ring'){const r=f.r*Math.min(1,k*1.4);f.m.scale.set(r,r,r);f.m.material.opacity=.9*(1-k)}else f.m.material.opacity=1-k;if(k>=1){scene.remove(f.m);f.m.material.dispose();return false}return true});
     flUpdate(dt);
     S.pa=S.pa.filter(q=>{q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vy-=14*dt;if(q.y<.05){q.y=.05;q.vy*=-.3;q.vx*=.6;q.vz*=.6}q.l-=dt;return q.l>0});
     S.shake=Math.max(0,S.shake-dt);I.fl=Math.max(0,I.fl-dt);
+    {const smx=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u)};
+      if(t<INTRO_T0&&t>.8)S.shake=Math.max(S.shake,.03+.045*(t-.8));   /* A：地面開始隱隱震動 */
+      const fa=smx(t/9)*(1-smx((t-13)/3.2));scene.fog.near=I.fog0[0]-13*fa;scene.fog.far=I.fog0[1]-55*fa;   /* 霧越來越濃，之後散開 */
+      for(const q of I.fx){const on=t>1.8&&t<INTRO_T0+.5;q.material.opacity=on?Math.min(1,(t-1.8)/.5)*(.55+.45*Math.sin(t*9))*Math.max(0,1-Math.max(0,t-INTRO_T0)/.5):0;q.position.y=68-(t-1.8)*3}   /* 雲層深處兩點紅光（龍的眼睛）*/
+      const base=t<7.2?.07:.07+.93*smx((t-7.2)/1.8),k=Math.min(1,base+(I.fl>0&&!I.big&&base<.9?.5:0));
+      for(const q of I.mc){q.m.color.copy(q.c).multiplyScalar(k);if(q.em)q.m.emissive.copy(q.em).multiplyScalar(k)}
+      /* D：背光——龍身後方一盞冷色輪廓光，強化咆哮與噴火時的剪影 */
+      const rk=Math.max(0,Math.min(1,Math.min((t-11.2)/.8,(16.8-t)/.8)));
+      if(e.g.visible){const dx=I.P.x-e.x,dz=I.P.z-e.z,dl=Math.hypot(dx,dz)||1;rimL.position.set(e.x-dx/dl*8,e.alt+4,e.z-dz/dl*8)}rimL.intensity=4.5*rk}
     /* 閃電：越接近落地越密集 */
     I.nb-=dt;if(I.nb<=0&&t<INTRO_LAND+.6){I.nb=Math.max(.12,.5-t*.1)+rnd()*.25;I.bolts.push(mkBolt());if(I.bolts.length>5)I.bolts.shift();I.fl=.14;S.shake=Math.max(S.shake,.12+Math.min(.25,t*.07));if((I.tn=(I.tn||0)-1)<=0){I.tn=3+((rnd()*2)|0);lightningSfx()}}
     for(const b of I.bolts)b.t-=dt;I.bolts=I.bolts.filter(b=>b.t>0);
@@ -2016,7 +2030,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       I.rxT=k<.5?.4+.07*Math.sin(t*2.4):k<.8?.4+(-.45-.4)*sm_((k-.5)/.3):-.45+.35*sm_((k-.8)/.2);   /* 平穩滑翔下降（影片感），接近時才緩緩抬頭收勢 */
       I.rzT=Math.cos(k*9.5)*.5*am+Math.sin(k*23)*.07*am;   /* 只做順著轉彎方向的自然側傾，不再翻轉 */
       I.ph+=dt;if(I.ph>.6){I.ph=0;GA.noise(.6,.14,350+rnd()*200)}}
-    else if(t>=INTRO_LAND){I.rxT=-.1+.05*Math.sin(t*2.2)-(t>9.2&&t<13.3?.3*sm_(Math.min((t-9.2)/.6,(13.3-t)/.5)):0);I.rzT=Math.sin(t*1.3)*.04}
+    else if(t>=INTRO_LAND){I.rxT=-.1+.05*Math.sin(t*2.2)-(t>ROAR0&&t<FIRE1+.2?.3*sm_(Math.min((t-ROAR0)/.6,(FIRE1+.2-t)/.5)):0);I.rzT=Math.sin(t*1.3)*.04}
     /* 電影運鏡：六個鏡頭，之間以「淡出→淡入」切換。全程貼近龍：側面伴飛→臉部特寫→仰拍巨翼→煞停→英雄環繞 */
     {const C=I.C,P=I.P,[fx,fz]=I.F,sm=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u)},
         bp=new THREE.Vector3(e.x,e.g.visible?e.alt:60,e.z);let sh=0;for(let i=0;i<CUTS.length;i++)if(t>=CUTS[i])sh=i+1;
@@ -2028,10 +2042,10 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
         const a=fa+Math.PI*.5-.4+u*.8,d=30-u*6;cx=bp.x+Math.cos(a)*d;cz=bp.z+Math.sin(a)*d;cy=bp.y+1+Math.sin(u*3)*1.2;tx=bp.x;tz=bp.z;ty=bp.y;fv=52-u*6;rate=16}
       else if(sh===2){   /* ③ 臉部特寫：張口咆哮的凶相，鏡頭推近微微繞行 */
         const H=hw(),a=fa+.55-u*.5,d=15-u*5;cx=H.x+Math.sin(a)*d;cz=H.z+Math.cos(a)*d;cy=H.y+.9-u*.4;tx=H.x;tz=H.z;ty=H.y+.1;fv=32-u*6;rate=40}
-      else if(sh===3){   /* ④ 低角度仰拍：雙翼高舉遮天（翅膀往上拍） */
-        const side=u*1.2-.6;cx=bp.x+vx_(e)*(6+u*5)+vz_(e)*side*6;cz=bp.z+vz_(e)*(6+u*5)-vx_(e)*side*6;cy=Math.max(1.1,bp.y*.18);tx=bp.x;tz=bp.z;ty=bp.y+1;fv=76-u*8;rate=18}
-      else if(sh===4){   /* ⑤ 煞停：機頭上揚展翼減速，低機位推向龍頭 */
-        const H=hw(),a=fa+.25*(1-u),d=24-u*10;cx=H.x+Math.sin(a)*d;cz=H.z+Math.cos(a)*d;cy=1.8+u*2;tx=H.x;tz=H.z;ty=H.y-.3;fv=54-u*12;rate=30}
+      else if(sh===3){   /* ④ 玩家視角仰望：龍巨大的身影從頭頂壓下來，與地面上渺小的玩家形成尺度對比 */
+        cx=P.x;cz=P.z;cy=1.7;tx=bp.x;tz=bp.z;ty=bp.y+2+u*1.5;fv=74-u*14;rate=7}
+      else if(sh===4){   /* ⑤ 降臨衝擊：拉開的廣角，完整看見龍王懸停、塵土環與碎石 */
+        const f0=e.face,d=30-u*5;cx=bp.x+Math.sin(f0)*d+Math.cos(f0)*13;cz=bp.z+Math.cos(f0)*d-Math.sin(f0)*13;cy=2.4+u*.6;tx=bp.x;tz=bp.z;ty=bp.y+.6;fv=58-u*6;rate=14}
       else if(sh===5){   /* ⑥ 仰天大吼：龍在正面前方仰頭咆哮、雙翼張開；鏡頭在牠前方偏側的低角度仰拍並緩慢環繞 */
         const H=hw(),f0=e.face,d=17-u*4,sd=7*(1-u*1.4);cx=H.x+Math.sin(f0)*d+Math.cos(f0)*sd;cz=H.z+Math.cos(f0)*d-Math.sin(f0)*sd;cy=1.3+u*.7;tx=H.x;tz=H.z;ty=H.y-.6;fv=50-u*5;rate=12}
       else if(sh===6){   /* ⑦ 仰天噴火：低機位在牠前方，緩慢橫移，火柱掃過夜空 */
@@ -2041,30 +2055,33 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       if(sh!==I.shot){I.shot=sh;I.lk=null}
       const tg=new THREE.Vector3(tx,ty,tz);if(!I.lk)I.lk=tg.clone();else I.lk.lerp(tg,1-Math.exp(-dt*rate));
       I.cp=[cx,cy,cz];I.ct=I.lk;I.fv=fv}
-    if(t>=INTRO_LAND&&!I.land){I.land=true;I.rz=wrp(I.rz||0);e.g.visible=true;e.x=I.C.x;e.z=I.C.z;e.face=Math.atan2(I.P.x-e.x,I.P.z-e.z);e.alt=5.4;e.y0=e.alt-e.h/2;I.fl=.5;I.big=1;S.shake=1;ring(e.x,e.z,22,0xff2a3a,.9);ring(e.x,e.z,14,0xffffff,.6);ring(e.x,e.z,30,0xb36bff,1.2);burst(e.x,.4,e.z,'#ff4a4a',40,10,.2);burst(e.x,.4,e.z,'#ffd08a',24,8,.15);GA.noise(1.4,.5,150);GA.tone(50,1.2,'sawtooth',.3,.3);thunderSfx(.85,.8);roarSfx(1)}
+    if(t>=INTRO_LAND&&!I.land){I.land=true;I.rz=wrp(I.rz||0);e.g.visible=true;e.x=I.C.x;e.z=I.C.z;e.face=Math.atan2(I.P.x-e.x,I.P.z-e.z);e.alt=5.4;e.y0=e.alt-e.h/2;I.fl=.5;I.big=1;S.shake=1;ring(e.x,e.z,22,0xff2a3a,.9);ring(e.x,e.z,14,0xffffff,.6);ring(e.x,e.z,30,0xb36bff,1.2);burst(e.x,.4,e.z,'#ff4a4a',40,10,.2);burst(e.x,.4,e.z,'#ffd08a',24,8,.15);GA.noise(1.4,.5,150);GA.tone(50,1.2,'sawtooth',.3,.3);thunderSfx(.85,.8);I.hs=.22;
+      for(let i=0;i<56;i++){const a=i/56*6.283+rnd()*.1;flame(e.x+Math.cos(a)*3,.4,e.z+Math.sin(a)*3,Math.cos(a),.05,Math.sin(a),10+rnd()*3,.12,1.2,4.6,2.0,1,{st:0,rise:.7,drag:.9,alpha:.6,sm:1})}   /* 塵土沖擊環 */
+      for(let i=0;i<30;i++){const a=rnd()*6.283,v=6+rnd()*9;S.pa.push({x:e.x+Math.cos(a)*2,y:.3,z:e.z+Math.sin(a)*2,vx:Math.cos(a)*v,vy:5+rnd()*8,vz:Math.sin(a)*v,l:1.2+rnd()*.8,m:1.6,c:'#4a5568',s:.25+rnd()*.3})}   /* 碎石 */
+      spark(e.x,.5,e.z,60,9)}
     if(I.land)S.shake=Math.max(S.shake,Math.max(0,.9-(t-INTRO_LAND)*.7));
     if(I.land&&!I.r2&&t>INTRO_LAND+1.2){I.r2=1;GA.noise(1.2,.35,120);GA.tone(70,1.1,'sawtooth',.22,.3)}
     if(I.skip&&t<INTRO_DUR-.8){I.skip=0;I.t=INTRO_DUR-.8}
     /* 龍的身體傾斜（俯衝／翻滾／煞停）＋頭頸／翅膀／噴火：依時間表切換 */
     {e.g.rotation.order='YXZ';I.rx=(I.rx||0)+((I.rxT||0)-(I.rx||0))*Math.min(1,dt*7);I.rz=t<INTRO_LAND?(I.rzT||0):(I.rz||0)+((I.rzT||0)-(I.rz||0))*Math.min(1,dt*4);e.g.rotation.x=I.rx;e.g.rotation.z=I.rz;e.skn=null;e.skt=0;e.roar=0;
       let ps=null;const sw=Math.sin(t*3.1);
-      if(t<2)ps={p:.3,j:.15,y:sw*.3,w:7,wing:[-.05,.15,9,.85],tw:.8,tf:6};
-      else if(t<3.6)ps={p:.15,j:0,y:Math.sin(t*4)*.55,w:8,wing:t<2.9?[-.05,.15,9,.85]:[.5,.55,6,.1],tw:1,tf:5};
-      else if(t<5)ps={p:-.55,j:1,w:8,wing:[.6,.6,5,.1]};
-      else if(t<6.4)ps={p:.25,j:.2,w:8,wing:[1.05,.9,8,0]};
-      else if(t<INTRO_LAND)ps={p:-.3,j:.3,w:8,wing:[.35,.95,11,0],lx:-.1};
-      else if(t<8)ps={j:0,w:6,wing:[.45,.8,6.5,.1]};
-      else if(t<9.4)ps={p:-.85,j:1,w:6,lx:-.25,wing:[1,.5,7,0],tw:.5};
-      else if(t<13){const u=(t-9.4)/3.6,th=-.95*Math.cos(u*PI*2),al=1.02,f0=e.face,M=e.mdl.mouth&&e.mdl.mouth();   /* 仰天噴火：左→右→左，視線掃過夜空 */
+      if(t<3.6)ps={p:.3,j:.1,y:sw*.3,w:7,wing:[-.05,.15,9,.85],tw:.8,tf:6};                            /* B1 剪影滑翔 */
+      else if(t<5.2)ps={p:.28,j:.1,y:sw*.35,w:7,wing:[-.05,.15,9,.85],tw:.8,tf:6};
+      else if(t<6.2)ps={p:.12,j:0,y:Math.sin(t*2.2)*.3,w:8,wing:[.2,.4,6,.2],tw:1,tf:5};              /* B2 臉部特寫：緩緩轉頭、凝視 */
+      else if(t<7.0)ps={p:-.3,j:.55,y:Math.sin(t*2.2)*.2,w:8,wing:[.5,.55,6,.1]};                      /*    低吼 */
+      else if(t<INTRO_LAND)ps={p:-.3,j:.3,w:8,wing:[.35,.95,11,0],lx:-.1};                            /* B3 逼近：巨翼猛拍 */
+      else if(t<ROAR0)ps={j:0,w:6,wing:[.45,.8,6.5,.1],p:.05};                                          /* C 降臨懸停：下拍氣流、頭微壓 */
+      else if(t<FIRE0)ps={p:-.85,j:1,w:6,lx:-.25,wing:[1,.5,7,0],tw:.5};                              /* D1 仰頭咆哮 */
+      else if(t<FIRE1){const u=(t-FIRE0)/(FIRE1-FIRE0),th=-.95*Math.cos(u*PI*2),al=1.02,f0=e.face,M=e.mdl.mouth&&e.mdl.mouth();   /* D2 仰天噴火：左→右→左，視線掃過夜空 */
         if(M)ps={aim:[M.p.x+Math.sin(f0+th)*Math.cos(al)*40,M.p.y+Math.sin(al)*40,M.p.z+Math.cos(f0+th)*Math.cos(al)*40],j:.85,w:10,ar:7,lx:-.3,wing:[.95,.5,5,0],tw:.5,lz:Math.sin(u*PI*2)*.12}}
-      else ps={j:0,w:5,wing:[.5,.45,3.4,.1],lx:0};
+      else ps={j:0,w:5,p:.18,wing:[.5,.45,3.4,.1],lx:0};                                                 /* E 低頭凝視玩家 */
       e.pose=ps;
-      if(t>=9.4&&t<13){I.fa=(I.fa||0);if(t>9.55)fireBreath(e,dt,150,24,.1,.5,4.6,1.1)}
-      if(!I.r1&&t>3.7){I.r1=1;roarSfx(0);S.shake=Math.max(S.shake,.3)}
-      if(!I.r3&&t>8.05){I.r3=1;roarSfx(1);S.shake=Math.max(S.shake,.5)}
-      if(!I.r4&&t>9.45){I.r4=1;roarSfx(1);GA.noise(3.2,.3,700);GA.tone(70,3.2,'sawtooth',.2,.3);S.shake=Math.max(S.shake,.4)}
-      if(t>9.6&&t<13)S.shake=Math.max(S.shake,.12)}
-    if(t>=INTRO_DUR){S.intro=null;e.pose=null;e.roar=0;e.rv=0;e.g.rotation.x=0;e.g.rotation.z=0;stopIntroMusic();GA.music('boss',()=>stage.isConnected&&S&&!S.over);S.fiT=performance.now();e.skn=null;e.bt=2.5;S.bn={s:'龍王・戰鬥開始',t:2};GA.tone(392,.25,'triangle',.14);GA.tone(523,.25,'triangle',.14,0,.1)}}
+      if(t>=FIRE0&&t<FIRE1){I.fa=(I.fa||0);if(t>FIRE0+.15)fireBreath(e,dt,150,24,.1,.5,4.6,1.1)}
+      if(!I.r1&&t>6.2){I.r1=1;roarSfx(0);S.shake=Math.max(S.shake,.25)}
+      if(!I.r3&&t>8.2){I.r3=1;GA.noise(1.6,.22,500);GA.tone(90,1.4,'sawtooth',.14,.4);S.shake=Math.max(S.shake,.25)}
+      if(!I.r4&&t>ROAR0+.05){I.r4=1;roarSfx(1);GA.noise(3.2,.3,700);GA.tone(70,3.2,'sawtooth',.2,.3);S.shake=Math.max(S.shake,.4)}
+      if(t>FIRE0&&t<FIRE1)S.shake=Math.max(S.shake,.12)}
+    if(t>=INTRO_DUR){for(const q of I.mc){q.m.color.copy(q.c);if(q.em)q.m.emissive.copy(q.em)}for(const q of I.fx){scene.remove(q);q.material.dispose()}I.tex.dispose();rimL.intensity=0;scene.fog.near=I.fog0[0];scene.fog.far=I.fog0[1];S.intro=null;e.pose=null;e.roar=0;e.rv=0;e.g.rotation.x=0;e.g.rotation.z=0;stopIntroMusic();GA.music('boss',()=>stage.isConnected&&S&&!S.over);S.fiT=performance.now();e.skn=null;e.bt=2.5;S.bn={s:'龍王・戰鬥開始',t:2};GA.tone(392,.25,'triangle',.14);GA.tone(523,.25,'triangle',.14,0,.1)}}
   function drawIntro(){
     const I=S.intro,t=I.t,e=I.e;hx.clearRect(0,0,W,H);
     /* 暗紅天色＋暈影 */
@@ -2084,9 +2101,9 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     /* 文字：落地後浮現 */
     if(t>TITLE0&&t<TITLE0+3.2){const k=Math.min(1,(t-TITLE0)/.7),fo=Math.min(1,Math.max(0,(TITLE0+3.1-t)/.4));hx.save();hx.globalAlpha=k*fo;hx.textAlign='center';hx.shadowColor='#ff2a3a';hx.shadowBlur=26;hx.fillStyle='#ffe9e9';
       hx.font='bold '+Math.round(H*.085)+'px sans-serif';const sc=1.25-.25*k;hx.translate(W/2,H*.3);hx.scale(sc,sc);hx.fillText('龍王',0,0);hx.shadowBlur=10;hx.font=Math.round(H*.03)+'px sans-serif';hx.fillStyle='#ffb0b8';hx.fillText('最終魔王',0,H*.06);hx.restore()}
-    if(t<2.6){hx.save();hx.globalAlpha=.75*Math.min(1,t/.5);hx.textAlign='center';hx.fillStyle='#ff8a94';hx.font='bold '+Math.round(H*.035)+'px sans-serif';hx.fillText('天空正在撕裂……',W/2,H*.78);hx.restore()}
+    if(t<INTRO_T0){hx.save();hx.globalAlpha=.75*Math.min(1,t/.5)*Math.min(1,(INTRO_T0-t)/.5);hx.textAlign='center';hx.fillStyle='#ff8a94';hx.font='bold '+Math.round(H*.035)+'px sans-serif';hx.fillText('天空正在撕裂……',W/2,H*.78);hx.restore()}
     /* 鏡頭切換：淡出→淡入（黑場）、結尾淡出 */
-    {let fa=0;for(const c of CUTS)fa=Math.max(fa,1-Math.abs(t-c)/.26);fa=Math.max(fa,Math.min(1,(t-(INTRO_DUR-.6))/.5),Math.max(0,1-t/.7));
+    {let fa=0;for(const c of CUTS)fa=Math.max(fa,1-Math.abs(t-c)/.2);fa=Math.max(fa,Math.min(1,(t-(INTRO_DUR-.6))/.5),Math.max(0,1-t/.7));
       if(fa>0){hx.fillStyle='rgba(0,0,0,'+Math.min(1,fa)+')';hx.fillRect(0,0,W,H)}}
     hx.save();hx.globalAlpha=.55;hx.fillStyle='#fff';hx.font=Math.round(H*.022)+'px sans-serif';hx.textAlign='right';hx.fillText('Enter／空白鍵 跳過',W-16,H-bar-10);hx.restore()
   }
