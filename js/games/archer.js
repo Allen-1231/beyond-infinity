@@ -231,7 +231,7 @@ function mountArcher(stage,done){
   function killE(e){
     const d=ET[e.t];if(e.nok)return;A.kills++;A.score+=d.sc*(e.boss?25:1);burst(e.x,e.y,e.c,e.boss?50:10,e.boss?260:150,.6);GA.tone(e.boss?80:220+rnd()*100,.12,'sine',.1,.3);
     gainXp((e.boss?50:d.xp)*stt().xpm);
-    if(!e.boss&&rnd()<.03)A.orbs.push({x:e.x,y:e.y,v:30,c:'#ff6a8a',k:'h'});
+    if(!e.boss&&rnd()<.018)A.orbs.push({x:e.x,y:e.y,v:24,c:'#3ddc6a',k:'h'});
     if(e.t==='bom'){ringFx(e.x,e.y,80,'#ff7a3a',.35);burst(e.x,e.y,'#ffb060',16,220);GA.noise(.14,.14,700);if(Math.hypot(e.x-A.p.x,e.y-A.p.y)<80)hurtP(22)}
     if(e.t==='rea'&&!e.boss){for(let i=0;i<2;i++)spawnEn('shard',e.x+(i?8:-8),e.y)}
     if(A.evo.storm){const b=nearest(e.x,e.y,170,o=>o!==e);if(b){boltFx(e,b);dealt(b,18,false,true)}}
@@ -270,15 +270,16 @@ function mountArcher(stage,done){
   const menuNodes=[...ov.childNodes];function menu(){return menuNodes}
   const fmt=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
   function update(dt){
-    const p=A.p,S=stt();A.t+=dt;const ox0=A.p.x,oy0=A.p.y;p.max=S.maxhp;p.inv=Math.max(0,p.inv-dt);p.dcd=Math.max(0,p.dcd-dt);p.slow=Math.max(0,p.slow-dt);A.shk=Math.max(0,A.shk-dt);A.flash=Math.max(0,A.flash-dt);A.hbT=Math.max(0,A.hbT-dt);
+    const p=A.p,S=stt();A.t+=dt;const ox0=A.p.x,oy0=A.p.y;p.max=S.maxhp;p.inv=Math.max(0,p.inv-dt);p.dcd=Math.max(0,p.dcd-dt);p.slow=Math.max(0,p.slow-dt);p.frz=Math.max(0,(p.frz||0)-dt);A.shk=Math.max(0,A.shk-dt);A.flash=Math.max(0,A.flash-dt);A.hbT=Math.max(0,A.hbT-dt);
     if(A.bn){A.bn.t-=dt;if(A.bn.t<=0)A.bn=null}
     p.hp=Math.min(p.max,p.hp+S.regen*dt);
     if(lv('shield')&&!p.sh){p.shT+=dt;if(p.shT>=[14,10,7][lv('shield')-1])p.sh=true}
     let ix=0,iy=0;if(keys.a||keys.arrowleft)ix--;if(keys.d||keys.arrowright)ix++;if(keys.w||keys.arrowup)iy--;if(keys.s||keys.arrowdown)iy++;if(joy.on){ix=joy.x;iy=joy.y}
     const l=Math.hypot(ix,iy);if(l>1){ix/=l;iy/=l}if(l>.1){p.dx=ix;p.dy=iy}
     if(p.conf>0){p.conf-=dt;ix=-ix;iy=-iy}
+    if(p.frz>0){ix=0;iy=0}
     if(p.dch==null)p.dch=3;if(p.dch<3&&p.dcd<=0){p.dch++;p.dcd=p.dch<3?S.dcd:0}
-    if(keys[' ']&&!p.dh&&p.dch>0&&p.dash<=0){if(p.dch>=3)p.dcd=S.dcd;p.dch--;const dl=Math.hypot(p.dx,p.dy)||1;p.ddx=p.dx/dl;p.ddy=p.dy/dl;p.dash=.16;GA.noise(.12,.15,4000,0,true);ringFx(p.x,p.y,30,'#c9a6ff',.3)}
+    if(keys[' ']&&!p.dh&&p.dch>0&&p.dash<=0&&!(p.frz>0)){if(p.dch>=3)p.dcd=S.dcd;p.dch--;const dl=Math.hypot(p.dx,p.dy)||1;p.ddx=p.dx/dl;p.ddy=p.dy/dl;p.dash=.16;GA.noise(.12,.15,4000,0,true);ringFx(p.x,p.y,30,'#c9a6ff',.3)}
     p.dh=!!keys[' '];
     if(p.dash>0){p.dash-=dt;p.x+=p.ddx*S.ddist/.16*dt;p.y+=p.ddy*S.ddist/.16*dt;A.pa.push({x:p.x,y:p.y,vx:0,vy:0,l:.25,m:.25,c:'#c9a6ff'})}
     else{const k=p.slow>0?.45:1;p.x+=ix*S.sp*k*dt;p.y+=iy*S.sp*k*dt}
@@ -308,7 +309,7 @@ function mountArcher(stage,done){
     A.zn=A.zn.filter(z=>{z.t+=dt;
       if(z.k==='slam'){if(z.t>=z.dur){ringFx(z.x,z.y,z.r,z.c,.4);burst(z.x,z.y,z.c,20,220);A.shk=Math.max(A.shk,.25);GA.noise(.25,.25,300);
         const d=Math.hypot(p.x-z.x,p.y-z.y);if(d<z.r){if(hurtP(z.dm)){p.kx=(p.x-z.x)/(d||1)*320;p.ky=(p.y-z.y)/(d||1)*320}}return false}return true}
-      if(z.k==='time'){if(z.t>z.warn&&Math.hypot(p.x-z.x,p.y-z.y)<z.r)p.slow=Math.max(p.slow,.12);return z.t<z.dur}
+      if(z.k==='time'){if(z.t>z.warn&&Math.hypot(p.x-z.x,p.y-z.y)<z.r){p.slow=Math.max(p.slow,.12);if(!(p.frz>0)){z.in=(z.in||0)+dt;if(z.in>=1.2){z.in=0;p.frz=.9;ringFx(p.x,p.y,40,'#2fe07a',.5);GA.tone(180,.3,'triangle',.12,.4)}}}else z.in=0;return z.t<z.dur}
       if(z.k==='portal'){z.tk-=dt;if(z.t>.6&&z.tk<=0){z.tk=.5;const a=Math.atan2(p.y-z.y,p.x-z.x);for(let i=-1;i<=1;i++)eshot(z.x,z.y,a+i*.22,225,9*.85,z.c);GA.tone(650,.05,'square',.05)}return z.t<z.dur}
       if(z.k==='beam'){if(z.fol){if(z.fol.hp<=0)return false;z.x=z.fol.x;z.y=z.fol.y}if(z.rot&&z.t>z.warn)z.a+=z.rot*dt;else if(z.rot)z.a+=z.rot*dt*.2;
         if(z.t>z.warn){z.tk-=dt;const ca=Math.cos(z.a),sa=Math.sin(z.a),dx=p.x-z.x,dy=p.y-z.y,u=dx*ca+dy*sa,v=Math.abs(-dx*sa+dy*ca);if(z.tk<=0&&v<z.w+8&&u>(z.both?-z.len:0)&&u<z.len){z.tk=.3;hurtP(9*dmMul(mins()))}}return z.t<z.dur}
@@ -535,14 +536,14 @@ function mountArcher(stage,done){
     for(const z of A.zn){ctx.save();
       if(z.k==='slam'){const k=z.t/z.dur;ctx.fillStyle=z.c;ctx.globalAlpha=.12+.3*k;ctx.beginPath();ctx.arc(z.x,z.y,z.r*k,0,TAU);ctx.fill();ctx.globalAlpha=.9;ctx.strokeStyle=z.c;ctx.lineWidth=2;ctx.setLineDash([8,6]);ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,TAU);ctx.stroke()}
       else if(z.k==='time'){const on=z.t>z.warn;ctx.globalAlpha=on?.28:.12;ctx.fillStyle='#2fe07a';ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,TAU);ctx.fill();ctx.globalAlpha=.8;ctx.strokeStyle='#2fe07a';ctx.lineWidth=2;ctx.setLineDash(on?[]:[6,6]);ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,TAU);ctx.stroke();
-        if(on){ctx.beginPath();ctx.moveTo(z.x,z.y);ctx.lineTo(z.x+Math.cos(T*3)*z.r*.8,z.y+Math.sin(T*3)*z.r*.8);ctx.stroke()}}
+        if(on){const ang=z.in>0?-PI/2+z.in/1.2*TAU:-PI/2+T*.6;if(z.in>0){ctx.globalAlpha=.55;ctx.lineWidth=5;ctx.beginPath();ctx.arc(z.x,z.y,z.r*.88,-PI/2,ang);ctx.stroke();ctx.globalAlpha=.8;ctx.lineWidth=2}ctx.beginPath();ctx.moveTo(z.x,z.y);ctx.lineTo(z.x+Math.cos(ang)*z.r*.8,z.y+Math.sin(ang)*z.r*.8);ctx.stroke()}}
       else if(z.k==='portal'){const k=Math.min(1,z.t/.5);ctx.strokeStyle=z.c;ctx.shadowColor=z.c;ctx.shadowBlur=14;ctx.lineWidth=3;ctx.globalAlpha=.9;ctx.beginPath();ctx.ellipse(z.x,z.y,26*k,38*k,T*2,0,TAU);ctx.stroke();ctx.globalAlpha=.4;ctx.fillStyle='#0a1a40';ctx.fill();ctx.strokeStyle='#bfe0ff';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(z.x,z.y,16*k,24*k,-T*3,0,TAU);ctx.stroke()}
       else if(z.k==='beam'){const on=z.t>z.warn,ca=Math.cos(z.a),sa=Math.sin(z.a),x1=z.x-(z.both?ca*z.len:0),y1=z.y-(z.both?sa*z.len:0),x2=z.x+ca*z.len,y2=z.y+sa*z.len;ctx.lineCap='round';
         if(!on){ctx.strokeStyle=z.c;ctx.globalAlpha=.25+.25*(z.t/z.warn);ctx.lineWidth=2;ctx.setLineDash([10,8]);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
         else{ctx.strokeStyle=z.c;ctx.globalAlpha=.3;ctx.lineWidth=z.w*3;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.globalAlpha=.85;ctx.lineWidth=z.w*1.8;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.strokeStyle='#fff';ctx.lineWidth=z.w*.6;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}}
       else if(z.k==='fire'){ctx.globalAlpha=.3*(1-z.t/z.dur)+.1;ctx.fillStyle='#ff7a3a';ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,TAU);ctx.fill()}
       ctx.restore()}
-    for(const o of A.orbs){ctx.fillStyle=o.c;ctx.beginPath();if(o.k==='h'){ctx.arc(o.x,o.y,6,0,TAU)}else{ctx.moveTo(o.x,o.y-5);ctx.lineTo(o.x+4,o.y);ctx.lineTo(o.x,o.y+5);ctx.lineTo(o.x-4,o.y)}ctx.fill()}ctx.shadowBlur=0;
+    for(const o of A.orbs){ctx.fillStyle=o.c;ctx.beginPath();if(o.k==='h'){ctx.fillStyle='#f4fff6';ctx.fillRect(o.x-8,o.y-3.5,16,7);ctx.fillRect(o.x-3.5,o.y-8,7,16);ctx.fillStyle='#2fd163';ctx.fillRect(o.x-6.5,o.y-2,13,4);ctx.fillRect(o.x-2,o.y-6.5,4,13)}else{ctx.moveTo(o.x,o.y-5);ctx.lineTo(o.x+4,o.y);ctx.lineTo(o.x,o.y+5);ctx.lineTo(o.x-4,o.y)}ctx.fill()}ctx.shadowBlur=0;
     for(const e of A.en)drawEnemy(e,T);
     for(const b of A.eb){const sp=glowSpr(b.c,b.r),n=sp.width;ctx.drawImage(sp,b.x-n/2,b.y-n/2)}ctx.shadowBlur=0;
     for(const b of A.pb){if(b.mx){const an=Math.atan2(b.vy,b.vx);ctx.save();ctx.translate(b.x,b.y);ctx.rotate(an);ctx.fillStyle='rgba(224,168,0,.35)';ctx.beginPath();ctx.moveTo(-6,0);ctx.lineTo(-34,-4);ctx.lineTo(-26,0);ctx.lineTo(-34,4);ctx.closePath();ctx.fill();ctx.fillStyle='#0b0905';ctx.strokeStyle=b.crit?'#ffd21a':'#c28a00';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(2,-6);ctx.lineTo(-6,-9);ctx.lineTo(-12,-3);ctx.lineTo(-12,3);ctx.lineTo(-6,9);ctx.lineTo(2,6);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#e0a800';ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-2,-2.5);ctx.lineTo(-2,2.5);ctx.closePath();ctx.fill();ctx.restore();continue}ctx.strokeStyle=b.c;ctx.lineCap='round';const sp=Math.hypot(b.vx,b.vy)||1;ctx.lineWidth=b.r*1.1;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-b.vx/sp*16,b.y-b.vy/sp*16);ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x,b.y,b.r*.6,0,TAU);ctx.fill()}ctx.shadowBlur=0;
@@ -550,6 +551,7 @@ function mountArcher(stage,done){
     if(!(p.inv>0&&Math.floor(T*16)%2)){drawPlayer(p,T);
       {const gs=EVO.filter(ev=>A.evo[ev.id]);gs.forEach((ev,i)=>{const an=T*2+i*TAU/gs.length,gx=p.x+Math.cos(an)*30,gy=p.y-8+Math.sin(an)*11,sz=5+(Math.sin(an)>0?1.5:0);ctx.save();ctx.translate(gx,gy);ctx.shadowColor=ev.c;ctx.shadowBlur=12;ctx.fillStyle=ev.c;ctx.beginPath();ctx.moveTo(0,-sz-2);ctx.lineTo(sz,0);ctx.lineTo(0,sz+2);ctx.lineTo(-sz,0);ctx.closePath();ctx.fill();ctx.fillStyle='rgba(255,255,255,.75)';ctx.beginPath();ctx.moveTo(0,-sz-2);ctx.lineTo(sz*.5,-1);ctx.lineTo(0,1);ctx.lineTo(-sz*.5,-1);ctx.closePath();ctx.fill();ctx.restore()})}
       if(p.sh){ctx.strokeStyle='rgba(191,244,255,.8)';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(p.x,p.y,24,0,TAU);ctx.stroke()}
+      if(p.frz>0){ctx.strokeStyle='rgba(120,255,170,.95)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y,27,0,TAU);ctx.stroke();ctx.fillStyle='rgba(60,255,150,.18)';ctx.fill()}
       if(p.slow>0){ctx.strokeStyle='rgba(47,224,122,.8)';ctx.setLineDash([3,4]);ctx.beginPath();ctx.arc(p.x,p.y,30,0,TAU);ctx.stroke();ctx.setLineDash([])}
       if(p.conf>0){ctx.fillStyle='#ffd52e';ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillText('? ?',p.x,p.y-32)}}
     for(const f of A.fx){const k=f.t/f.l;ctx.save();
