@@ -13,7 +13,7 @@ function mountArcher(stage,done){
     {id:'magnet',n:'求知',max:3,c:'#c9a6ff',d:l=>'經驗獲得 +20%'},
     {id:'dash',n:'迅影',max:3,c:'#b9a6ff',d:l=>'儲存槽回充 -20%，衝刺距離 +15%'},
     {id:'shield',n:'護盾',max:3,c:'#bff4ff',d:l=>'每 '+[14,10,7][l]+' 秒自動擋下一次傷害'},
-    {id:'leech',n:'吸血',max:4,c:'#ff6a7a',d:l=>'造成傷害的 3% 轉為生命'},
+    {id:'leech',n:'吸血',max:4,c:'#ff6a7a',d:l=>'造成傷害的 2% 轉為生命'},
     {id:'burn',n:'灼燒',max:4,c:'#ff9a3d',d:l=>'命中使敵人燃燒，每秒受傷提升'},
     {id:'break',n:'破甲',max:4,c:'#ffcf6a',d:l=>'降低魔王防禦 '+((l+1)*5)+'%'},
     {id:'chain',n:'連鎖閃電',max:4,c:'#ffe680',d:l=>'命中有機率放出閃電，連鎖數 +1'},
@@ -60,7 +60,7 @@ function mountArcher(stage,done){
   const cm=()=>A&&EVO.every(ev=>A.evo[ev.id])?1.1:1;
   function stt(){return{
     atk:15*(1+.2*lv('atk'))*cm(),rate:3.2*(1+.15*lv('rate'))*cm(),crit:.05+.1*lv('crit'),maxhp:Math.round((500+60*lv('hp'))*cm()),regen:1.6*lv('regen')*(A.evo.venom?1.1:1),sp:185*(1+.08*lv('speed')),
-    mag:90,xpm:1+.2*lv('magnet'),dcd:3.6*Math.pow(.8,lv('dash')),ddist:130*(1+.15*lv('dash')),leech:.03*lv('leech')}}
+    mag:90,xpm:1+.2*lv('magnet'),dcd:3.6*Math.pow(.8,lv('dash')),ddist:130*(1+.15*lv('dash')),leech:.02*lv('leech')}}
   function begin(wp){
     A={wp:'gun',t:0,p:{mv:0,wk:0,fl:0,x:0,y:0,hp:500,max:500,inv:0,dash:0,dx:0,dy:-1,dcd:0,face:-PI/2,atk:.3,shT:0,sh:false,conf:0,slow:0,rg:0},up:{},evo:{},lvl:1,xp:0,need:8,score:0,kills:0,en:[],pb:[],eb:[],orbs:[],pa:[],dn:[],zn:[],fx:[],bl:{a:0},sp:0,bossN:0,bk:0,bosses:[],boss:null,pull:null,over:false,pick:null,shk:0,flash:0,bn:null,revived:false,hbT:0,mus:''};
     ov.hidden=true;pickBox.hidden=true;chips.textContent='';GA.ctx();GA.music('archer',()=>stage.isConnected&&A&&!A.over);
@@ -95,7 +95,7 @@ function mountArcher(stage,done){
   /* —— 敵人 —— */
   const mins=()=>A.t/60;
   /* 難度曲線：前 3 分鐘維持原樣，之後小兵血量與傷害階段性大幅上升 */
-  const bossDef=m=>Math.min(.8,.06*Math.pow(1.28,m)),hpMul=m=>(1+.24*m+.012*m*m+(m>3?1.1*(m-3)+.07*(m-3)*(m-3):0))*(1+.05*Math.floor(m)),bossF=m=>(m<3?.95:m<4?1:1.5)*(m>8?Math.pow(1.25,m-8):1);
+  const bossDef=m=>Math.min(.8,.06*Math.pow(1.28,m)),hpMul=m=>(1+.24*m+.012*m*m+(m>3?1.1*(m-3)+.07*(m-3)*(m-3):0))*(1+.05*Math.floor(m)),bossF=m=>(m<4?1.35:1.5)*(m>8?Math.pow(1.25,m-8):1);
   const dmMul=m=>1+.04*m+(m>3?.25*(m-3)+.008*(m-3)*(m-3):0);
   const BOSS_EVERY=60;
   function spawnEn(t,x,y,boss){
