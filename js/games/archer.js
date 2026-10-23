@@ -53,7 +53,7 @@ function mountArcher(stage,done){
   const startB=h('button',{class:'btn',type:'button'},'開始戰鬥');startB.onclick=()=>begin('gun');
   const ov=h('div',{class:'ty-ov'},h('div',{class:'ty-t',style:'color:#c9a6ff'},'無限寶石：生存戰'),
     h('p',{},'敵人無窮無盡，每一分鐘皆有 Boss，存活越久越多分數！'),h('p',{style:'margin-top:14px;font-size:.92em;opacity:.9'},'💡Hint: 當六種流派聚集時，會獲得遠古宇宙能量，將有攻擊、血量、攻速各 10% 的加成。'),startB);
-  stage.append(hud,h('div',{class:'ty-wrap'},cv,ov,pickBox),h('div',{class:'hint'},'WASD／方向鍵／拖曳 移動　・　空白鍵 衝刺（無敵・儲存槽最多 3 次）　・　自動瞄準射擊　・　升級時按 1–3 或點選強化'));
+  stage.append(hud,h('div',{class:'ty-wrap'},cv,ov,pickBox),h('div',{class:'hint'},'WASD／方向鍵／拖曳 移動　・　空白鍵 衝刺（無敵・儲存槽最多 3 次）　・　自動瞄準射擊　・　升級時按 1–3 或點選強化　・　73 級後每升一級皆會獲得 0.5% 增傷'));
   const ctx=cv.getContext('2d');ctx.setTransform(cv.width/W,0,0,cv.height/H,0,0);
   let A=null,raf=0,last=0;const keys={},joy={on:false,ox:0,oy:0,x:0,y:0};
   const lv=id=>A.up[id]||0;
@@ -75,6 +75,7 @@ function mountArcher(stage,done){
   /* —— 傷害 —— */
   function dealt(e,d,crit,nop,quiet){
     if(e.hp<=0)return;const S=stt(),p=A.p;
+    if(A.xtra)d*=1+.005*A.xtra;
     const az=crit&&A.evo.azure;
     if(e.boss){const df=az?0:Math.max(0,bossDef(mins())-.05*lv('break'));d*=1-df}
     e.hp-=d;e.fl=.1;if(!quiet)dnum(e.x,e.y-e.r,Math.round(d),crit?'#ffd52e':'#fff');
@@ -247,7 +248,7 @@ function mountArcher(stage,done){
       for(const ev of EVO){if(A.evo[ev.id])continue;if(ev.need[u.id]&&lv(u.id)<ev.need[u.id]){w=Object.keys(ev.need).some(k=>k!==u.id&&lv(k)>0)?3:1.4}}pool.push({u,w})}
     const out=[];while(out.length<3&&pool.length){let r=rnd()*pool.reduce((a,q)=>a+q.w,0),j=0;for(;j<pool.length;j++){if(r<pool[j].w)break;r-=pool[j].w}out.push(pool.splice(Math.min(j,pool.length-1),1)[0].u)}return out}
   function showPick(){
-    A.pick=choices();if(!A.pick.length){A.pick=null;return}
+    A.pick=choices();if(!A.pick.length){A.pick=null;A.xtra=(A.xtra||0)+1;return}
     pickBox.textContent='';pickBox.hidden=false;const cards=h('div',{class:'ar-cards'});
     A.pick.forEach((u,i)=>{const l=lv(u.id),evs=EVO.filter(ev=>!A.evo[ev.id]&&ev.need[u.id]).map(ev=>ev.n);
       const b=h('button',{class:'ar-card',type:'button',style:'--c:'+u.c},h('i',{},(i+1)+(u.w?' ・ '+(u.w==='gun'?'槍':'刀'):'')),h('b',{},u.n),h('span',{},u.d(l)),h('em',{},'Lv '+l+' → '+(l+1)+' / '+u.max+(evs.length?'　・　流派：'+evs.join('、'):'')));b.onclick=()=>choose(i);cards.append(b)});
