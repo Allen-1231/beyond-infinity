@@ -690,25 +690,21 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     const hd=new THREE.Group();hd.position.set(HPV[0],HPV[1],HPV[2]);hd.rotation.order='YXZ';sc.add(hd);
     const HMt=new THREE.MeshStandardMaterial({color:0x44298a,roughness:.55,metalness:.1,emissive:0x1c0c44,flatShading:true,side:THREE.DoubleSide}),TMt=new THREE.MeshStandardMaterial({color:0xf3e8c6,roughness:.45,emissive:0x40361c,flatShading:true});all.push(HMt);
     const jawG=new THREE.Group();jawG.position.set(0,2.4,4.05);hd.add(jawG);
-    {const R=[[.5,.18,.38,.24,0],[.4,.13,.28,.22,1.1],[.14,.08,.08,.12,2.35]],V=[],ix=[];
-      R.forEach(r=>{V.push(-r[0],r[1],r[4],r[0],r[1],r[4],r[2],-r[3],r[4],-r[2],-r[3],r[4])});V.push(0,.12,2.8);
-      for(let k=0;k<2;k++)for(let c=0;c<4;c++){const a=k*4+c,b=k*4+(c+1)%4,a2=a+4,b2=b+4;ix.push(a,a2,b,b,a2,b2)}
-      for(let c=0;c<4;c++)ix.push(8+c,8+(c+1)%4,12);
-      const jg=new THREE.BufferGeometry();jg.setAttribute('position',new THREE.Float32BufferAttribute(V,3));jg.setIndex(ix);const jn=jg.toNonIndexed();jn.computeVertexNormals();
-      jawG.add(new THREE.Mesh(jn,HMt));
-      const tooth=(par,x,y,z,h,r,dir)=>{const t=new THREE.Mesh(new THREE.ConeGeometry(r,h,5),TMt);t.position.set(x,y+dir*h*.5,z);if(dir<0)t.rotation.x=PI;par.add(t)};
-      for(let i=0;i<7;i++){const z=.35+i*.3,w=(.46-.14*Math.min(1,z/2.3))-.05,h=i%2?.26:.36;tooth(jawG,w,.17-.04*(z/2.3),z,h,.05,1);tooth(jawG,-w,.17-.04*(z/2.3),z,h,.05,1)}
-      tooth(jawG,0,.1,2.6,.3,.045,1)}
-    for(let i=0;i<7;i++){const z=4.35+i*.32,w=.34-.02*i,h=i%2?.28:.4;for(const sx of[1,-1]){const t=new THREE.Mesh(new THREE.ConeGeometry(.05,h,5),TMt);t.position.set(sx*w,2.52-h*.5,z);t.rotation.x=PI;hd.add(t)}}
     const GLT=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.3,'rgba(255,255,255,.55)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c)})();
     const mglow=new THREE.Sprite(new THREE.SpriteMaterial({map:GLT,color:0xff7a1a,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,opacity:0}));mglow.scale.set(2.6,1.8,1);mglow.position.set(0,2.3,5.6);hd.add(mglow);
     const eyeM=new THREE.MeshBasicMaterial({color:o.eye!=null?o.eye:0xffe27a}),eyeHalo=new THREE.SpriteMaterial({map:GLT,color:0xff8a14,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,opacity:.9});
     /* 兇狠的眼睛：外眼角高、內眼角低（怒目斜吊），眼上方壓著一道斜向內側的厚眉骨，瞳孔是細豎線 */
     const BRM=new THREE.MeshStandardMaterial({color:0x2a1560,roughness:.5,emissive:0x12062e,flatShading:true}),SLM=new THREE.MeshBasicMaterial({color:0x140400});
-    for(const sx of[1,-1]){const ey=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),eyeM);ey.scale.set(1.8,.34,.9);ey.position.set(sx*.54,3.12,4.95);ey.rotation.z=sx*.42;hd.add(ey);
-      const sl=new THREE.Mesh(new THREE.BoxGeometry(.035,.2,.02),SLM);sl.position.set(sx*.54,3.12,4.95+.145);sl.rotation.z=sx*.42;hd.add(sl);
-      const hl=new THREE.Sprite(eyeHalo);hl.scale.set(1.1,.7,1);hl.position.copy(ey.position);hd.add(hl);
-      const br=new THREE.Mesh(new THREE.BoxGeometry(.78,.17,.5),BRM);br.position.set(sx*.5,3.36,4.88);br.rotation.z=sx*.5;br.rotation.y=-sx*.12;hd.add(br);   /* 眉骨：外側高、往鼻樑壓下 */
+    /* 眼睛（參考龍側臉插畫）：貼在臉側的扁平細長杏仁眼，兩端尖、上緣近乎平直（怒目），外圈橘紅、內芯亮黃、細豎瞳。
+       眼面朝「前＋外側」，所以正面與側面都看得到；外側（後方）眼角上揚、靠鼻端（前方）眼角壓低 */
+    const almond=(L,Ht,Hb)=>{const sp=new THREE.Shape();sp.moveTo(-L,0);sp.quadraticCurveTo(-L*.2,Ht,L,Ht*.15);sp.quadraticCurveTo(L*.1,-Hb,-L,0);return new THREE.ShapeGeometry(sp,6)},
+      AG1=almond(.42,.2,.12),AG2=almond(.35,.15,.085),EOM=new THREE.MeshBasicMaterial({color:0xff5a14,side:THREE.DoubleSide});
+    for(const sx of[1,-1]){const eg=new THREE.Group();eg.position.set(sx*.62,3.1,4.95);eg.rotation.order='YXZ';eg.rotation.y=sx*.72;eg.rotation.z=sx*.4;hd.add(eg);
+      if(sx<0){eg.scale.x=-1}   /* 左眼鏡像 */
+      const o1=new THREE.Mesh(AG1,EOM);eg.add(o1);const o2=new THREE.Mesh(AG2,new THREE.MeshBasicMaterial({color:o.eye!=null?o.eye:0xffe27a,side:THREE.DoubleSide}));o2.position.z=.012;eg.add(o2);
+      const sl=new THREE.Mesh(new THREE.PlaneGeometry(.035,.17),SLM);sl.position.set(.02,.02,.025);eg.add(sl);
+      const hl=new THREE.Sprite(eyeHalo);hl.scale.set(.75,.42,1);hl.position.copy(eg.position);hd.add(hl);
+      const br=new THREE.Mesh(new THREE.BoxGeometry(.78,.17,.5),BRM);br.position.set(sx*.58,3.34,4.9);br.rotation.z=sx*.5;br.rotation.y=sx*.5;hd.add(br);   /* 眉骨：外側高、往鼻樑壓下 */
       const bs=new THREE.Mesh(new THREE.ConeGeometry(.09,.4,4),BRM);bs.position.set(sx*.86,3.5,4.72);bs.rotation.set(-.5,0,-sx*1.1);hd.add(bs)}   /* 眉尾尖角 */
     /* —— 姿態狀態（彈簧平滑）：y 偏航、p 俯仰(正＝低頭)、j 嘴張開、tw 尾巴幅度、lx/lz 機身傾斜 —— */
     const HC={y:0,yv:0,p:0,pv:0,j:0,jv:0,ay:0,ap:0,tw:.3,twv:0,tph:0,lx:0,lxv:0,lz:0,lzv:0},WPR={r:.5,A:.42,F:3.2,sw:.1,ph:0},LG={ph:0,wk:0,tuck:0};
@@ -1129,7 +1125,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
       en:[],pb:[],eb:[],orbs:[],pa:[],cs:[],fl:[],fx:[],cl:[],wells:[],zn:[],dn:[],aura:null,slow:null,q:[],sp:0,gapT:1.5,bn:null,pick:null,boss:null,flash:0,shake:0,hm:0,tm:1,sp2:0,sp2t:0,escort:0,blinkInv:0,lt:[],wm:0,dg:[],swT:0,swDir:1,kick:0,bf:[],gust:null,dead:[],bwin:0,ads:0,ammo:50,rl:0,mf:0,rk:0,vsw:0,vmW:0,wt:null};   /* wm：武器模式 0 飛刀射擊／1 近戰揮砍 */
     yaw=0;pit=-.1;ay=ap=0;hy=Math.PI;
   }
-  const dmgMul=()=>1+.18*S.bl.dmg,rateMul=()=>(1+.14*S.bl.rate)*(S.slow&&S.slow.t>0?1.3:1),spdMul=()=>1+.08*S.bl.spd;
+  const dmgMul=()=>1+.18*S.bl.dmg,BASE_DMG=20,rateMul=()=>(1+.14*S.bl.rate)*(S.slow&&S.slow.t>0?1.3:1),spdMul=()=>1+.08*S.bl.spd;
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
   const lvl=i=>S.gl[i];
   /* 城堡實心：長方形碰撞（主堡＋兩側塔＋門樓，含敞開的門洞），玩家、怪物都無法穿過 */
@@ -1194,10 +1190,10 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     const mdl=t==='gar'&&gIdx===6?alienModel(d,6):t==='fbs'&&BD2?bossStaticModel({h:7}):t==='fbs'&&BDR?bossDragonModel({h:6.4,wid:1.22,lock:1}):t==='wyr'&&BDR?bossDragonModel({h:2,wid:.95,pal:'wyr',wsc:1.9,ff:1.5,fa:1.3,wr:.05,wem:0x5a2808,bem:0x0a1840}):t==='drg'&&DRG?dragonModel():useG?glbModel(t,gIdx):d.fly?wispModel():humanoid({col:d.col,eye:d.eye,s:d.s||1,back:t==='spt',armor:t==='brt'||t==='mbs'||t==='fbs',cloth:t==='fbs'?0x201030:t==='mbs'?0x3a1a1a:0x2c2c3a});
     if(mdl.armL){mdl.armL.rotation.x=mdl.armR.rotation.x=-1.4}
     const g=mdl.g;g.userData.en=1;g.position.set(x,0,z);g.add(shadow(d.r*1.15));
-    let og=null;if(t==='fbs'){og=new THREE.Group();GEM.forEach((q,i)=>{const o=new THREE.Mesh(new THREE.OctahedronGeometry(.45),BM(new THREE.Color(q.c)));const a=i/6*PI*2;o.position.set(Math.cos(a)*3.6,6.8,Math.sin(a)*3.6);og.add(o)});g.add(og)}
+    const og=null;   /* 龍王頭上的六顆寶石已移除 */
     dyn.add(g);
     const al=(t==='fbs'&&!BDR&&!BD2)?undefined:d.alt;
-    const e={t,d,x,z,hp:d.hp*m,max:d.hp*m,sp:d.sp*(d.boss?1:1+.02*w),r:d.r,h:useG||(t==='drg'&&DRG)||(t==='wyr'&&BDR)?Math.max(.8,Math.min(d.h,mdl.hh*1.15)):d.h,y0:t==='wsp'?.6:al?al-d.h/2:0,alt:al,at:rnd()*d.at,kx:0,kz:0,stun:0,fl:0,ph:rnd()*6,mdl,g,og,boss:!!d.boss,bt:2.5,b2:5,b3:9,face:0,wk:0};
+    const e={t,d,x,z,hp:(d.hp+10)*m*(t==='mbs'?(S.wave===7?3:2):1),max:(d.hp+10)*m*(t==='mbs'?(S.wave===7?3:2):1),sp:d.sp*(d.boss?1:1+.02*w),r:d.r,h:useG||(t==='drg'&&DRG)||(t==='wyr'&&BDR)?Math.max(.8,Math.min(d.h,mdl.hh*1.15)):d.h,y0:t==='wsp'?.6:al?al-d.h/2:0,alt:al,at:rnd()*d.at,kx:0,kz:0,stun:0,fl:0,ph:rnd()*6,mdl,g,og,boss:!!d.boss,bt:2.5,b2:5,b3:9,face:0,wk:0};
     S.en.push(e);if(d.boss)S.boss=e;return e;
   }
   /* —— 可抵達區域（格子洪水填充）：只有從玩家出生點走得到的地方才會生成敵人，避免生在牆外／城堡後／障礙物裡而卡關 —— */
@@ -1712,7 +1708,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
   function toggleWeapon(){S.wm=S.wm?0:1;S.swT=0;S.kick=0;S.rl=0;S.vsw=1;S.p.fcd=Math.max(S.p.fcd,.32);S.wt={s:S.wm?'副武器：匕首（近戰）':'主武器：戰術步槍',t:1.3};GA.tone(700,.06,'triangle',.05,.5);GA.noise(.08,.08,2500)}
   /* 近戰揮砍：面前扇形範圍內全部敵人受傷 */
   function slashHit(ty){const SW_HALF=ty===2?2.1:1.5,SW_R=ty===2?4:3.6;
-    const p=S.p,[fx,fz]=fwd(),dm0=30*dmgMul();let hit=0;
+    const p=S.p,[fx,fz]=fwd(),dm0=(30+BASE_DMG)*dmgMul();let hit=0;
     for(const e of S.en){if(e.hp<=0)continue;const dx=e.x-p.x,dz=e.z-p.z,d=Math.hypot(dx,dz);if(d>SW_R+e.r)continue;if(Math.abs(e.y0+e.h*.5-(p.y+1))>1.6+e.h*.5)continue;   /* 太高或太低（例如高空敵人）揮不到 */
       const ang=Math.acos(clamp((dx*fx+dz*fz)/(d||1),-1,1));if(d>e.r+.7&&ang-Math.asin(Math.min(1,e.r/(d||1)))>SW_HALF)continue;
       hurtE(e,dm0,'#fff');hit++;e.kx+=dx/(d||1)*(e.boss?1.5:6);e.kz+=dz/(d||1)*(e.boss?1.5:6);if(!e.boss)e.stun=Math.max(e.stun,.2);if(lvl(5)>=5&&rnd()<.2)chain(e,3,15,0)}
@@ -1738,7 +1734,7 @@ for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({color:0x444455,roug
     const ads=S.ads>.5,sp=(ads?.0025:.032)+Math.min(1,p.mv/6)*(ads?.004:.03)+(p.y>.05?(ads?.02:.03):0);   /* 腰射發散加大（圓錐散布：離越遠，彈著點散得越開） */
     const n=1;for(let k=0;k<n;k++){let ux=dx+(rnd()-.5)*sp*2+(k?(k%2?1:-1)*.02*Math.ceil(k/2):0),uy=dy+(rnd()-.5)*sp*2,uz=dz+(rnd()-.5)*sp*2;const ul=Math.hypot(ux,uy,uz);ux/=ul;uy/=ul;uz/=ul;
       if(S.dg.length<90){const m=makeBullet();m.position.set(mx,my,mz);m.lookAt(mx+ux,my+uy,mz+uz);dyn.add(m);
-        S.dg.push({sx:mx,sz:mz,x:mx,y:my,z:mz,vx:ux*260,vy:uy*260,vz:uz*260,l:.5,d:12*dmgMul(),m,ro:0})}}
+        S.dg.push({sx:mx,sz:mz,x:mx,y:my,z:mz,vx:ux*260,vy:uy*260,vz:uz*260,l:.5,d:(12+BASE_DMG)*dmgMul(),m,ro:0})}}
     S.ammo--;S.p.fcd=1/(11*rateMul());S.rk=1;S.rkx=rnd()-.5;S.rkz=rnd()-.5;S.mf=.045;S.shake=Math.max(S.shake,.035);
     GA.noise(.1,.34,4200);GA.tone(120,.09,'sawtooth',.1,.45);GA.tone(2200,.025,'square',.03,.5);
     {const ej=RF.localToWorld(RF.userData.eject.clone()),[rx,rz]=rgt();   /* 退殼：真正的黃銅彈殼，向右上方彈出、翻滾、落地彈跳 */
